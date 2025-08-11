@@ -633,7 +633,7 @@
     if (mainMenuHeader) mainMenuHeader.style.display = 'block';
     if (brandLogo) brandLogo.style.display = 'block';
 
-    if(finalP) finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas.';
+    if(finalP) finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas, o matalos.';
     if(titleEl) titleEl.style.display = 'none';
     if(finalStats) finalStats.style.display = 'none';
     if(mainExtras) mainExtras.style.display = desdePausa ? 'block' : 'none';
