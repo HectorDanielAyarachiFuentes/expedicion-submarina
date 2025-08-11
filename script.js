@@ -33,6 +33,9 @@
   const closeInfo=document.getElementById('closeInfo');
   const logoHUD=document.getElementById('logoHUD');
   const mainExtras=document.getElementById('mainExtras');
+  const bossHealthContainer = document.getElementById('bossHealthContainer');
+  const bossHealthBar = document.getElementById('bossHealthBar');
+  const gameplayHints = document.getElementById('gameplay-hints');
   
   // ========= Sprites (UI) =========
   const BTN_SPRITE_URL='https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/blue-buttons.png';
@@ -47,7 +50,32 @@
   const iconSpeakerOn = makeDataUrl("<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#5aa4ff'/><stop offset='1' stop-color='#2b58a6'/></linearGradient></defs><rect x='2' y='2' width='52' height='52' rx='8' ry='8' fill='url(#g)' stroke='#0b214b' stroke-width='3'/><g transform='translate(28,28)'><path d='M-9,-8 h6 l8,-6 v28 l-8,-6 h-6 z' fill='#0b214b'/><path d='M6,-6 q6,6 0,12' fill='none' stroke='#0b214b' stroke-width='3' stroke-linecap='round'/><path d='M10,-10 q10,10 0,20' fill='none' stroke='#0b214b' stroke-width='3' stroke-linecap='round'/></g></svg>");
   const iconInfo = makeDataUrl("<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#5aa4ff'/><stop offset='1' stop-color='#2b58a6'/></linearGradient></defs><rect x='2' y='2' width='52' height='52' rx='8' ry='8' fill='url(#g)' stroke='#0b214b' stroke-width='3'/><g transform='translate(28,28)'><circle r='10' fill='#0b214b'/><text x='0' y='6' text-anchor='middle' font-family='monospace' font-size='20' fill='#5aa4ff'>?</text></g></svg>");
   function refreshIcons(){ muteBtn.innerHTML='<img alt="mute" src="'+(icoMuteURL||iconSpeakerOn)+'" />'; infoBtn.innerHTML='<img alt="info" src="'+(icoInfoURL||iconInfo)+'" />'; if(icoFSURL) fsBtn.innerHTML='<img alt="fullscreen" src="'+icoFSURL+'" />'; if(icoShareURL) shareBtn.innerHTML='<img alt="share" src="'+icoShareURL+'" />'; muteBtn.style.opacity=S.isMuted()?0.35:1; }
-  function setModalButtons(fromPause){ if(grayDiveURL){ startBtn.innerHTML='<img alt="'+(fromPause?'Continuar':'Sumergirse')+'" src="'+(fromPause?grayContinueURL:grayDiveURL)+'" />'; } if(grayRetryURL){ restartBtn.innerHTML='<img alt="Reintentar" src="'+grayRetryURL+'" />'; } if(grayExitURL){ closeInfo.innerHTML='<img alt="Salir" src="'+grayExitURL+'" />'; } }
+  
+  function setModalButtons(fromPause) { 
+    const startButtonSpan = '<span class="text-fallback-button">' + (fromPause ? 'Continuar' : 'Sumergirse') + '</span>';
+    const restartButtonSpan = '<span class="text-fallback-button">Reintentar</span>';
+    const closeButtonSpan = '<span class="text-fallback-button">Salir</span>';
+
+    if (grayDiveURL) { 
+        const btnText = fromPause ? 'Continuar' : 'Sumergirse';
+        const btnImg = fromPause ? grayContinueURL : grayDiveURL;
+        startBtn.innerHTML='<img alt="'+btnText+'" src="'+btnImg+'" />'; 
+    } else {
+        startBtn.innerHTML = startButtonSpan;
+    }
+    
+    if (grayRetryURL) { 
+        restartBtn.innerHTML='<img alt="Reintentar" src="'+grayRetryURL+'" />'; 
+    } else {
+        restartBtn.innerHTML = restartButtonSpan;
+    }
+    
+    if (grayExitURL) { 
+        closeInfo.innerHTML='<img alt="Salir" src="'+grayExitURL+'" />'; 
+    } else {
+        closeInfo.innerHTML = closeButtonSpan;
+    }
+  }
   
   // ========= Audio =========
   const RAW='https://raw.githubusercontent.com/baltaz/the_expedition/main/sfx/';
@@ -114,7 +142,6 @@
   const TORPEDO_COOLDOWN = 1.5;
   let torpedos = [];
   
-  // *** NEW: Level Configuration ***
   const LEVEL_CONFIG = [
     { name: 'NIVEL 1: CAÑÓN DE MAR DEL PLATA', objective: 'Captura 10 especímenes', goal: 10, type: 'capture' },
     { name: 'NIVEL 2: FOSA ABISAL', objective: 'Sobrevive 60 segundos', goal: 60, type: 'survive' },
@@ -127,7 +154,6 @@
       run:false, rescued:0, score:0, depth_s:0, lives:3, lifeAnim:0, spawn:0, speed:260, elapsed:0, inputLock:0.2,
       lightPhase:'off', lightVisible:false, lightTimer:0, lightToggles:0, lastMusicT:0,
       torpedoCooldown: 0,
-      // *** NEW: Level state ***
       level: 1,
       levelObjectiveValue: 0,
       boss: null,
@@ -164,7 +190,6 @@
     
     let speed = currentSpeed() + 60;
     let type = 'normal';
-    // Level 2 has aggressive creatures
     if (state.level === 2 && Math.random() < 0.3) {
         type = 'aggressive';
         speed *= 1.3;
@@ -187,7 +212,6 @@
     S.play('torpedo');
   }
   
-  // *** NEW: Boss Logic ***
   function spawnBoss() {
     state.boss = {
         x: W - 150, y: H / 2,
@@ -198,7 +222,6 @@
         hitTimer: 0,
         tentacles: [],
     };
-    // Create some tentacles
     for (let i = 0; i < 6; i++) {
         state.boss.tentacles.push({
             angle: (i / 5 - 0.5) * Math.PI * 0.8,
@@ -206,6 +229,7 @@
             phase: Math.random() * Math.PI * 2,
         });
     }
+    if (bossHealthContainer) bossHealthContainer.classList.remove('hidden');
   }
 
   function updateBoss(dt) {
@@ -220,12 +244,7 @@
         if (attackType < 0.45) { // Tentacle Smash
             boss.state = 'attacking_smash';
             const targetLane = Math.floor(Math.random() * LANES_N);
-            boss.attackData = {
-                lane: targetLane,
-                charge: 1.2,
-                y: lanes[targetLane],
-                progress: 0,
-            };
+            boss.attackData = { lane: targetLane, charge: 1.2, y: lanes[targetLane], progress: 0 };
         } else if (attackType < 0.75) { // Ink Blast
             boss.state = 'attacking_ink';
             state.inkProjectiles.push({ x: boss.x, y: boss.y, vx: -400, r: 20 });
@@ -239,11 +258,10 @@
         }
     }
     
-    // Update ongoing attacks
     if (boss.state === 'attacking_smash') {
         boss.attackData.charge -= dt;
         if (boss.attackData.charge <= 0) {
-            boss.attackData.progress += dt * 8; // speed of smash
+            boss.attackData.progress += dt * 8;
             const tentacleX = W - boss.attackData.progress * W;
             if (Math.hypot(player.x*W - tentacleX, player.y*H - boss.attackData.y) < player.r + 30) {
                  if(state.lives > 0) { state.lives--; S.play('lose'); state.lifeAnim = 0.6; }
@@ -262,12 +280,8 @@
     const boss = state.boss;
     ctx.save();
     
-    // Hit flash
-    if (boss.hitTimer > 0) {
-        ctx.filter = 'brightness(2.5)';
-    }
+    if (boss.hitTimer > 0) ctx.filter = 'brightness(2.5)';
 
-    // Tentacles
     ctx.strokeStyle = '#6a0dad';
     ctx.lineWidth = 18;
     ctx.lineCap = 'round';
@@ -283,13 +297,11 @@
         ctx.stroke();
     });
 
-    // Body
     ctx.fillStyle = '#8a2be2';
     ctx.beginPath();
     ctx.ellipse(boss.x, boss.y, boss.w / 2, boss.h / 2, 0, 0, Math.PI * 2);
     ctx.fill();
     
-    // Eyes
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.arc(boss.x - 40, boss.y - 50, 25, 0, Math.PI*2);
@@ -303,11 +315,9 @@
     ctx.arc(pupilX, boss.y - 50, 10, 0, Math.PI*2);
     ctx.fill();
     
-    // Smash attack telegraph
     if (boss.state === 'attacking_smash' && boss.attackData.charge > 0) {
         ctx.fillStyle = 'rgba(255, 50, 50, 0.4)';
         ctx.fillRect(0, boss.attackData.y - 20, W, 40);
-        // Draw tentacle preparing
         ctx.strokeStyle = '#e04040';
         ctx.lineWidth = 40;
         ctx.beginPath();
@@ -315,7 +325,6 @@
         ctx.lineTo(W - 100, boss.attackData.y + (Math.random()-0.5)*20);
         ctx.stroke();
     }
-    // Smash attack active
     if (boss.state === 'attacking_smash' && boss.attackData.charge <= 0) {
         const tentacleX = W - boss.attackData.progress * (W+200);
         ctx.strokeStyle = '#e04040';
@@ -330,7 +339,6 @@
     ctx.restore();
   }
 
-  // ========= Update & Render Functions (Game Loop) =========
   function update(dt){
     if(!state || !state.run) return;
 
@@ -350,7 +358,6 @@
     if(keys[' ']&&state.inputLock===0){ if(!player.h){ fire(); } else if(player.h.phase==='out'){ player.h.phase='return'; } keys[' ']=false; }
     if((keys['x'] || keys['X']) && state.inputLock===0){ fireTorpedo(); keys['x']=keys['X']=false; }
     
-    // Update Level Objective
     const levelConf = LEVEL_CONFIG[state.level - 1];
     if (levelConf.type === 'capture') state.levelObjectiveValue = state.rescued;
     else if (levelConf.type === 'survive') state.levelObjectiveValue = Math.min(state.levelObjectiveValue + dt, levelConf.goal);
@@ -358,23 +365,16 @@
     for(let i=animals.length-1;i>=0;i--){
         const a=animals[i]; a.x+=a.vx*dt; a.frameTimer+=dt; if(a.frameTimer>=0.2){ a.frameTimer-=0.2; a.frame^=1; }
         
-        // Player collision: ANY collision with an uncaptured creature causes damage.
         if (!a.captured && Math.hypot(player.x*W+bobX() - a.x, player.y*H - a.y) < player.r + 20) {
-            animals.splice(i, 1); // The creature is removed on collision
+            animals.splice(i, 1);
             const before=state.lives; 
             if(state.lives > 0) state.lives--; 
-            if(state.lives < before) { 
-                state.lifeAnim=0.6; 
-                S.play('lose'); 
-            } 
+            if(state.lives < before) { state.lifeAnim=0.6; S.play('lose'); } 
             if(state.lives <= 0) loseGame();
-            continue; // Move to the next creature to avoid further checks
+            continue;
         }
-
-        // If a creature leaves the screen, it's just removed without penalty.
         if(!a.captured && a.x < -a.r){ 
             animals.splice(i,1); 
-            // No life is lost here anymore.
         }
     }
     
@@ -396,7 +396,6 @@
             }
         }
         if (hit) continue;
-        // Boss collision
         if (state.boss && t.x > state.boss.x - state.boss.w/2) {
             spawnTorpedoExplosion(t.x, t.y);
             torpedos.splice(i, 1);
@@ -410,7 +409,6 @@
         }
     }
     
-    // Update ink projectiles
     for (let i = state.inkProjectiles.length - 1; i >= 0; i--) {
         const ink = state.inkProjectiles[i];
         ink.x += ink.vx * dt;
@@ -430,13 +428,10 @@
   }
 
   function render(dt){
-    // Background
     if (state) drawBG(dt);
     
-    // Main Canvas
     ctx.clearRect(0,0,W,H);
     if (state) {
-        // Boss is drawn behind animals
         if (state.level === 3) drawBoss();
 
         for(let i=0;i<animals.length;i++){
@@ -454,7 +449,6 @@
         if(player){ const px=player.x*W + bobX(), py=player.y*H; ctx.save(); ctx.translate(px,py); ctx.rotate(robotTilt); if(robotReady){ ctx.imageSmoothingEnabled=false; const dw=spriteW*robotScale, dh=spriteH*robotScale; ctx.drawImage(robotImg, Math.round(-dw/2), Math.round(-dh/2), dw, dh); } else { ctx.fillStyle='#7ef'; ctx.beginPath(); ctx.arc(0,0,player.r,0,Math.PI*2); ctx.fill(); } ctx.restore(); }
         if(player&&player.h){ ctx.strokeStyle='#8ff'; ctx.beginPath(); const hx0=player.x*W + bobX(), hy0=player.y*H; ctx.moveTo(hx0,hy0); ctx.lineTo(player.h.x, player.h.y); ctx.stroke(); ctx.fillStyle='#8ff'; ctx.beginPath(); ctx.arc(player.h.x, player.h.y, 6, 0, Math.PI*2); ctx.fill(); }
         
-        // Draw Torpedos and Ink
         ctx.fillStyle = '#ffcc00';
         for (const t of torpedos) { ctx.fillRect(t.x, t.y, t.w, t.h); }
         ctx.fillStyle = '#101010';
@@ -463,13 +457,12 @@
     }
     drawParticles();
 
-    // FX and HUD
     drawLightMask();
     drawHUD();
   }
   
   function drawBG(dt){ if (!state) return;
-    const bgScroll = state.level !== 3; // Stop scrolling for boss
+    const bgScroll = state.level !== 3;
     if(bgReady&&bgW&&bgH){
         const spd=BG_BASE_SPEED*(1+0.6*clamp(difficultyRaw(),0,2));
         if (bgScroll) bgOffset=(bgOffset+spd*dt)%bgW;
@@ -488,55 +481,95 @@
     const alpha=lerp(0,0.9, clamp(darknessTarget,0,1));
     if(alpha<=0.001) return; fx.globalCompositeOperation='source-over'; fx.fillStyle='rgba(0,0,0,'+alpha.toFixed(3)+')'; fx.fillRect(0,0,W,H); if(state.lightVisible && player){ const px=player.x*W + bobX(), py=player.y*H; const ang=robotTilt; const ux=Math.cos(ang), uy=Math.sin(ang); const vx=-Math.sin(ang), vy=Math.cos(ang); const ax=Math.round(px + ux*(spriteW*robotScale*0.5 - 11) + vx*(-4)); const ay=Math.round(py + uy*(spriteW*robotScale*0.5 - 11) + vy*(-4)); const L=Math.min(W*0.65,560); const theta=Math.PI/9; const endx=ax+ux*L, endy=ay+uy*L; const half=Math.tan(theta)*L; const pTopX=endx+vx*half, pTopY=endy+vy*half; const pBotX=endx-vx*half, pBotY=endy-vy*half; let g=fx.createLinearGradient(ax,ay,endx,endy); g.addColorStop(0.00,'rgba(255,255,255,1.0)'); g.addColorStop(0.45,'rgba(255,255,255,0.5)'); g.addColorStop(1.00,'rgba(255,255,255,0.0)'); fx.globalCompositeOperation='destination-out'; fx.fillStyle=g; fx.beginPath(); fx.moveTo(ax,ay); fx.lineTo(pTopX,pTopY); fx.lineTo(pBotX,pBotY); fx.closePath(); fx.fill(); const rg=fx.createRadialGradient(ax,ay,0, ax,ay,54); rg.addColorStop(0,'rgba(255,255,255,1.0)'); rg.addColorStop(1,'rgba(255,255,255,0.0)'); fx.fillStyle=rg; fx.beginPath(); fx.arc(ax,ay,54,0,Math.PI*2); fx.fill(); fx.globalCompositeOperation='lighter'; const gGlow=fx.createLinearGradient(ax,ay,endx,endy); gGlow.addColorStop(0.00,'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60,'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00,'rgba(255,255,255,0.00)'); fx.fillStyle=gGlow; fx.beginPath(); fx.moveTo(ax,ay); fx.lineTo(pTopX,pTopY); fx.lineTo(pBotX,pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation='source-over'; }
   }
-  function drawHUD(){ if (!state) return; hud.clearRect(0,0,W,H); if (!state.run) return; const s=state, depthVal=Math.floor(s.depth_s||0), scoreVal=s.score||0, livesVal=s.lives||3; const padX=18,padY=18,lh=22;
-    hud.save(); hud.fillStyle='#ffffff'; hud.font='18px "Press Start 2P", monospace'; hud.textAlign='left'; hud.textBaseline='alphabetic';
+  
+  function drawHUD(){ 
+    if (!state) return; 
+    hud.clearRect(0,0,W,H); 
+    if (!state.run) return; 
+    const s=state, depthVal=Math.floor(s.depth_s||0), scoreVal=s.score||0, livesVal=s.lives||3; 
+    const padX=18, padY=18, lh=22;
+    
+    const logoWidth = logoHUD ? logoHUD.offsetWidth : 0;
+    const objectiveX = logoWidth + padX * 1.5;
 
-    // Top-left HUD: Level Objective
+    hud.save(); 
+    hud.fillStyle='#ffffff'; 
+    hud.font='18px "Press Start 2P", monospace'; 
+    hud.textAlign='left'; 
+    hud.textBaseline='alphabetic';
+
     const levelConf = LEVEL_CONFIG[s.level-1];
     let objectiveText = '';
     if (levelConf.type === 'capture') objectiveText = `CAPTURES: ${s.rescued} / ${levelConf.goal}`;
     else if (levelConf.type === 'survive') objectiveText = `SUPERVIVENCIA: ${Math.floor(levelConf.goal - s.levelObjectiveValue)}s`;
     
-    hud.fillText(`NIVEL ${s.level}`, padX, padY + lh);
+    hud.fillText(`NIVEL ${s.level}`, objectiveX, padY + lh);
     hud.fillStyle='#ffdd77';
-    hud.fillText(objectiveText, padX, padY + lh*2);
+    hud.fillText(objectiveText, objectiveX, padY + lh*2);
     hud.fillStyle='#ffffff';
 
-    // Bottom-left HUD: Stats
     const rows=[{label:'SCORE',value:String(scoreVal)},{label:'DEPTH',value:depthVal+' m'},{label:'RECORD',value:String(highScore)}]; const totalRows=rows.length+2; const y0=H-padY-lh*totalRows;
     let maxLabelW=0; for(let i=0;i<rows.length;i++) maxLabelW=Math.max(maxLabelW, hud.measureText(rows[i].label).width);
     const gap=16; const valueX=padX+maxLabelW+gap; for(let i=0;i<rows.length;i++){ const y=y0+i*lh; hud.fillText(rows[i].label, padX, y); hud.fillText(rows[i].value, valueX, y); }
     const livesY=y0+rows.length*lh; hud.fillText('LIVES', padX, livesY); hud.fillStyle='#ff4d4d'; hud.fillText('♥'.repeat(livesVal)+'♡'.repeat(3-livesVal), valueX, livesY); hud.fillStyle='#ffffff';
     const torpedoY = livesY + lh; hud.fillText('TORPEDO', padX, torpedoY); const torpedoReady = s.torpedoCooldown <= 0; hud.fillStyle = torpedoReady ? '#66ff66' : '#ff6666'; hud.fillText(torpedoReady ? 'LISTO' : 'RECARGANDO...', valueX, torpedoY); const barW = hud.measureText('RECARGANDO...').width; const barH = 4; const barX = valueX; const progress = clamp(1 - (s.torpedoCooldown / TORPEDO_COOLDOWN), 0, 1); hud.fillStyle = 'rgba(255,255,255,0.2)'; hud.fillRect(barX, torpedoY + 2, barW, barH); hud.fillStyle = '#66ff66'; hud.fillRect(barX, torpedoY + 2, barW * progress, barH);
     
-    // Boss Health Bar
     if (s.level === 3 && s.boss) {
-        const barW = W * 0.6, barH = 20;
-        const barX = (W - barW) / 2, barY = 20;
-        hud.fillStyle = 'rgba(0,0,0,0.5)';
-        hud.fillRect(barX, barY, barW, barH);
         const hpProgress = clamp(s.boss.hp / s.boss.maxHp, 0, 1);
-        hud.fillStyle = '#b22222';
-        hud.fillRect(barX, barY, barW * hpProgress, barH);
-        hud.strokeStyle = '#fff';
-        hud.strokeRect(barX, barY, barW, barH);
-        hud.fillStyle = '#fff';
-        hud.textAlign = 'center';
-        hud.font='14px "Press Start 2P"';
-        hud.fillText('KRAKEN', W/2, barY + barH - 5);
+        if (bossHealthBar) {
+            bossHealthBar.style.width = (hpProgress * 100) + '%';
+        }
+    } else {
+        if (bossHealthContainer && !bossHealthContainer.classList.contains('hidden')) {
+            bossHealthContainer.classList.add('hidden');
+        }
     }
     
     hud.restore();
   }
   
-  // ========= Main Loop Setup =========
   let last=0; function loop(t){ const dt=Math.min(0.033,(t-last)/1000||0); last=t; if(state.gamePhase==='playing') update(dt); render(dt); requestAnimationFrame(loop); }
 
-  // ========= Start / End / Levels =========
-  let __starting=false; function start(){ if(__starting) return; __starting=true; if(state&&state.run){ __starting=false; return; } reset(); keys={}; state.inputLock=0.2; state.gamePhase = 'playing'; state.run=true; state.spawn=1.0; state.lightVisible=true; S.init(); S.stop('music'); S.loop('music'); mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; titleEl.style.display='none'; brandLogo.style.display='block'; finalP.innerHTML='Captura tantos especímenes<br/>como puedas'; finalStats.style.display='none'; if(mainExtras) mainExtras.style.display='none'; overlay.style.display='none'; overlayMode='menu'; startBtn.style.display='inline'; restartBtn.style.display='none'; refreshIcons(); setTimeout(function(){ __starting=false; },200); }
+  let __starting=false; 
+  function start(){ 
+    if(__starting) return; 
+    __starting=true; 
+    if(state&&state.run){ __starting=false; return; } 
+    reset(); 
+    keys={}; 
+    state.inputLock=0.2; 
+    state.gamePhase = 'playing'; 
+    state.run=true; 
+    state.spawn=1.0; 
+    state.lightVisible=true; 
+    S.init(); 
+    S.stop('music'); 
+    S.loop('music'); 
+    mainMenu.style.display = 'block'; 
+    levelTransition.style.display = 'none'; 
+    titleEl.style.display='none'; 
+    brandLogo.style.display='block'; 
+    finalP.innerHTML='Captura tantos especímenes<br/>como puedas'; 
+    finalStats.style.display='none'; 
+    if(mainExtras) mainExtras.style.display='none'; 
+    overlay.style.display='none'; 
+    overlayMode='menu'; 
+    startBtn.style.display='inline'; 
+    restartBtn.style.display='none'; 
+    refreshIcons();
+
+    if (gameplayHints) {
+        gameplayHints.style.opacity = 1;
+        setTimeout(() => {
+            if (gameplayHints) gameplayHints.style.opacity = 0;
+        }, 7000);
+    }
+    
+    setTimeout(function(){ __starting=false; },200); 
+  }
   
-  function loseGame(){ if(!state || state.gamePhase === 'gameover') return; state.gamePhase = 'gameover'; state.run=false; S.stop('music'); S.play('gameover'); if(state.score>highScore){ highScore=state.score; saveHighScore(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='Fin de la expedición'; finalP.textContent='Gracias por ser parte'; statScore.textContent='SCORE: '+state.score; statDepth.textContent='DEPTH: '+state.depth_s+' m'; statSpecimens.textContent='SPECIMENS: '+state.rescued; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline'; overlayMode='gameover'; overlay.style.display='grid'; }
-  function winGame(){ if(!state || state.gamePhase === 'gameover') return; state.gamePhase = 'gameover'; state.run=false; S.stop('music'); S.play('victory'); if(state.score>highScore){ highScore=state.score; saveHighScore(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='¡VICTORIA!'; titleEl.style.color = '#ffdd77'; finalP.textContent='¡Has conquistado las profundidades!'; statScore.textContent='SCORE: '+state.score; statDepth.textContent='DEPTH: '+state.depth_s+' m'; statSpecimens.textContent='SPECIMENS: '+state.rescued; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline'; overlayMode='gameover'; overlay.style.display='grid'; }
+  function loseGame(){ if(!state || state.gamePhase === 'gameover') return; state.gamePhase = 'gameover'; state.run=false; S.stop('music'); S.play('gameover'); if(state.score>highScore){ highScore=state.score; saveHighScore(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='Fin de la expedición'; finalP.textContent='Gracias por ser parte'; statScore.textContent='SCORE: '+state.score; statDepth.textContent='DEPTH: '+state.depth_s+' m'; statSpecimens.textContent='SPECIMENS: '+state.rescued; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline'; overlayMode='gameover'; overlay.style.display='grid'; if (bossHealthContainer) bossHealthContainer.classList.add('hidden'); }
+  function winGame(){ if(!state || state.gamePhase === 'gameover') return; state.gamePhase = 'gameover'; state.run=false; S.stop('music'); S.play('victory'); if(state.score>highScore){ highScore=state.score; saveHighScore(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='¡VICTORIA!'; titleEl.style.color = '#ffdd77'; finalP.textContent='¡Has conquistado las profundidades!'; statScore.textContent='SCORE: '+state.score; statDepth.textContent='DEPTH: '+state.depth_s+' m'; statSpecimens.textContent='SPECIMENS: '+state.rescued; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline'; overlayMode='gameover'; overlay.style.display='grid'; if (bossHealthContainer) bossHealthContainer.classList.add('hidden'); }
 
   function checkLevelCompletion() {
     if (state.gamePhase !== 'playing') return;
@@ -581,12 +614,49 @@
     state.inputLock = 0.5;
   }
 
-  // ========= Input & Buttons =========
   addEventListener('keydown', function(e){ keys[e.key]=true; if(e.code==='Space') e.preventDefault(); if(e.key==='Escape') { e.preventDefault(); openMainMenu(); } });
   addEventListener('keyup', function(e){ keys[e.key]=false; });
   startBtn.onclick=function(e){ e.stopPropagation(); if(overlayMode==='pause'){ overlay.style.display='none'; if(state){ state.run=true; state.inputLock=0.15; } S.loop('music'); } else { start(); } };
   restartBtn.onclick=start; muteBtn.onclick=function(){ S.toggleMuted(); refreshIcons(); };
-  function showMainMenuView(fromPause){ brandLogo.style.display='block'; titleEl.style.display='none'; finalP.innerHTML='Captura tantos especímenes<br/>como puedas'; finalStats.style.display='none'; const divider=document.getElementById('menuDivider'); if(divider) divider.style.display='block'; if(mainExtras) mainExtras.style.display= fromPause ? 'block':'none'; setModalButtons(fromPause); startBtn.style.display='inline'; restartBtn.style.display = fromPause ? 'inline' : 'none'; overlayMode= fromPause ? 'pause':'menu'; mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; overlay.style.display='grid'; }
+  
+  function showMainMenuView(fromPause) {
+    const mainMenuHeader = document.getElementById('mainMenuHeader');
+    const finalP = document.getElementById('final');
+    const finalStats = document.getElementById('finalStats');
+    const menuDivider = document.getElementById('menuDivider');
+    const mainExtras = document.getElementById('mainExtras');
+    const titleEl = document.getElementById('gameOverTitle');
+
+    if (fromPause) {
+        // --- VISTA DE PAUSA ---
+        mainMenuHeader.innerHTML = '<img id="logoHUD" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/brand/logo_hud.png" alt="logo">';
+        finalP.innerHTML = 'LA EXPEDICIÓN<br/>CAPTURA TANTOS ESPECÍMENES<br/>COMO PUEDAS';
+        titleEl.style.display = 'none';
+        finalStats.style.display = 'none';
+        menuDivider.style.display = 'block';
+        mainExtras.style.display = 'block';
+        startBtn.style.display = 'inline-block';
+        restartBtn.style.display = 'inline-block';
+
+    } else {
+        // --- VISTA DE MENÚ PRINCIPAL (INICIO) ---
+        mainMenuHeader.innerHTML = '<img id="brandLogo" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/brand/logo.png" alt="La Expedición" style="width: min(350px, 80vw); margin-bottom: 12px; image-rendering: pixelated;">';
+        finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas';
+        titleEl.style.display = 'none';
+        finalStats.style.display = 'none';
+        menuDivider.style.display = 'block';
+        mainExtras.style.display = 'none';
+        startBtn.style.display = 'inline-block';
+        restartBtn.style.display = 'none';
+    }
+
+    setModalButtons(fromPause);
+    overlayMode = fromPause ? 'pause' : 'menu';
+    mainMenu.style.display = 'block';
+    levelTransition.style.display = 'none';
+    overlay.style.display = 'grid';
+  }
+
   function openMainMenu(){ if(state && state.run){ state.run=false; S.pause('music'); showMainMenuView(true); } }
   infoBtn.onclick=openMainMenu;
   logoHUD.addEventListener('click', function(){ wasRunningBeforeCredits=!!(state&&state.run); if(state){ state.run=false; } S.pause('music'); infoOverlay.style.display='grid'; });
@@ -595,18 +665,15 @@
   if(shareBtn){ shareBtn.onclick = async function(){ let wasRunning = !!(state && state.run); if(wasRunning){ state.run=false; S.pause('music'); } try{ if(navigator.share){ await navigator.share({ title:'Expedición Mardel', text:'¡He conquistado las profundidades! ¿Puedes tú?', url: location.href }); } }catch(_){} finally{ if(wasRunning && overlay.style.display==='none'){ state.run=true; S.loop('music'); } } }; }
   overlay.addEventListener('click', function(e){ if(e.target===overlay && overlay.style.display!=='none' && restartBtn.style.display==='none' && state.gamePhase !== 'transition'){ if(overlayMode==='pause'){ overlay.style.display='none'; if(state){ state.run=true; state.inputLock=0.15; } S.loop('music'); } else { start(); } } });
 
-  // ---- Mobile controls ----
   let dragId=-1, dragActive=false, dragY=0;
   function isOverUI(x,y){ const elts=[muteBtn, infoBtn, fsBtn, shareBtn, overlay, infoOverlay]; for (const el of elts){ if(!el) continue; const style=getComputedStyle(el); if(style.display==='none'||style.visibility==='hidden') continue; const r=el.getBoundingClientRect(); if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return true; } return false; }
   window.addEventListener('pointerdown', (e) => { if (isOverUI(e.clientX, e.clientY)) return; const tapX = e.clientX; if (tapX < W * 0.4) { dragId = e.pointerId; dragActive = true; dragY = e.clientY; e.preventDefault(); } else if (tapX > W * 0.6) { if(!state||!state.run) return; if(state.inputLock===0){ if(!player.h){ fire(); } else if(player.h.phase==='out'){ player.h.phase='return'; } } } else { fireTorpedo(); } }, {passive:false});
   window.addEventListener('pointermove', (e) => { if (!dragActive || e.pointerId !== dragId) return; dragY = e.clientY; e.preventDefault(); }, {passive:false});
   window.addEventListener('pointerup', (e) => { if (e.pointerId === dragId) { dragActive = false; dragId = -1; } }, {passive:false});
 
-  // ========= Fullscreen / Immersive =========
   function canUseFullscreen(){ return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
   function toggleFullscreen(){ if(!canUseFullscreen()){document.body.classList.toggle('immersive');return;}const el=document.documentElement;try{if(!document.fullscreenElement&&!document.webkitFullscreenElement&&!document.msFullscreenElement){if(el.requestFullscreen)return el.requestFullscreen();if(el.webkitRequestFullscreen)return el.webkitRequestFullscreen();}else{if(document.exitFullscreen)return document.exitFullscreen();if(document.webkitExitFullscreen)return document.webkitExitFullscreen();}}catch(err){console.warn('Fullscreen no disponible',err);}}
 
-  // ========= Size / Init =========
   function autoSize(){ const v={w:innerWidth,h:innerHeight}; [bgCanvas,cvs,fxCanvas,hudCanvas].forEach(c=>{ c.width=v.w; c.height=v.h; }); W=v.w; H=v.h; computeLanes(); if(!state || !state.run) { initParticles(); } }
   window.addEventListener('resize', autoSize);
   

@@ -1,81 +1,95 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Captura especímenes, sobrevive en la fosa abisal y derrota al Kraken."/>
-  <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/favicon.ico"/>
-  <title>Expedición Mardel - Edición Kraken</title>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <!-- CSS Externo -->
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>La Expedición</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- CANVASES -->
-  <canvas id="bgCanvas"></canvas>
-  <canvas id="gameCanvas"></canvas>
-  <canvas id="fxCanvas"></canvas>
-  <canvas id="hudCanvas"></canvas>
+    <!-- Canvas y UI existentes... -->
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
+    <canvas id="fxCanvas"></canvas>
+    <canvas id="hudCanvas"></canvas>
 
-  <!-- LOGO SUPERIOR IZQUIERDA (abre créditos) -->
-  <div id="ui-topleft">
-    <img id="logoHUD" alt="La Expedición" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/logo.png" />
-  </div>
+    <div id="ui-topleft">
+        <img id="logoHUD" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/brand/logo_hud.png" alt="logo">
+    </div>
 
-  <!-- INSTRUCCIONES SUPERIORES -->
-  <div id="ui">
-    <div id="hint-move">MOVER: ↑/↓ | CAPTURAR: <span class="keycap">SPACE</span></div>
-    <div id="hint-shoot">DISPARAR: <span class="keycap">X</span></div>
-  </div>
-
-  <!-- BOTONES SUPERIORES DERECHA -->
-  <div id="ui-topright">
-    <button id="muteBtn" class="spritebtn" title="Mute" aria-label="Mute"></button>
-    <button id="infoBtn" class="spritebtn" title="Menú" aria-label="Menú"></button>
-    <button id="fsBtn" class="spritebtn" title="Fullscreen" aria-label="Fullscreen"></button>
-    <button id="shareBtn" class="spritebtn" title="Compartir" aria-label="Compartir"></button>
-  </div>
-
-  <!-- MODAL PRINCIPAL / GAME OVER / PAUSA (abre con infoBtn) -->
-  <div id="overlay">
-    <div class="card">
-        <div id="mainMenu">
-            <img id="brandLogo" alt="La Expedición" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/logo.png" style="height:72px; image-rendering:pixelated; display:block; margin:0 auto 10px;"/>
-            <h1 id="gameOverTitle" style="display:none;">LA EXPEDICIÓN</h1>
-            <p id="final">Captura especímenes, sobrevive en las profundidades<br/>y enfrenta al Kraken.</p>
-            <div id="finalStats" style="display:none; font-size:14px; line-height:20px; font-weight:bold;">
-                <div id="statScore">SCORE: 0</div>
-                <div id="statDepth">DEPTH: 0 m</div>
-                <div id="statSpecimens">SPECIMENS: 0</div>
+    <div id="ui-topright">
+        <button id="muteBtn" class="spritebtn"></button>
+        <button id="infoBtn" class="spritebtn"></button>
+        <button id="fsBtn" class="spritebtn"></button>
+        <button id="shareBtn" class="spritebtn"></button>
+    </div>
+    
+    <div id="overlay">
+        <div id="mainMenu" class="card">
+            <div id="mainMenuHeader">
+                <img id="brandLogo" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/brand/logo.png" alt="La Expedición" style="width: min(350px, 80vw); margin-bottom: 12px; image-rendering: pixelated;">
             </div>
-            <div id="primaryBtns" class="btnCol">
-                <button id="start" class="imgbtn btn70" aria-label="Sumergirse"></button>
-                <button id="restart" class="imgbtn btn70" style="display:none;" aria-label="Reintentar"></button>
+            <h1 id="gameOverTitle" style="display:none; color: #ff5555; font-size: 1.8em;"></h1>
+            <p id="final" style="font-size: 1em; line-height: 1.5;">Captura tantos especímenes<br/>como puedas</p>
+            <div id="finalStats" style="display:none; margin: 16px 0;">
+                <p id="statScore">SCORE: 0</p>
+                <p id="statDepth">DEPTH: 0 m</p>
+                <p id="statSpecimens">SPECIMENS: 0</p>
             </div>
-            <div id="menuDivider" class="divider" style="display:none;"></div>
-            <div id="mainExtras" style="display:none; font-size:14px; line-height:20px; margin:12px 0 6px 0;">
-                <div> por</div>
-                <a id="githubLink" href="https://github.com/HectorDanielAyarachiFuentes" target="_blank" rel="noopener"><b>@HECTORDANIELAYARACHIFUENTES</b></a>
+            <div id="menuDivider" class="divider"></div>
+            <div id="mainExtras" style="display: none; margin: 16px 0;">
+                <p>Usa <kbd>↑</kbd> <kbd>↓</kbd> para moverte</p>
+                <p><kbd>ESPACIO</kbd> para capturar</p>
+                <p><kbd>X</kbd> para disparar torpedos</p>
+            </div>
+            <div class="button-container">
+                <button id="start" class="imgbtn"><span class="text-fallback-button">Sumergirse</span></button>
+                <button id="restart" class="imgbtn" style="display:none;"><span class="text-fallback-button">Reintentar</span></button>
             </div>
         </div>
-        <div id="levelTransition">
-            <h2 id="levelTitle"></h2>
-            <p id="levelDesc"></p>
+        <div id="levelTransition" class="card">
+            <h2 id="levelTitle">NIVEL 2</h2>
+            <p id="levelDesc">Sobrevive 60 segundos</p>
         </div>
     </div>
-  </div>
 
-  <!-- MODAL CRÉDITOS (abre con logo) -->
-  <div id="infoOverlay">
-    <div class="card">
-      <h1>CRÉDITOS</h1>
-      <div style="margin: 18px 0; line-height: 2;">
-          <p>• POR: <a href="https://github.com/HectorDanielAyarachiFuentes" target="_blank" rel="noopener"><b>@HECTORDANIELAYARACHIFUENTES</b></a></p>
-      </div>
-      <button id="closeInfo" class="imgbtn" aria-label="Salir"></button>
+    <div id="infoOverlay">
+        <div class="card">
+            <h2>Créditos</h2>
+            <p>Un juego de <a href="https://github.com/HectorDanielAyarachiFuentes" target="_blank">Héctor Daniel Ayarachi Fuentes</a></p>
+            <div class="divider"></div>
+            <button id="closeInfo" class="imgbtn"><span class="text-fallback-button">Salir</span></button>
+        </div>
     </div>
-  </div>
 
- <script type="module" src="script.js"></script>
+    <div id="bossHealthContainer" class="hidden">
+        <div id="bossName">KRAKEN</div>
+        <div class="health-bar-bg">
+            <div id="bossHealthBar"></div>
+        </div>
+    </div>
+
+    <!-- ===== NUEVO ELEMENTO PARA LOS CONTROLES ===== -->
+    <div id="gameplay-hints">
+        <div class="hint">
+            <span>MOVER</span>
+            <kbd class="key-icon arrow-up"></kbd>
+            <kbd class="key-icon arrow-down"></kbd>
+        </div>
+        <div class="hint">
+            <span>CAPTURAR</span>
+            <kbd class="key-icon spacebar"></kbd>
+        </div>
+        <div class="hint">
+            <span>TORPEDO</span>
+            <kbd class="key-icon text-key">X</kbd>
+        </div>
+    </div>
+    <!-- ===== FIN DEL NUEVO ELEMENTO ===== -->
+
+    <script src="script.js"></script>
 </body>
 </html>
