@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Captura especímenes del cañon de Mar del Plata y defiéndete con torpedos."/>
+  <meta name="description" content="Captura especímenes, sobrevive en la fosa abisal y derrota al Kraken."/>
   <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/favicon.ico"/>
-  <title>Expedición Mardel - Versión Mejorada</title>
+  <title>Expedición Mardel - Edición Kraken</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <!-- CSS Externo -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -38,25 +39,29 @@
   <!-- MODAL PRINCIPAL / GAME OVER / PAUSA (abre con infoBtn) -->
   <div id="overlay">
     <div class="card">
-      <img id="brandLogo" alt="La Expedición" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/logo.png" style="height:72px; image-rendering:pixelated; display:block; margin:0 auto 10px;"/>
-      <h1 id="gameOverTitle" style="display:none;">LA EXPEDICIÓN</h1>
-      <p id="final">Captura tantos especímenes<br/>como puedas</p>
-      <div id="finalStats" style="display:none; font-size:14px; line-height:20px; font-weight:bold;">
-        <div id="statScore">SCORE: 0</div>
-        <div id="statDepth">DEPTH: 0 m</div>
-        <div id="statSpecimens">SPECIMENS: 0</div>
-      </div>
-      <div id="primaryBtns" class="btnCol">
-        <button id="start" class="imgbtn btn70" aria-label="Sumergirse"></button>
-        <button id="restart" class="imgbtn btn70" style="display:none;" aria-label="Reintentar"></button>
-      </div>
-      <div id="menuDivider" class="divider" style="display:none;"></div>
-      
-      <!-- CRÉDITOS ACTUALIZADOS -->
-      <div id="mainExtras" style="display:none; font-size:14px; line-height:20px; margin:12px 0 6px 0;">
-        <div> por</div>
-        <a id="githubLink" href="https://github.com/HectorDanielAyarachiFuentes" target="_blank" rel="noopener"><b>@HECTORDANIELAYARACHIFUENTES</b></a>
-      </div>
+        <div id="mainMenu">
+            <img id="brandLogo" alt="La Expedición" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/logo.png" style="height:72px; image-rendering:pixelated; display:block; margin:0 auto 10px;"/>
+            <h1 id="gameOverTitle" style="display:none;">LA EXPEDICIÓN</h1>
+            <p id="final">Captura especímenes, sobrevive en las profundidades<br/>y enfrenta al Kraken.</p>
+            <div id="finalStats" style="display:none; font-size:14px; line-height:20px; font-weight:bold;">
+                <div id="statScore">SCORE: 0</div>
+                <div id="statDepth">DEPTH: 0 m</div>
+                <div id="statSpecimens">SPECIMENS: 0</div>
+            </div>
+            <div id="primaryBtns" class="btnCol">
+                <button id="start" class="imgbtn btn70" aria-label="Sumergirse"></button>
+                <button id="restart" class="imgbtn btn70" style="display:none;" aria-label="Reintentar"></button>
+            </div>
+            <div id="menuDivider" class="divider" style="display:none;"></div>
+            <div id="mainExtras" style="display:none; font-size:14px; line-height:20px; margin:12px 0 6px 0;">
+                <div> por</div>
+                <a id="githubLink" href="https://github.com/HectorDanielAyarachiFuentes" target="_blank" rel="noopener"><b>@HECTORDANIELAYARACHIFUENTES</b></a>
+            </div>
+        </div>
+        <div id="levelTransition">
+            <h2 id="levelTitle"></h2>
+            <p id="levelDesc"></p>
+        </div>
     </div>
   </div>
 
@@ -65,12 +70,12 @@
     <div class="card">
       <h1>CRÉDITOS</h1>
       <div style="margin: 18px 0; line-height: 2;">
-          <p>•  POR: <a id="githubLink" href="https://github.com/HectorDanielAyarachiFuentes" target="_blank" rel="noopener"><b>@HECTORDANIELAYARACHIFUENTES</b></a></p>
+          <p>• POR: <a href="https://github.com/HectorDanielAyarachiFuentes" target="_blank" rel="noopener"><b>@HECTORDANIELAYARACHIFUENTES</b></a></p>
       </div>
       <button id="closeInfo" class="imgbtn" aria-label="Salir"></button>
     </div>
   </div>
 
-  <script src="script.js"></script>
+ <script type="module" src="script.js"></script>
 </body>
 </html>
