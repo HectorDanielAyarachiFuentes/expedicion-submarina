@@ -10,24 +10,11 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- ===== ESTRUCTURA DEL HUD SUPERIOR ===== -->
+    <!-- ===== ESTRUCTURA DEL HUD SUPERIOR (REDISEÑADO) ===== -->
     <div id="top-hud">
-        <div id="gameplay-hints" class="hidden">
-            <div class="hint">
-                <span>MOVER</span>
-                <kbd class="key-icon key-arrow-up"></kbd>
-                <kbd class="key-icon key-arrow-down"></kbd>
-            </div>
-            <div class="hint">
-                <span>CAPTURAR</span>
-                <kbd class="key-icon key-spacebar"></kbd>
-            </div>
-            <div class="hint">
-                <span>TORPEDO</span>
-                <kbd class="key-icon text-key">X</kbd>
-            </div>
-        </div>
+        <!-- Barra de estado única que contiene todo -->
         <div id="status-bar">
+            <!-- Sección Izquierda: Logo y Nivel -->
             <div id="status-left">
                 <img id="logoHUD" src="img/logo.png" alt="logo">
                 <div id="status-text">
@@ -35,6 +22,25 @@
                     <div id="hud-objective-text">CAPTURAS: 0 / 10</div>
                 </div>
             </div>
+
+            <!-- Sección Central: Pistas de Juego (Controles) -->
+            <div id="gameplay-hints">
+                <div class="hint">
+                    <span>MOVER</span>
+                    <kbd class="key-icon key-arrow-up"></kbd>
+                    <kbd class="key-icon key-arrow-down"></kbd>
+                </div>
+                <div class="hint">
+                    <span>CAPTURAR</span>
+                    <kbd class="key-icon key-spacebar"></kbd>
+                </div>
+                <div class="hint">
+                    <span>TORPEDO</span>
+                    <kbd class="key-icon text-key">X</kbd>
+                </div>
+            </div>
+
+            <!-- Sección Derecha: Botones de Acción -->
             <div id="status-right">
                 <button id="muteBtn" class="spritebtn"></button>
                 <button id="infoBtn" class="spritebtn"></button>

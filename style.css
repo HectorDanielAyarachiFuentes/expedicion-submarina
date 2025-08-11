@@ -13,9 +13,9 @@
     --hud-blur: 8px; /* Intensidad del desenfoque */
     --hud-border-color: rgba(126, 203, 255, 0.4); /* Color de borde sutil */
 
-    --controls-bar-height: 50px;
-    --status-bar-height: 80px;
-    --total-hud-height: calc(var(--controls-bar-height) + var(--status-bar-height));
+    /* Altura simplificada para una sola barra */
+    --status-bar-height: 70px;
+    --total-hud-height: var(--status-bar-height);
 }
 
 html, body { 
@@ -30,6 +30,7 @@ html, body {
 canvas { 
     position: fixed; 
     left: 0;
+    /* Se posiciona correctamente debajo de la nueva barra única */
     top: var(--total-hud-height);
     width: 100vw; 
     height: calc(100vh - var(--total-hud-height));
@@ -40,7 +41,7 @@ canvas {
 #fxCanvas { z-index: 2; pointer-events: none; }
 #hudCanvas { z-index: 3; pointer-events: none; }
 
-/* ========= HUD SUPERIOR (DISEÑO MEJORADO) ========= */
+/* ========= HUD SUPERIOR (DISEÑO EN LÍNEA ÚNICA) ========= */
 #top-hud {
     position: fixed;
     top: 0;
@@ -59,30 +60,52 @@ canvas {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Barra de Controles */
+/* MODIFICACIÓN CLAVE: La barra de estado ahora es el contenedor principal de todo el HUD */
+#status-bar {
+    display: flex;
+    justify-content: space-between; /* Alinea los elementos a los extremos y centro */
+    align-items: center; /* Centra todo verticalmente */
+    height: var(--status-bar-height);
+    padding: 0 clamp(10px, 3vw, 20px);
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--hud-border-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Sección Izquierda: Logo y texto */
+#status-left { 
+    display: flex; 
+    align-items: center; 
+    gap: clamp(10px, 3vw, 20px); 
+    /* Se encoge lo mínimo necesario */
+    flex-shrink: 0;
+}
+#logoHUD { height: clamp(40px, 7vh, 50px); }
+#status-text {
+    color: var(--text-light);
+    font-size: clamp(0.8rem, 2.2vw, 1rem);
+    line-height: 1.4;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+}
+#hud-objective-text { color: var(--accent-yellow); }
+
+
+/* Sección Central: Pistas de juego */
 #gameplay-hints {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 2rem;
     color: var(--text-light);
-    height: var(--controls-bar-height);
-    box-sizing: border-box;
-    transition: opacity 0.3s ease;
-}
-
-#gameplay-hints.hidden {
-    opacity: 0;
-    pointer-events: none;
-    height: 0;
-    overflow: hidden;
+    /* Ocupa el espacio sobrante */
+    flex-grow: 1;
 }
 
 .hint {
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+    font-size: clamp(0.6rem, 1.3vw, 0.8rem);
     text-transform: uppercase;
     opacity: 0.8;
 }
@@ -96,44 +119,30 @@ kbd.key-icon {
     border: 1px solid #64748b;
     border-bottom: 3px solid #475569;
     font-family: 'Press Start 2P', monospace;
-    height: 30px;
+    height: 28px;
     border-radius: 4px;
     transition: all 0.1s ease-out;
 }
 kbd.key-icon:active { transform: translateY(2px); border-bottom-width: 1px; }
-kbd.text-key { width: 30px; font-size: 1.2rem; }
-.key-arrow-up, .key-arrow-down { width: 30px; }
-.key-arrow-up::before { content: ''; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 10px solid var(--accent-blue-light); }
-.key-arrow-down::before { content: ''; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 10px solid var(--accent-blue-light); }
-kbd.key-spacebar { width: 120px; height: 26px; background-color: var(--accent-blue-light); }
+kbd.text-key { width: 28px; font-size: 1.1rem; }
+.key-arrow-up, .key-arrow-down { width: 28px; }
+.key-arrow-up::before { content: ''; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 9px solid var(--accent-blue-light); }
+.key-arrow-down::before { content: ''; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid var(--accent-blue-light); }
+kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-blue-light); }
 
-/* Barra de Estado */
-#status-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: var(--status-bar-height);
-    padding: 0 clamp(10px, 3vw, 20px);
-    box-sizing: border-box;
-    border-bottom: 1px solid var(--hud-border-color);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
 
-#status-left { display: flex; align-items: center; gap: clamp(10px, 3vw, 20px); }
-#logoHUD { height: clamp(44px, 8vh, 56px); }
-#status-text {
-    color: var(--text-light);
-    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-    line-height: 1.5;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+/* Sección Derecha: Botones de Iconos */
+#status-right { 
+    display: flex; 
+    gap: 10px;
+    /* Se encoge lo mínimo necesario */
+    flex-shrink: 0; 
 }
-#hud-objective-text { color: var(--accent-yellow); }
-#status-right { display: flex; gap: 10px; }
 
 /* Botones con sprites (iconos) del HUD */
 .spritebtn { 
-    width: clamp(44px, 8vh, 56px); 
-    height: clamp(44px, 8vh, 56px); 
+    width: clamp(40px, 7vh, 50px); 
+    height: clamp(40px, 7vh, 50px); 
     padding: 0; 
     border: none; 
     background: transparent; 
@@ -142,13 +151,9 @@ kbd.key-spacebar { width: 120px; height: 26px; background-color: var(--accent-bl
 }
 .spritebtn:hover { transform: scale(1.05); opacity: 1; }
 .spritebtn:active { transform: scale(0.95) translateY(2px); }
-.spritebtn img {
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: crisp-edges;
-}
+.spritebtn img { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges; }
+
+/* El resto del CSS permanece igual... */
 
 /* ========= Barra de vida del Jefe ========= */
 #bossHealthContainer { position: fixed; top: var(--total-hud-height); padding-top: 20px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; z-index: 5; color: var(--text-light); text-shadow: 2px 2px 4px rgba(0,0,0,0.8); transition: opacity 0.5s ease, transform 0.5s ease; }
@@ -169,51 +174,27 @@ kbd.key-spacebar { width: 120px; height: 26px; background-color: var(--accent-bl
 #levelDesc { font-size: clamp(1rem, 4vw, 1.2rem); }
 .button-container { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
 
-/* ========= CORRECCIÓN DEFINITIVA DE BOTONES DE MENÚ ========= */
-/* Estilo general para el <button> que contiene la imagen */
-.imgbtn {
-    background: transparent;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Estilo para la <img> DENTRO del botón de menú */
-.imgbtn img { 
-    display: block;
-    /* Un tamaño fijo y razonable para un botón grande */
-    width: 96px; 
-    height: 96px;
-    margin: 8px auto;
-    image-rendering: pixelated;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: crisp-edges;
-}
-/* ========================================================== */
-
+.imgbtn { background: transparent; border: 0; padding: 0; cursor: pointer; transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
+.imgbtn img { display: block; width: 96px; height: 96px; margin: 8px auto; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges; }
 .imgbtn:hover { transform: scale(1.03); }
 .imgbtn:active { transform: scale(0.98) translateY(1px); }
-
-/* Este estilo es para cuando no se puede mostrar la imagen SVG, lo dejamos por si acaso */
 .text-fallback-button { display: inline-block; padding: 16px 28px; margin: 8px auto; background: var(--bg-card); color: var(--text-light); border: 2px solid var(--accent-blue); box-shadow: inset -6px -6px 0 var(--accent-blue-dark), inset 6px 6px 0 var(--accent-blue); text-transform: uppercase; font-size: clamp(1.2rem, 5vw, 1.5rem); letter-spacing: 1px; }
 
 /* ========= Media Queries para Responsividad ========= */
 @media (max-width: 820px) {
-    .hint { flex-direction: column; gap: 0.5rem; font-size: 0.65rem; }
-    #gameplay-hints { gap: 1.5rem; }
-    kbd.key-spacebar { width: 100px; }
-}
-
-@media (max-width: 600px) { 
-    #fsBtn, #shareBtn, #githubBtn { display: none; }
+    /* Ocultamos el texto de las pistas para ahorrar espacio */
     .hint > span { display: none; }
     #gameplay-hints { gap: 1rem; }
     kbd.key-spacebar { width: 80px; }
 }
 
-@media (pointer: coarse) {
+@media (max-width: 600px) { 
+    /* En pantallas muy pequeñas, ocultamos las pistas de controles */
     #gameplay-hints { display: none; }
-    :root { --total-hud-height: var(--status-bar-height); }
-    /* El CSS para 'canvas' y '#bossHealthContainer' se ajustará automáticamente */
+    #fsBtn, #shareBtn, #githubBtn { display: none; }
+}
+
+@media (pointer: coarse) {
+    /* En dispositivos táctiles, ocultamos los controles de teclado */
+    #gameplay-hints { display: none; }
 }
