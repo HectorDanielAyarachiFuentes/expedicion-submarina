@@ -221,3 +221,67 @@ kbd.key-spacebar { width: 120px; height: 26px; background-color: var(--accent-bl
     }
     #bossHealthContainer { top: var(--status-bar-height); }
 }
+/* ... (El CSS anterior es correcto, solo se añade/modifica una regla) ... */
+
+/* Estilos de botones sin cambios, excepto por una adición clave */
+.spritebtn { 
+    width: clamp(44px, 8vh, 56px); 
+    height: clamp(44px, 8vh, 56px); 
+    padding: 0; 
+    border: none; 
+    background: transparent; 
+    cursor: pointer;
+    transition: transform 0.15s ease-out, opacity 0.2s ease-out;
+}
+.spritebtn:hover { transform: scale(1.05); opacity: 1; }
+.spritebtn:active { transform: scale(0.95) translateY(2px); }
+
+/* REGLA AÑADIDA/MODIFICADA: Asegura que la imagen SVG se renderice con píxeles nítidos */
+.spritebtn img {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+/* ... (El resto del CSS se mantiene igual) ... */
+
+/* ========= Media Queries para Responsividad ========= */
+@media (max-width: 820px) {
+    /* En tablets, las pistas de control se apilan verticalmente */
+    .hint {
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.65rem;
+    }
+    #gameplay-hints {
+        gap: 1.5rem;
+    }
+    kbd.key-spacebar { width: 100px; }
+}
+
+@media (max-width: 600px) { 
+    /* En móviles, se ocultan botones menos importantes */
+    #fsBtn, #shareBtn { display: none; }
+    #githubBtn { display: none; } /* Ocultamos también el de GitHub en pantallas muy pequeñas */
+    
+    /* En móviles, las pistas de texto se ocultan para dar más espacio a los iconos */
+    .hint > span { display: none; }
+    #gameplay-hints { gap: 1rem; }
+    kbd.key-spacebar { width: 80px; }
+}
+
+/* Para dispositivos táctiles, la barra de pistas de teclado no es necesaria */
+@media (pointer: coarse) {
+    #gameplay-hints { display: none; }
+    
+    /* Recalcular la altura total del HUD y la posición de los canvas */
+    :root { --total-hud-height: var(--status-bar-height); }
+    
+    canvas { 
+        top: var(--status-bar-height); 
+        height: calc(100vh - var(--status-bar-height)); 
+    }
+    #bossHealthContainer { top: var(--status-bar-height); }
+}

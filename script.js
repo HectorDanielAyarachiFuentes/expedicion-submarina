@@ -27,6 +27,7 @@
   const statSpecimens=document.getElementById('statSpecimens');
   const muteBtn=document.getElementById('muteBtn');
   const infoBtn=document.getElementById('infoBtn');
+  const githubBtn = document.getElementById('githubBtn'); // Referencia para el nuevo botón
   const fsBtn=document.getElementById('fsBtn');
   const shareBtn=document.getElementById('shareBtn');
   const infoOverlay=document.getElementById('infoOverlay');
@@ -40,7 +41,7 @@
   const hudObjectiveText = document.getElementById('hud-objective-text');
   
   // ===================================================================
-  // ========= Sprites (UI) - VERSIÓN CON SVG GENERADOS Y CORREGIDOS =========
+  // ========= Sprites (UI) - VERSIÓN PIXEL-PERFECT =========
   // ===================================================================
 
   function createButtonSVG(iconContent, colors, viewBox = '-16 -16 32 32') {
@@ -59,22 +60,24 @@
     return makeDataUrl(svg);
   }
   
-  const blueColors = { id: 'blue', gradStart: '#5aa4ff', gradEnd: '#2b58a6', stroke: '#0b214b', iconFill: '#0b214b' };
+  const blueColors = { id: 'blue', gradStart: '#5aa4ff', gradEnd: '#2b58a6', stroke: '#0b214b', iconFill: '#e9f3ff' }; // IconFill cambiado a claro para contraste
   const grayColors = { id: 'gray', gradStart: '#e0e0e0', gradEnd: '#a0a0a0', stroke: '#404040', iconFill: '#202020' };
 
-  // Definiciones de los iconos (Contenido SVG corregido)
-  const icoMutePath = `<path d='M-10,-8 h4 l8,-6 v28 l-8,-6 h-4 z' fill='${blueColors.iconFill}'/><path d='M2,-6 q6,6 0,12' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/><path d='M6,-10 q10,10 0,20' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
-  const icoInfoPath = `<path d='M-10,-8 h20 M-10,0 h20 M-10,8 h20' stroke='${blueColors.iconFill}' stroke-width='4' fill='none' stroke-linecap='round'/>`;
-  const icoFSPath = `<path d='M-14,-8 v-6 h6 M14,-8 v-6 h-6 M-14,8 v6 h6 M14,8 v6 h-6' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
-  const icoSharePath = `<circle cx='-9' cy='-6' r='4.5' fill='${blueColors.iconFill}'/> <circle cx='-9' cy='6' r='4.5' fill='${blueColors.iconFill}'/> <circle cx='9' cy='0' r='5' fill='${blueColors.iconFill}'/> <path d='M-6,-4 L6,0 L-6,4' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
-  
-  const icoExitPath = `<path d='M-8,-8 L8,8 M8,-8 L-8,8' stroke='${grayColors.iconFill}' stroke-width='4' fill='none' stroke-linecap='round'/>`;
-  const icoContinuePath = `<path d='M-6,-10 L8,0 L-6,10 Z' fill='${grayColors.iconFill}'/>`;
-  const icoDivePath = `<path d='M0,-10 L0,0 M-6,0 L6,0 M0,0 l-8,8 m8,-8 l8,8' stroke='${grayColors.iconFill}' stroke-width='4' fill='none' stroke-linecap='round'/>`;
-  const icoRetryPath = `<path d='M10,0 A10,10 0 1,1 0,-10' stroke='${grayColors.iconFill}' stroke-width='4' fill='none'/><path d='M0,-15 l-5,5 h10 Z' fill='${grayColors.iconFill}'/>`;
+  // ========= ICONOS PIXELADOS REDISEÑADOS =========
+  const icoMutePath = `<path d='M-10-6 h4 v12 h-4 z M-4-10 l8-6 v24 l-8-6' fill='${blueColors.iconFill}'/><path d='M4-12 v2 M6-14 v6 M8-12 v2' stroke='${blueColors.iconFill}' stroke-width='2' stroke-linecap='round'/>`;
+  const icoInfoPath = `<path d='M-2-12 h4 v4 h-4 z M-4-6 h8 v18 h-8 z' fill='${blueColors.iconFill}'/>`;
+  const icoGithubPath = `<path d='M-12 0 v-4 h4 v-2 h-4 v-2 h2 v-4 h12 v4 h2 v2 h-4 v2 h4 v4 a8 8 0 0 1 -16 0z M-6-2 h4 v4 h-4z M6-2 h4 v4 h-4z' fill='${blueColors.iconFill}'/><path d='M-12 2 h2 v6 h-4 v-4 a4 4 0 0 1 2-2z M10 2 a4 4 0 0 1 2 2 v4 h-4 v-6 h2z' fill='${blueColors.iconFill}'/>`;
+  const icoFSPath = `<path d='M-14-14 h8 v2 h-6 v6 h-2z M-14 14 h2 v-6 h6 v-2 h-8z M14 14 h-8 v-2 h6 v-6 h2z M14-14 h-2 v6 h-6 v2 h8z' fill='${blueColors.iconFill}'/>`;
+  const icoSharePath = `<path d='M4 6 h6 v4 h-6z M-10 6 h6 v4 h-6z M-2 -8 h6 v4 h-6z M0 0 l-6 4 M4 4 l-1-6 M4 4 l6 0' stroke='${blueColors.iconFill}' stroke-width='2'/>`;
+
+  const icoExitPath = `<path d='M-10-10 l20 20 M-10 10 l20-20' stroke='${grayColors.iconFill}' stroke-width='4'/>`;
+  const icoContinuePath = `<path d='M-6-10 L8 0 L-6 10 Z' fill='${grayColors.iconFill}'/>`;
+  const icoDivePath = `<path d='M0-12 v10 M-8-2 h16 M0-2 l-8 10 M0-2 l8 10' stroke='${grayColors.iconFill}' stroke-width='4' fill='none'/>`;
+  const icoRetryPath = `<path d='M12 0 A12 12 0 1 1 0 -12' stroke='${grayColors.iconFill}' stroke-width='4' fill='none'/><path d='M0-16 l-6 6 h12 Z' fill='${grayColors.iconFill}'/>`;
 
   const icoMuteURL = createButtonSVG(icoMutePath, blueColors);
   const icoInfoURL = createButtonSVG(icoInfoPath, blueColors);
+  const icoGithubURL = createButtonSVG(icoGithubPath, blueColors);
   const icoFSURL = createButtonSVG(icoFSPath, blueColors);
   const icoShareURL = createButtonSVG(icoSharePath, blueColors);
   
@@ -85,7 +88,8 @@
 
   function refreshIcons(){ 
     muteBtn.innerHTML=`<img alt="mute" src="${icoMuteURL}" />`; 
-    infoBtn.innerHTML=`<img alt="info" src="${icoInfoURL}" />`; 
+    infoBtn.innerHTML=`<img alt="info" src="${icoInfoURL}" />`;
+    githubBtn.innerHTML=`<img alt="GitHub" src="${icoGithubURL}" />`;
     fsBtn.innerHTML=`<img alt="fullscreen" src="${icoFSURL}" />`; 
     shareBtn.innerHTML=`<img alt="share" src="${icoShareURL}" />`; 
     muteBtn.style.opacity=S.isMuted()?0.35:1; 
@@ -694,8 +698,3 @@
   
   autoSize(); reset(); requestAnimationFrame(loop); S.init(); refreshIcons();
 })();
-
-
-
-
-
