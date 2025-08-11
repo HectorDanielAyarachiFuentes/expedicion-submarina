@@ -1,7 +1,6 @@
 (function(){
   'use strict';
   // ========= Funciones Auxiliares =========
-  function crearUrlDatos(svg){ return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg); }
   function cargarImagen(url, cb){ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>cb(im); im.onerror=()=>cb(null); im.src=url; }
 
   // ========= Lienzos (Canvas) =========
@@ -40,67 +39,16 @@
   const hudLevelText = document.getElementById('hud-level-text');
   const hudObjectiveText = document.getElementById('hud-objective-text');
   
-  // ===================================================================
-  // ========= Sprites (UI) - VERSIÓN PIXEL-PERFECT =========
-  // ===================================================================
-
-  function crearBotonSVG(iconContent, colors, viewBox = '-16 -16 32 32') {
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56' shape-rendering="crispEdges">
-      <defs>
-        <linearGradient id='grad-${colors.id}' x1='0' y1='0' x2='0' y2='1'>
-          <stop offset='0' stop-color='${colors.gradStart}'/>
-          <stop offset='1' stop-color='${colors.gradEnd}'/>
-        </linearGradient>
-      </defs>
-      <rect x='2' y='2' width='52' height='52' rx='8' ry='8' fill='url(#grad-${colors.id})' stroke='${colors.stroke}' stroke-width='3'/>
-      <g transform='translate(28,28)' shape-rendering="crispEdges">
-        <svg viewBox='${viewBox}' width='32' height='32'>${iconContent}</svg>
-      </g>
-    </svg>`;
-    return crearUrlDatos(svg);
-  }
-  
-  const blueColors = { id: 'blue', gradStart: '#5aa4ff', gradEnd: '#2b58a6', stroke: '#0b214b', iconFill: '#e9f3ff' };
-  const grayColors = { id: 'gray', gradStart: '#e0e0e0', gradEnd: '#a0a0a0', stroke: '#404040', iconFill: '#202020' };
-
-  // ========= ICONOS PIXELADOS REDISEÑADOS =========
-  const icoMutePath = `<path d='M-10-6 h4 v12 h-4 z M-4-10 l8-6 v24 l-8-6' fill='${blueColors.iconFill}'/><path d='M4-12 v2 M6-14 v6 M8-12 v2' stroke='${blueColors.iconFill}' stroke-width='2' stroke-linecap='round'/>`;
-  const icoInfoPath = `<path d='M-2-12 h4 v4 h-4 z M-4-6 h8 v18 h-8 z' fill='${blueColors.iconFill}'/>`;
-  const icoGithubPath = `<path d='M-12 0 v-4 h4 v-2 h-4 v-2 h2 v-4 h12 v4 h2 v2 h-4 v2 h4 v4 a8 8 0 0 1 -16 0z M-6-2 h4 v4 h-4z M6-2 h4 v4 h-4z' fill='${blueColors.iconFill}'/><path d='M-12 2 h2 v6 h-4 v-4 a4 4 0 0 1 2-2z M10 2 a4 4 0 0 1 2 2 v4 h-4 v-6 h2z' fill='${blueColors.iconFill}'/>`;
-  const icoFSPath = `<path d='M-14-14 h8 v2 h-6 v6 h-2z M-14 14 h2 v-6 h6 v-2 h-8z M14 14 h-8 v-2 h6 v-6 h2z M14-14 h-2 v6 h-6 v2 h8z' fill='${blueColors.iconFill}'/>`;
-  const icoSharePath = `<path d='M4 6 h6 v4 h-6z M-10 6 h6 v4 h-6z M-2 -8 h6 v4 h-6z M0 0 l-6 4 M4 4 l-1-6 M4 4 l6 0' stroke='${blueColors.iconFill}' stroke-width='2'/>`;
-
-  const icoExitPath = `<path d='M-10-10 l20 20 M-10 10 l20-20' stroke='${grayColors.iconFill}' stroke-width='4'/>`;
-  const icoContinuePath = `<path d='M-6-10 L8 0 L-6 10 Z' fill='${grayColors.iconFill}'/>`;
-  const icoDivePath = `<path d='M0-12 v10 M-8-2 h16 M0-2 l-8 10 M0-2 l8 10' stroke='${grayColors.iconFill}' stroke-width='4' fill='none'/>`;
-  const icoRetryPath = `<path d='M12 0 A12 12 0 1 1 0 -12' stroke='${grayColors.iconFill}' stroke-width='4' fill='none'/><path d='M0-16 l-6 6 h12 Z' fill='${grayColors.iconFill}'/>`;
-
-  const icoMuteURL = crearBotonSVG(icoMutePath, blueColors);
-  const icoInfoURL = crearBotonSVG(icoInfoPath, blueColors);
-  const icoGithubURL = crearBotonSVG(icoGithubPath, blueColors);
-  const icoFSURL = crearBotonSVG(icoFSPath, blueColors);
-  const icoShareURL = crearBotonSVG(icoSharePath, blueColors);
-  
-  const grayExitURL = crearBotonSVG(icoExitPath, grayColors, '-12 -12 24 24');
-  const grayContinueURL = crearBotonSVG(icoContinuePath, grayColors, '-10 -12 24 24');
-  const grayDiveURL = crearBotonSVG(icoDivePath, grayColors, '-12 -12 24 24');
-  const grayRetryURL = crearBotonSVG(icoRetryPath, grayColors, '-12 -12 24 24');
-
   function actualizarIconos(){ 
-    muteBtn.innerHTML=`<img alt="Silenciar" src="${icoMuteURL}" />`; 
-    infoBtn.innerHTML=`<img alt="Información" src="${icoInfoURL}" />`;
-    githubBtn.innerHTML=`<img alt="GitHub" src="${icoGithubURL}" />`;
-    fsBtn.innerHTML=`<img alt="Pantalla Completa" src="${icoFSURL}" />`; 
-    shareBtn.innerHTML=`<img alt="Compartir" src="${icoShareURL}" />`; 
-    muteBtn.style.opacity = S.estaSilenciado() ? 0.35 : 1; 
-  }
-
-  function configurarBotonesModales(desdePausa){ 
-    const textoInicio = desdePausa ? 'Continuar' : 'Sumergirse';
-    const urlInicio = desdePausa ? grayContinueURL : grayDiveURL;
-    startBtn.innerHTML=`<img alt="${textoInicio}" src="${urlInicio}" />`;
-    restartBtn.innerHTML=`<img alt="Reintentar" src="${grayRetryURL}" />`;
-    closeInfo.innerHTML=`<img alt="Salir" src="${grayExitURL}" />`;
+    if (!muteBtn) return;
+    const slash = document.getElementById('muteSlash');
+    if (S.estaSilenciado()) {
+        muteBtn.classList.add('muted');
+        if (slash) slash.style.display = 'block';
+    } else {
+        muteBtn.classList.remove('muted');
+        if (slash) slash.style.display = 'none';
+    }
   }
   
   // ========= Audio =========
@@ -149,6 +97,7 @@
     }
   }
   function dibujarParticulas() {
+      if (!ctx) return;
       ctx.save();
       for(const p of particulas) { ctx.globalCompositeOperation='lighter'; ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
       ctx.globalCompositeOperation='lighter';
@@ -161,7 +110,7 @@
   function generarExplosionTorpedo(x,y) { for (let i=0; i<20; i++) { const ang=Math.random()*Math.PI*2, spd=30+Math.random()*100; generarParticula(particulasExplosion, {x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:Math.random()*2+1,vida:0.4+Math.random()*0.4,color:'#ff8833'}); } }
   function generarNubeDeTinta(x,y,size) { S.reproducir('ink'); for(let i=0; i<50; i++) { const ang = Math.random()*Math.PI*2, spd = 20+Math.random()*size; generarParticula(particulasTinta, {x,y, vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd, r: 15+Math.random()*size*0.8, vida: 2.5+Math.random()*2, color: '#101010'}); } }
 
-  // ========= Estado y Lógica del Juego =========
+  // ========= Lógica del Juego =========
   let estadoJuego=null, jugador, animales; let teclas={};
   let modoSuperposicion='menu'; let estabaCorriendoAntesCreditos=false;
   let inclinacionRobot=0, inclinacionRobotObjetivo=0; const INCLINACION_MAX=Math.PI/36;
@@ -190,7 +139,7 @@
     particulasTinta = [];
     autoSize();
     iniciarParticulas();
-    if (gameplayHints) gameplayHints.classList.add('hidden');
+    if (gameplayHints) gameplayHints.style.display = 'none';
   }
   
   function dificultadBase(){ if (!estadoJuego) return 0; return estadoJuego.tiempoTranscurrido/180; }
@@ -229,7 +178,7 @@
     animales.push({ x:W+40,y, vx:-velocidad, r:44, carril:indiceCarril, capturado:false, fila, frame:0, timerFrame:0, tamano:96, semillaFase:Math.random()*Math.PI*2, tipo: tipo });
   }
 
-  function disparar(){ if(!jugador || jugador.garra || estadoJuego.bloqueoEntrada>0) return; const baseX=jugador.x*W + oscilarX(), baseY=jugador.y*H; jugador.garra={ x:baseX,y:baseY, dx:1,dy:0, velocidad:1400, fase:'ida', golpeado:null, alcance: W*0.7, recorrido:0 }; S.reproducir('fire'); }
+  function disparar(){ if(!jugador || jugador.garra || !estadoJuego || estadoJuego.bloqueoEntrada>0) return; const baseX=jugador.x*W + oscilarX(), baseY=jugador.y*H; jugador.garra={ x:baseX,y:baseY, dx:1,dy:0, velocidad:1400, fase:'ida', golpeado:null, alcance: W*0.7, recorrido:0 }; S.reproducir('fire'); }
   function lanzarTorpedo() {
     if (!estadoJuego || !estadoJuego.enEjecucion || estadoJuego.enfriamientoTorpedo > 0) return;
     const px=jugador.x*W + oscilarX(), py=jugador.y*H;
@@ -255,11 +204,11 @@
             fase: Math.random() * Math.PI * 2,
         });
     }
-    if (bossHealthContainer) bossHealthContainer.classList.remove('hidden');
+    if (bossHealthContainer) bossHealthContainer.style.display = 'block';
   }
 
   function actualizarJefe(dt) {
-    if (!estadoJuego.jefe) return;
+    if (!estadoJuego || !estadoJuego.jefe) return;
     const jefe = estadoJuego.jefe;
     jefe.timerGolpe = Math.max(0, jefe.timerGolpe - dt);
     jefe.y = H/2 + Math.sin(estadoJuego.tiempoTranscurrido * 0.5) * 50;
@@ -267,15 +216,17 @@
     jefe.timerAtaque -= dt;
     if (jefe.timerAtaque <= 0) {
         const tipoAtaque = Math.random();
-        if (tipoAtaque < 0.45) { // Golpe de tentáculo
+        jefe.estado = 'idle'; // Reset state
+        if (tipoAtaque < 0.45) { 
             jefe.estado = 'attacking_smash';
             const carrilObjetivo = Math.floor(Math.random() * NUM_CARRILES);
             jefe.datosAtaque = { carril: carrilObjetivo, carga: 1.2, y: carriles[carrilObjetivo], progreso: 0 };
-        } else if (tipoAtaque < 0.75) { // Ráfaga de tinta
+            jefe.timerAtaque = 3;
+        } else if (tipoAtaque < 0.75) {
             jefe.estado = 'attacking_ink';
             estadoJuego.proyectilesTinta.push({ x: jefe.x, y: jefe.y, vx: -400, r: 20 });
             jefe.timerAtaque = 3.5;
-        } else { // Generar esbirros
+        } else { 
             jefe.estado = 'attacking_minion';
             for (let i = 0; i < 2; i++) {
                 setTimeout(() => generarAnimal(true), i * 300);
@@ -284,7 +235,7 @@
         }
     }
     
-    if (jefe.estado === 'attacking_smash') {
+    if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
         jefe.datosAtaque.carga -= dt;
         if (jefe.datosAtaque.carga <= 0) {
             jefe.datosAtaque.progreso += dt * 8;
@@ -295,6 +246,7 @@
             }
             if (jefe.datosAtaque.progreso >= 1.2) {
                 jefe.estado = 'idle';
+                jefe.datosAtaque = null;
                 jefe.timerAtaque = 2 + Math.random() * 2;
             }
         }
@@ -302,7 +254,7 @@
   }
   
   function dibujarJefe() {
-    if (!estadoJuego.jefe) return;
+    if (!estadoJuego || !estadoJuego.jefe || !ctx) return;
     const jefe = estadoJuego.jefe;
     ctx.save();
     
@@ -341,25 +293,26 @@
     ctx.arc(pupilaX, jefe.y - 50, 10, 0, Math.PI*2);
     ctx.fill();
     
-    if (jefe.estado === 'attacking_smash' && jefe.datosAtaque.carga > 0) {
-        ctx.fillStyle = 'rgba(255, 50, 50, 0.4)';
-        ctx.fillRect(0, jefe.datosAtaque.y - 20, W, 40);
-        ctx.strokeStyle = '#e04040';
-        ctx.lineWidth = 40;
-        ctx.beginPath();
-        ctx.moveTo(W, jefe.datosAtaque.y);
-        ctx.lineTo(W - 100, jefe.datosAtaque.y + (Math.random()-0.5)*20);
-        ctx.stroke();
-    }
-    if (jefe.estado === 'attacking_smash' && jefe.datosAtaque.carga <= 0) {
-        const tentaculoX = W - jefe.datosAtaque.progreso * (W+200);
-        ctx.strokeStyle = '#e04040';
-        ctx.lineWidth = 40;
-        ctx.beginPath();
-        ctx.moveTo(tentaculoX + 200, jefe.datosAtaque.y-20);
-        ctx.lineTo(tentaculoX, jefe.datosAtaque.y);
-        ctx.lineTo(tentaculoX + 200, jefe.datosAtaque.y+20);
-        ctx.stroke();
+    if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
+        if (jefe.datosAtaque.carga > 0) {
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.4)';
+            ctx.fillRect(0, jefe.datosAtaque.y - 20, W, 40);
+            ctx.strokeStyle = '#e04040';
+            ctx.lineWidth = 40;
+            ctx.beginPath();
+            ctx.moveTo(W, jefe.datosAtaque.y);
+            ctx.lineTo(W - 100, jefe.datosAtaque.y + (Math.random()-0.5)*20);
+            ctx.stroke();
+        } else {
+            const tentaculoX = W - jefe.datosAtaque.progreso * (W+200);
+            ctx.strokeStyle = '#e04040';
+            ctx.lineWidth = 40;
+            ctx.beginPath();
+            ctx.moveTo(tentaculoX + 200, jefe.datosAtaque.y-20);
+            ctx.lineTo(tentaculoX, jefe.datosAtaque.y);
+            ctx.lineTo(tentaculoX + 200, jefe.datosAtaque.y+20);
+            ctx.stroke();
+        }
     }
     
     ctx.restore();
@@ -455,6 +408,7 @@
 
   function renderizar(dt){
     if (estadoJuego) dibujarFondo(dt);
+    if (!ctx) return;
     
     ctx.clearRect(0,0,W,H);
     if (estadoJuego) {
@@ -482,34 +436,69 @@
         ctx.imageSmoothingEnabled = true;
     }
     dibujarParticulas();
-
     dibujarMascaraLuz();
     dibujarHUD();
   }
   
-  function dibujarFondo(dt){ if (!estadoJuego) return;
+  function dibujarFondo(dt){ 
+    if (!estadoJuego || !bgCtx) return;
     const scrollFondo = estadoJuego.nivel !== 3;
-    if(bgListo&&bgAncho&&bgAlto){
+
+    if(bgListo && bgAncho && bgAlto){
         const spd=BG_VELOCIDAD_BASE*(1+0.6*clamp(dificultadBase(),0,2));
         if (scrollFondo) bgOffset=(bgOffset+spd*dt)%bgAncho;
         bgCtx.setTransform(1,0,0,1,0,0); bgCtx.clearRect(0,0,W,H); bgCtx.imageSmoothingEnabled=false;
-        let startX=-Math.floor(bgOffset)-bgAncho; for(let x=startX; x<W+bgAncho; x+=bgAncho){ for(let y=0; y<H+bgAlto; y+=bgAlto){ bgCtx.drawImage(bgImg, Math.round(x), Math.round(y)); } }
-    } else { bgCtx.clearRect(0,0,W,H); }
-    if(fgListo&&fgAncho&&fgAlto){
-        const fspd=FG_VELOCIDAD_BASE*(1+0.6*clamp(dificultadBase(),0,2));
-        if (scrollFondo) fgOffset=(fgOffset+fspd*dt)%fgAncho;
-        const yBase=H-fgAlto; const startXF=-Math.floor(fgOffset)-fgAncho;
-        for(let xx=startXF; xx<W+fgAncho; xx+=fgAncho){ bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase)); }
+        let startX=-Math.floor(bgOffset)-bgAncho; 
+        for(let x=startX; x<W+bgAncho; x+=bgAncho){ 
+            for(let y=0; y<H+bgAlto; y+=bgAlto){ 
+                bgCtx.drawImage(bgImg, Math.round(x), Math.round(y)); 
+            } 
+        }
+        if(fgListo && fgAncho && fgAlto){
+            const fspd=FG_VELOCIDAD_BASE*(1+0.6*clamp(dificultadBase(),0,2));
+            if (scrollFondo) fgOffset=(fgOffset+fspd*dt)%fgAncho;
+            const yBase=H-fgAlto; const startXF=-Math.floor(fgOffset)-fgAncho;
+            for(let xx=startXF; xx<W+fgAncho; xx+=fgAncho){ bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase)); }
+        }
+    } else { 
+        bgCtx.fillStyle = '#06131f';
+        bgCtx.fillRect(0, 0, W, H);
     }
   }
-  function dibujarMascaraLuz(){ if (!estadoJuego) return; fx.clearRect(0,0,W,H);
+
+  function dibujarMascaraLuz(){ 
+    if (!estadoJuego || !fx) return; 
+    fx.clearRect(0,0,W,H);
     const oscuridadObjetivo = estadoJuego.nivel === 1 ? estadoJuego.tiempoTranscurrido / 180 : (estadoJuego.nivel === 2 ? 0.95 : 1.0);
     const alpha=lerp(0,0.9, clamp(oscuridadObjetivo,0,1));
-    if(alpha<=0.001) return; fx.globalCompositeOperation='source-over'; fx.fillStyle='rgba(0,0,0,'+alpha.toFixed(3)+')'; fx.fillRect(0,0,W,H); if(estadoJuego.luzVisible && jugador){ const px=jugador.x*W + oscilarX(), py=jugador.y*H; const ang=inclinacionRobot; const ux=Math.cos(ang), uy=Math.sin(ang); const vx=-Math.sin(ang), vy=Math.cos(ang); const ax=Math.round(px + ux*(spriteAncho*robotEscala*0.5 - 11) + vx*(-4)); const ay=Math.round(py + uy*(spriteAncho*robotEscala*0.5 - 11) + vy*(-4)); const L=Math.min(W*0.65,560); const theta=Math.PI/9; const endx=ax+ux*L, endy=ay+uy*L; const half=Math.tan(theta)*L; const pTopX=endx+vx*half, pTopY=endy+vy*half; const pBotX=endx-vx*half, pBotY=endy-vy*half; let g=fx.createLinearGradient(ax,ay,endx,endy); g.addColorStop(0.00,'rgba(255,255,255,1.0)'); g.addColorStop(0.45,'rgba(255,255,255,0.5)'); g.addColorStop(1.00,'rgba(255,255,255,0.0)'); fx.globalCompositeOperation='destination-out'; fx.fillStyle=g; fx.beginPath(); fx.moveTo(ax,ay); fx.lineTo(pTopX,pTopY); fx.lineTo(pBotX,pBotY); fx.closePath(); fx.fill(); const rg=fx.createRadialGradient(ax,ay,0, ax,ay,54); rg.addColorStop(0,'rgba(255,255,255,1.0)'); rg.addColorStop(1,'rgba(255,255,255,0.0)'); fx.fillStyle=rg; fx.beginPath(); fx.arc(ax,ay,54,0,Math.PI*2); fx.fill(); fx.globalCompositeOperation='lighter'; const gGlow=fx.createLinearGradient(ax,ay,endx,endy); gGlow.addColorStop(0.00,'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60,'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00,'rgba(255,255,255,0.00)'); fx.fillStyle=gGlow; fx.beginPath(); fx.moveTo(ax,ay); fx.lineTo(pTopX,pTopY); fx.lineTo(pBotX,pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation='source-over'; }
+    if(alpha<=0.001) return; 
+    fx.globalCompositeOperation='source-over'; 
+    fx.fillStyle='rgba(0,0,0,'+alpha.toFixed(3)+')'; 
+    fx.fillRect(0,0,W,H); 
+    if(estadoJuego.luzVisible && jugador){ 
+        const px=jugador.x*W + oscilarX(), py=jugador.y*H; const ang=inclinacionRobot; const ux=Math.cos(ang), uy=Math.sin(ang); const vx=-Math.sin(ang), vy=Math.cos(ang); 
+        const ax=Math.round(px + ux*(spriteAncho*robotEscala*0.5 - 11) + vx*(-4)); 
+        const ay=Math.round(py + uy*(spriteAncho*robotEscala*0.5 - 11) + vy*(-4)); 
+        const L=Math.min(W*0.65,560); const theta=Math.PI/9; const endx=ax+ux*L, endy=ay+uy*L; const half=Math.tan(theta)*L; 
+        const pTopX=endx+vx*half, pTopY=endy+vy*half; const pBotX=endx-vx*half, pBotY=endy-vy*half; 
+        let g=fx.createLinearGradient(ax,ay,endx,endy); g.addColorStop(0.00,'rgba(255,255,255,1.0)'); g.addColorStop(0.45,'rgba(255,255,255,0.5)'); g.addColorStop(1.00,'rgba(255,255,255,0.0)'); 
+        fx.globalCompositeOperation='destination-out'; 
+        fx.fillStyle=g; fx.beginPath(); fx.moveTo(ax,ay); fx.lineTo(pTopX,pTopY); fx.lineTo(pBotX,pBotY); fx.closePath(); fx.fill(); 
+        const rg=fx.createRadialGradient(ax,ay,0, ax,ay,54); rg.addColorStop(0,'rgba(255,255,255,1.0)'); rg.addColorStop(1,'rgba(255,255,255,0.0)'); 
+        fx.fillStyle=rg; fx.beginPath(); fx.arc(ax,ay,54,0,Math.PI*2); fx.fill(); 
+        fx.globalCompositeOperation='lighter'; 
+        const gGlow=fx.createLinearGradient(ax,ay,endx,endy); gGlow.addColorStop(0.00,'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60,'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00,'rgba(255,255,255,0.00)'); 
+        fx.fillStyle=gGlow; fx.beginPath(); fx.moveTo(ax,ay); fx.lineTo(pTopX,pTopY); fx.lineTo(pBotX,pBotY); fx.closePath(); fx.fill(); 
+        fx.globalCompositeOperation='source-over'; 
+    }
   }
   
+  // ==========================================================
+  // ===== FUNCIÓN DE HUD RESTAURADA Y CORREGIDA =============
+  // ==========================================================
   function dibujarHUD(){ 
-    if (!estadoJuego) return; 
+    // Parte 1: Actualizar el HUD superior del DOM
+    if (!estadoJuego || !hudLevelText || !hudObjectiveText) return; 
     
     if(estadoJuego.enEjecucion) {
         const configNivel = CONFIG_NIVELES[estadoJuego.nivel-1];
@@ -521,8 +510,12 @@
         hudObjectiveText.textContent = textoObjetivo;
     }
 
+    // Parte 2: Limpiar y dibujar el HUD inferior en el canvas
+    if (!hud) return;
     hud.clearRect(0,0,W,H); 
     if (!estadoJuego.enEjecucion) return; 
+
+    // ---- CÓDIGO RESTAURADO ----
     const s=estadoJuego, valorPuntuacion=s.puntuacion||0, valorVidas=s.vidas||3, valorProfundidad=Math.floor(s.profundidad_m||0); 
     
     const padX=18, padY=18, lh=22;
@@ -531,28 +524,59 @@
     hud.font='18px "Press Start 2P", monospace'; 
     hud.textAlign='left'; 
     hud.textBaseline='alphabetic';
+    hud.shadowColor = 'rgba(0,0,0,0.7)';
+    hud.shadowBlur = 4;
 
-    const filas=[{label:'SCORE',value:String(valorPuntuacion)},{label:'DEPTH',value:valorProfundidad+' m'},{label:'RECORD',value:String(puntuacionMaxima)}]; const totalFilas=filas.length+2; const y0=H-padY-lh*totalFilas;
-    let maxAnchoEtiqueta=0; for(let i=0;i<filas.length;i++) maxAnchoEtiqueta=Math.max(maxAnchoEtiqueta, hud.measureText(filas[i].label).width);
-    const gap=16; const valueX=padX+maxAnchoEtiqueta+gap; for(let i=0;i<filas.length;i++){ const y=y0+i*lh; hud.fillText(filas[i].label, padX, y); hud.fillText(filas[i].value, valueX, y); }
-    const livesY=y0+filas.length*lh; hud.fillText('VIDAS', padX, livesY); hud.fillStyle='#ff4d4d'; hud.fillText('♥'.repeat(valorVidas)+'♡'.repeat(3-valorVidas), valueX, livesY); hud.fillStyle='#ffffff';
-    const torpedoY = livesY + lh; hud.fillText('TORPEDO', padX, torpedoY); const torpedoListo = s.enfriamientoTorpedo <= 0; hud.fillStyle = torpedoListo ? '#66ff66' : '#ff6666'; hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO...', valueX, torpedoY); const barW = hud.measureText('RECARGANDO...').width; const barH = 4; const barX = valueX; const progress = clamp(1 - (s.enfriamientoTorpedo / ENFRIAMIENTO_TORPEDO), 0, 1); hud.fillStyle = 'rgba(255,255,255,0.2)'; hud.fillRect(barX, torpedoY + 2, barW, barH); hud.fillStyle = '#66ff66'; hud.fillRect(barX, torpedoY + 2, barW * progress, barH);
+    const filas=[{label:'SCORE',value:String(valorPuntuacion)},{label:'DEPTH',value:valorProfundidad+' m'},{label:'RECORD',value:String(puntuacionMaxima)}];
+    const totalFilas=filas.length+2; 
+    const y0=H-padY-lh*totalFilas;
+    let maxAnchoEtiqueta=0; 
+    for(let i=0;i<filas.length;i++) maxAnchoEtiqueta=Math.max(maxAnchoEtiqueta, hud.measureText(filas[i].label).width);
+    const gap=16; 
+    const valueX=padX+maxAnchoEtiqueta+gap; 
+    for(let i=0;i<filas.length;i++){ 
+        const y=y0+i*lh; 
+        hud.fillText(filas[i].label, padX, y); 
+        hud.fillText(filas[i].value, valueX, y); 
+    }
+    const livesY=y0+filas.length*lh; 
+    hud.fillText('VIDAS', padX, livesY); 
+    hud.fillStyle='#ff4d4d'; 
+    hud.fillText('♥'.repeat(valorVidas)+'♡'.repeat(Math.max(0,3-valorVidas)), valueX, livesY); 
+    hud.fillStyle='#ffffff';
+    const torpedoY = livesY + lh; 
+    hud.fillText('TORPEDO', padX, torpedoY); 
+    const torpedoListo = s.enfriamientoTorpedo <= 0; 
+    hud.fillStyle = torpedoListo ? '#66ff66' : '#ff6666'; 
+    hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO...', valueX, torpedoY); 
     
+    if (!torpedoListo) {
+        const barW = hud.measureText('RECARGANDO...').width; 
+        const barH = 4; 
+        const barX = valueX; 
+        const progress = clamp(1 - (s.enfriamientoTorpedo / ENFRIAMIENTO_TORPEDO), 0, 1); 
+        hud.fillStyle = 'rgba(255,255,255,0.2)'; 
+        hud.fillRect(barX, torpedoY + 2, barW, barH); 
+        hud.fillStyle = '#66ff66'; 
+        hud.fillRect(barX, torpedoY + 2, barW * progress, barH);
+    }
+    hud.restore();
+    // ---- FIN DEL CÓDIGO RESTAURADO ----
+
+    // Parte 3: Actualizar la barra de vida del jefe
     if (s.nivel === 3 && s.jefe) {
         const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1);
         if (bossHealthBar) {
             bossHealthBar.style.width = (hpProgress * 100) + '%';
         }
     } else {
-        if (bossHealthContainer && !bossHealthContainer.classList.contains('hidden')) {
-            bossHealthContainer.classList.add('hidden');
+        if (bossHealthContainer && bossHealthContainer.style.display !== 'none') {
+            bossHealthContainer.style.display = 'none';
         }
     }
-    
-    hud.restore();
   }
   
-  let ultimo=0; function bucle(t){ const dt=Math.min(0.033,(t-ultimo)/1000||0); ultimo=t; if(estadoJuego.faseJuego==='playing') actualizar(dt); renderizar(dt); requestAnimationFrame(bucle); }
+  let ultimo=0; function bucle(t){ const dt=Math.min(0.033,(t-ultimo)/1000||0); ultimo=t; if(estadoJuego && estadoJuego.faseJuego==='playing') actualizar(dt); renderizar(dt); requestAnimationFrame(bucle); }
 
   let __iniciando=false; 
   function iniciarJuego(){ 
@@ -569,20 +593,65 @@
     S.init(); 
     S.detener('music'); 
     S.bucle('music'); 
-    overlay.style.display='none'; 
+    if(overlay) overlay.style.display='none'; 
     
-    if (gameplayHints) {
-        gameplayHints.classList.remove('hidden');
-    }
+    if (gameplayHints) gameplayHints.style.display = 'flex';
     
     setTimeout(function(){ __iniciando=false; },200); 
   }
   
-  function perderJuego(){ if(!estadoJuego || estadoJuego.faseJuego === 'gameover') return; estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion=false; S.detener('music'); S.reproducir('gameover'); if(estadoJuego.puntuacion>puntuacionMaxima){ puntuacionMaxima=estadoJuego.puntuacion; guardarPuntuacionMaxima(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='Fin de la expedición'; finalP.textContent='Gracias por ser parte'; statScore.textContent='PUNTUACIÓN: '+estadoJuego.puntuacion; statDepth.textContent='PROFUNDIDAD: '+estadoJuego.profundidad_m+' m'; statSpecimens.textContent='ESPECÍMENES: '+estadoJuego.rescatados; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline-block'; modoSuperposicion='gameover'; overlay.style.display='grid'; if (bossHealthContainer) bossHealthContainer.classList.add('hidden'); if(gameplayHints) gameplayHints.classList.add('hidden'); }
-  function ganarJuego(){ if(!estadoJuego || estadoJuego.faseJuego === 'gameover') return; estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion=false; S.detener('music'); S.reproducir('victory'); if(estadoJuego.puntuacion>puntuacionMaxima){ puntuacionMaxima=estadoJuego.puntuacion; guardarPuntuacionMaxima(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='¡VICTORIA!'; titleEl.style.color = '#ffdd77'; finalP.textContent='¡Has conquistado las profundidades!'; statScore.textContent='PUNTUACIÓN: '+estadoJuego.puntuacion; statDepth.textContent='PROFUNDIDAD: '+estadoJuego.profundidad_m+' m'; statSpecimens.textContent='ESPECÍMENES: '+estadoJuego.rescatados; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline-block'; modoSuperposicion='gameover'; overlay.style.display='grid'; if (bossHealthContainer) bossHealthContainer.classList.add('hidden'); if(gameplayHints) gameplayHints.classList.add('hidden'); }
+  function perderJuego(){ 
+    if(!estadoJuego || estadoJuego.faseJuego === 'gameover') return; 
+    estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion=false; 
+    S.detener('music'); S.reproducir('gameover'); 
+    if(estadoJuego.puntuacion>puntuacionMaxima){ puntuacionMaxima=estadoJuego.puntuacion; guardarPuntuacionMaxima(); } 
+    
+    if (mainMenu) mainMenu.style.display = 'block'; 
+    if (levelTransition) levelTransition.style.display = 'none'; 
+    if (brandLogo) brandLogo.style.display='none'; 
+    if (titleEl) { titleEl.style.display='block'; titleEl.textContent='Fin de la expedición'; titleEl.style.color = ''; }
+    if (finalP) finalP.textContent='Gracias por ser parte.'; 
+    if (statScore) statScore.textContent='PUNTUACIÓN: '+estadoJuego.puntuacion; 
+    if (statDepth) statDepth.textContent='PROFUNDIDAD: '+estadoJuego.profundidad_m+' m'; 
+    if (statSpecimens) statSpecimens.textContent='ESPECÍMENES: '+estadoJuego.rescatados; 
+    if (finalStats) finalStats.style.display='block'; 
+    if (mainExtras) mainExtras.style.display='none'; 
+    if (startBtn) startBtn.style.display='none'; 
+    if (restartBtn) restartBtn.style.display='inline-block'; 
+    
+    modoSuperposicion='gameover'; 
+    if (overlay) overlay.style.display='grid'; 
+    if (bossHealthContainer) bossHealthContainer.style.display = 'none'; 
+    if(gameplayHints) gameplayHints.style.display = 'none'; 
+  }
+
+  function ganarJuego(){ 
+    if(!estadoJuego || estadoJuego.faseJuego === 'gameover') return; 
+    estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion=false; 
+    S.detener('music'); S.reproducir('victory'); 
+    if(estadoJuego.puntuacion>puntuacionMaxima){ puntuacionMaxima=estadoJuego.puntuacion; guardarPuntuacionMaxima(); } 
+    
+    if (mainMenu) mainMenu.style.display = 'block'; 
+    if (levelTransition) levelTransition.style.display = 'none'; 
+    if (brandLogo) brandLogo.style.display='none'; 
+    if (titleEl) { titleEl.style.display='block'; titleEl.textContent='¡VICTORIA!'; titleEl.style.color = '#ffdd77'; }
+    if (finalP) finalP.textContent='¡Has conquistado las profundidades!'; 
+    if (statScore) statScore.textContent='PUNTUACIÓN: '+estadoJuego.puntuacion; 
+    if (statDepth) statDepth.textContent='PROFUNDIDAD: '+estadoJuego.profundidad_m+' m'; 
+    if (statSpecimens) statSpecimens.textContent='ESPECÍMENES: '+estadoJuego.rescatados; 
+    if (finalStats) finalStats.style.display='block'; 
+    if (mainExtras) mainExtras.style.display='none'; 
+    if (startBtn) startBtn.style.display='none'; 
+    if (restartBtn) restartBtn.style.display='inline-block'; 
+
+    modoSuperposicion='gameover'; 
+    if (overlay) overlay.style.display='grid'; 
+    if (bossHealthContainer) bossHealthContainer.style.display = 'none'; 
+    if(gameplayHints) gameplayHints.style.display = 'none'; 
+  }
 
   function comprobarCompletadoNivel() {
-    if (estadoJuego.faseJuego !== 'playing') return;
+    if (!estadoJuego || estadoJuego.faseJuego !== 'playing') return;
     const config = CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (estadoJuego.valorObjetivoNivel >= config.meta) {
         const proximoNivel = estadoJuego.nivel + 1;
@@ -598,11 +667,11 @@
     estadoJuego.faseJuego = 'transition';
     estadoJuego.enEjecucion = false;
     const config = CONFIG_NIVELES[proximoNivel - 1];
-    mainMenu.style.display = 'none';
-    levelTitle.textContent = config.nombre;
-    levelDesc.textContent = config.objetivo;
-    levelTransition.style.display = 'block';
-    overlay.style.display = 'grid';
+    if (mainMenu) mainMenu.style.display = 'none';
+    if (levelTitle) levelTitle.textContent = config.nombre;
+    if (levelDesc) levelDesc.textContent = config.objetivo;
+    if (levelTransition) levelTransition.style.display = 'block';
+    if (overlay) overlay.style.display = 'grid';
     
     setTimeout(() => {
         iniciarSiguienteNivel(proximoNivel);
@@ -610,6 +679,7 @@
   }
 
   function iniciarSiguienteNivel(nivel) {
+    if (!estadoJuego) return;
     estadoJuego.nivel = nivel;
     estadoJuego.valorObjetivoNivel = 0;
     animales = [];
@@ -618,59 +688,109 @@
     if (nivel === 3) {
         generarJefe();
     }
-    overlay.style.display = 'none';
+    if(overlay) overlay.style.display = 'none';
     estadoJuego.faseJuego = 'playing';
     estadoJuego.enEjecucion = true;
     estadoJuego.bloqueoEntrada = 0.5;
   }
-
+  
+  // ========= Eventos y Controles =========
+  
   addEventListener('keydown', function(e){ teclas[e.key]=true; if(e.code==='Space') e.preventDefault(); if(e.key==='Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
   addEventListener('keyup', function(e){ teclas[e.key]=false; });
-  startBtn.onclick=function(e){ e.stopPropagation(); if(modoSuperposicion==='pause'){ overlay.style.display='none'; if(estadoJuego){ estadoJuego.enEjecucion=true; estadoJuego.bloqueoEntrada=0.15; if(gameplayHints) gameplayHints.classList.remove('hidden'); } S.bucle('music'); } else { iniciarJuego(); } };
-  restartBtn.onclick=iniciarJuego; muteBtn.onclick=function(){ S.alternarSilenciado(); actualizarIconos(); };
+
+  if (startBtn) {
+    startBtn.onclick=function(e){ e.stopPropagation(); if(modoSuperposicion==='pause'){ if(overlay) overlay.style.display='none'; if(estadoJuego){ estadoJuego.enEjecucion=true; estadoJuego.bloqueoEntrada=0.15; if(gameplayHints) gameplayHints.style.display = 'flex'; } S.bucle('music'); } else { iniciarJuego(); } };
+  }
+  if (restartBtn) restartBtn.onclick=iniciarJuego; 
+  if (muteBtn) muteBtn.onclick=function(){ S.alternarSilenciado(); actualizarIconos(); };
   
   function mostrarVistaMenuPrincipal(desdePausa) {
+    if (!mainMenu) return;
     const mainMenuHeader = document.getElementById('mainMenuHeader');
+    if (mainMenuHeader) mainMenuHeader.style.display = 'block';
+    if (brandLogo) brandLogo.style.display = 'block';
+
+    if(finalP) finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas.';
+    if(titleEl) titleEl.style.display = 'none';
+    if(finalStats) finalStats.style.display = 'none';
+    if(mainExtras) mainExtras.style.display = desdePausa ? 'block' : 'none';
+    if(startBtn) startBtn.style.display = 'inline-block';
+    if(restartBtn) restartBtn.style.display = 'none';
     
-    if (desdePausa) {
-        mainMenuHeader.innerHTML = '<img id="logoHUD" src="img/logo.png" alt="logo">';
-        finalP.innerHTML = 'LA EXPEDICIÓN<br/>CAPTURA TANTOS ESPECÍMENES<br/>COMO PUEDAS';
-        titleEl.style.display = 'none';
-        finalStats.style.display = 'none';
-        mainExtras.style.display = 'block';
-        startBtn.style.display = 'inline-block';
-        restartBtn.style.display = 'inline-block';
-
-    } else { // Menú inicial
-        mainMenuHeader.innerHTML = '<img id="brandLogo" src="img/logo.png" alt="La Expedición" style="width: min(350px, 80vw); margin-bottom: 12px; image-rendering: pixelated;">';
-        finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas';
-        titleEl.style.display = 'none';
-        finalStats.style.display = 'none';
-        mainExtras.style.display = 'none';
-        startBtn.style.display = 'inline-block';
-        restartBtn.style.display = 'none';
-    }
-
-    configurarBotonesModales(desdePausa);
     modoSuperposicion = desdePausa ? 'pause' : 'menu';
-    mainMenu.style.display = 'block';
-    levelTransition.style.display = 'none';
-    overlay.style.display = 'grid';
+    if(mainMenu) mainMenu.style.display = 'block';
+    if(levelTransition) levelTransition.style.display = 'none';
+    if(overlay) overlay.style.display = 'grid';
+  }
+
+  function abrirMenuPrincipal(){ 
+      if(estadoJuego && estadoJuego.enEjecucion){ 
+          estadoJuego.enEjecucion=false; 
+          S.pausar('music'); 
+          mostrarVistaMenuPrincipal(true); 
+          if(gameplayHints) gameplayHints.style.display = 'none'; 
+      } 
   }
   
+  if (infoBtn) {
+      infoBtn.onclick = () => {
+          estabaCorriendoAntesCreditos=!!(estadoJuego&&estadoJuego.enEjecucion); 
+          if(estadoJuego) estadoJuego.enEjecucion=false; 
+          S.pausar('music'); 
+          if(infoOverlay) infoOverlay.style.display='grid'; 
+          if(gameplayHints) gameplayHints.style.display = 'none';
+      };
+  }
 
-  function abrirMenuPrincipal(){ if(estadoJuego && estadoJuego.enEjecucion){ estadoJuego.enEjecucion=false; S.pausar('music'); mostrarVistaMenuPrincipal(true); if(gameplayHints) gameplayHints.classList.add('hidden'); } }
-  infoBtn.onclick = abrirMenuPrincipal;
-  githubBtn.onclick = () => window.open('https://github.com/HectorDanielAyarachiFuentes', '_blank');
+  if (githubBtn) githubBtn.onclick = () => window.open('https://github.com/HectorDanielAyarachiFuentes', '_blank');
+  if (logoHUD) logoHUD.addEventListener('click', abrirMenuPrincipal);
+  
+  if (closeInfo) {
+    closeInfo.onclick=function(){ 
+        if (infoOverlay) infoOverlay.style.display='none'; 
+        if(estabaCorriendoAntesCreditos && (!overlay || overlay.style.display==='none')){ 
+            if(estadoJuego){ estadoJuego.enEjecucion=true; } S.bucle('music'); 
+            if(gameplayHints) gameplayHints.style.display = 'flex'; 
+        } 
+    };
+  }
 
-  logoHUD.addEventListener('click', function(){ estabaCorriendoAntesCreditos=!!(estadoJuego&&estadoJuego.enEjecucion); if(estadoJuego){ estadoJuego.enEjecucion=false; } S.pausar('music'); infoOverlay.style.display='grid'; if(gameplayHints) gameplayHints.classList.add('hidden'); });
-  closeInfo.onclick=function(){ infoOverlay.style.display='none'; if(estabaCorriendoAntesCreditos && overlay.style.display==='none'){ if(estadoJuego){ estadoJuego.enEjecucion=true; } S.bucle('music'); if(gameplayHints) gameplayHints.classList.remove('hidden'); } };
-  fsBtn.onclick=function(){ alternarPantallaCompleta(); };
-  if(shareBtn){ shareBtn.onclick = async function(){ let estabaCorriendo = !!(estadoJuego && estadoJuego.enEjecucion); if(estabaCorriendo){ estadoJuego.enEjecucion=false; S.pausar('music'); } try{ if(navigator.share){ await navigator.share({ title:'Expedición Submarina', text:'¡He conquistado las profundidades! ¿Puedes tú?', url: location.href }); } }catch(_){} finally{ if(estabaCorriendo && overlay.style.display==='none'){ estadoJuego.enEjecucion=true; S.bucle('music'); } } }; }
-  overlay.addEventListener('click', function(e){ if(e.target===overlay && overlay.style.display!=='none' && restartBtn.style.display==='none' && estadoJuego.faseJuego !== 'transition'){ if(modoSuperposicion==='pause'){ overlay.style.display='none'; if(estadoJuego){ estadoJuego.enEjecucion=true; estadoJuego.bloqueoEntrada=0.15; if(gameplayHints) gameplayHints.classList.remove('hidden');} S.bucle('music'); } else { iniciarJuego(); } } });
+  if (fsBtn) fsBtn.onclick=function(){ alternarPantallaCompleta(); };
+
+  if(shareBtn){ 
+    shareBtn.onclick = async function(){ 
+      let estabaCorriendo = !!(estadoJuego && estadoJuego.enEjecucion); 
+      if(estabaCorriendo){ estadoJuego.enEjecucion=false; S.pausar('music'); } 
+      try{ 
+        if(navigator.share){ 
+          await navigator.share({ title:'La Expedición', text:'¡He conquistado las profundidades! ¿Puedes tú?', url: location.href }); 
+        } 
+      }catch(_){} 
+      finally{ 
+        if(estabaCorriendo && (!overlay || overlay.style.display==='none')){ 
+          if (estadoJuego) estadoJuego.enEjecucion=true; 
+          S.bucle('music'); 
+        } 
+      } 
+    }; 
+  }
+  
+  if (overlay) {
+      overlay.addEventListener('click', function(e){ 
+          if(e.target===overlay && overlay.style.display!=='none' && (!restartBtn || restartBtn.style.display==='none') && estadoJuego && estadoJuego.faseJuego !== 'transition'){ 
+              if(modoSuperposicion==='pause'){ 
+                  overlay.style.display='none'; 
+                  if(estadoJuego){ estadoJuego.enEjecucion=true; estadoJuego.bloqueoEntrada=0.15; if(gameplayHints) gameplayHints.style.display = 'flex';} S.bucle('music'); 
+              } else { 
+                  iniciarJuego(); 
+              } 
+          } 
+      });
+  }
 
   let arrastreId=-1, arrastreActivo=false, arrastreY=0;
-  function estaSobreUI(x,y){ const elementos=[muteBtn, infoBtn, fsBtn, shareBtn, overlay, infoOverlay]; for (const el of elementos){ if(!el) continue; const style=getComputedStyle(el); if(style.display==='none'||style.visibility==='hidden') continue; const r=el.getBoundingClientRect(); if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return true; } return false; }
+  function estaSobreUI(x,y){ const elementos=[muteBtn, infoBtn, fsBtn, shareBtn, githubBtn, overlay, infoOverlay]; for (const el of elementos){ if(!el) continue; const style=getComputedStyle(el); if(style.display==='none'||style.visibility==='hidden') continue; const r=el.getBoundingClientRect(); if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return true; } return false; }
   window.addEventListener('pointerdown', (e) => { if (estaSobreUI(e.clientX, e.clientY)) return; const tapX = e.clientX; if (tapX < W * 0.4) { arrastreId = e.pointerId; arrastreActivo = true; arrastreY = e.clientY; e.preventDefault(); } else if (tapX > W * 0.6) { if(!estadoJuego||!estadoJuego.enEjecucion) return; if(estadoJuego.bloqueoEntrada===0){ if(!jugador.garra){ disparar(); } else if(jugador.garra.fase==='ida'){ jugador.garra.fase='retorno'; } } } else { lanzarTorpedo(); } }, {passive:false});
   window.addEventListener('pointermove', (e) => { if (!arrastreActivo || e.pointerId !== arrastreId) return; arrastreY = e.clientY; e.preventDefault(); }, {passive:false});
   window.addEventListener('pointerup', (e) => { if (e.pointerId === arrastreId) { arrastreActivo = false; arrastreId = -1; } }, {passive:false});
@@ -680,24 +800,22 @@
 
   function autoSize(){ 
     const topHud = document.getElementById('top-hud');
-    let alturaTotalHud = topHud ? topHud.offsetHeight : 0;
+    const alturaTotalHud = topHud ? topHud.offsetHeight : 70;
     
-    if (window.matchMedia("(pointer: coarse)").matches) {
-        const barraPistas = document.getElementById('gameplay-hints');
-        if (barraPistas && getComputedStyle(barraPistas).display !== 'none') {
-            alturaTotalHud -= barraPistas.offsetHeight;
-        }
-    }
-
     const v={w:innerWidth, h:innerHeight - alturaTotalHud}; 
-    [bgCanvas,cvs,fxCanvas,hudCanvas].forEach(c=>{ c.width=v.w; c.height=v.h; }); 
+    [bgCanvas,cvs,fxCanvas,hudCanvas].forEach(c=>{ if (c) {c.width=v.w; c.height=v.h;} }); 
     W=v.w; 
     H=v.h; 
     calcularCarriles(); 
-    if(!estadoJuego || !estadoJuego.enEjecucion) { iniciarParticulas(); } 
+    if(!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); } 
   }
   window.addEventListener('resize', autoSize);
   
-  autoSize(); reiniciar(); requestAnimationFrame(bucle); S.init(); actualizarIconos(); mostrarVistaMenuPrincipal(false);
+  // ======== INICIO ========
+  autoSize(); 
+  reiniciar(); 
+  requestAnimationFrame(bucle); 
+  S.init(); 
+  actualizarIconos(); 
+  mostrarVistaMenuPrincipal(false);
 })();
-
