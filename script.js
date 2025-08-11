@@ -357,15 +357,25 @@
     
     for(let i=animals.length-1;i>=0;i--){
         const a=animals[i]; a.x+=a.vx*dt; a.frameTimer+=dt; if(a.frameTimer>=0.2){ a.frameTimer-=0.2; a.frame^=1; }
-        // Player collision
+        
+        // Player collision: ANY collision with an uncaptured creature causes damage.
         if (!a.captured && Math.hypot(player.x*W+bobX() - a.x, player.y*H - a.y) < player.r + 20) {
-            if (a.type === 'aggressive') {
-                animals.splice(i, 1);
-                const before=state.lives; if(state.lives>0) state.lives--; if(state.lives<before){ state.lifeAnim=0.6; S.play('lose'); } if(state.lives<=0) loseGame();
-                continue;
-            }
+            animals.splice(i, 1); // The creature is removed on collision
+            const before=state.lives; 
+            if(state.lives > 0) state.lives--; 
+            if(state.lives < before) { 
+                state.lifeAnim=0.6; 
+                S.play('lose'); 
+            } 
+            if(state.lives <= 0) loseGame();
+            continue; // Move to the next creature to avoid further checks
         }
-        if(!a.captured && a.x<-a.r){ animals.splice(i,1); if(a.type !== 'aggressive'){ const before=state.lives; if(state.lives>0) state.lives--; if(state.lives<before){ state.lifeAnim=0.6; S.play('lose'); } if(state.lives<=0) loseGame(); } }
+
+        // If a creature leaves the screen, it's just removed without penalty.
+        if(!a.captured && a.x < -a.r){ 
+            animals.splice(i,1); 
+            // No life is lost here anymore.
+        }
     }
     
     if(player.h){ const h=player.h, spd=h.speed; if(h.phase==='out'){ h.x+=h.dx*spd*dt; h.traveled+=spd*dt; for(let j=0;j<animals.length;j++){ const aa=animals[j]; if(!h.hit && !aa.captured && aa.type === 'normal' && Math.hypot(aa.x-h.x,aa.y-h.y)<aa.r+8){ h.hit=aa; aa.captured=true; break; } } if(h.hit || h.traveled>=h.range) h.phase='return'; }
