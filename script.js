@@ -102,7 +102,7 @@
   // ========= Audio =========
   const RAW='https://raw.githubusercontent.com/baltaz/the_expedition/main/sfx/';
   const MUSIC='https://raw.githubusercontent.com/baltaz/the_expedition/main/music/the%20expedition.mp3';
-  const S=(function(){ let created=false; const a={}; let _muted=false; const srcMap={ fire:RAW+'sfx_fire.mp3', lose:RAW+'sfx_lose.mp3', gameover:RAW+'sfx_gameover.mp3', music:MUSIC, torpedo: 'sonidos/torpedo.wav', boss_hit: 'sonidos/boss_hit.mp3', victory: 'sonidos/victoria.mp3', ink: 'https://cdn.freesound.org/previews/49/49110_391983-lq.mp3' };
+  const S=(function(){ let created=false; const a={}; let _muted=false; const srcMap={ fire:RAW+'sfx_fire.mp3', lose:RAW+'sfx_lose.mp3', gameover:RAW+'sfx_gameover.mp3', music:MUSIC, torpedo: 'sonidos/torpedo.wav', boss_hit: 'sonidos/boss_hit.mp3', victory: 'sonidos/victoria.mp3', ink: 'sonidos/ink.wav' };
     function init(){ if(created) return; created=true; for(const k in srcMap){ const el=new Audio(srcMap[k]); el.preload='auto'; if(k==='music'){ el.loop=true; el.volume=0.35; } else { el.volume=0.5; } a[k]=el; } }
     function play(k){ const el=a[k]; if(!el) return; try{ el.currentTime=0; el.play(); }catch(e){} }
     function loop(k){ const el=a[k]; if(!el) return; if(el.paused){ try{ el.play(); }catch(e){} } }
@@ -630,7 +630,7 @@
     const mainMenuHeader = document.getElementById('mainMenuHeader');
     
     if (fromPause) {
-        mainMenuHeader.innerHTML = '<img id="logoHUD" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/brand/logo_hud.png" alt="logo">';
+        mainMenuHeader.innerHTML = '<img id="logoHUD" src="img\logo.png" alt="logo">';
         finalP.innerHTML = 'LA EXPEDICIÓN<br/>CAPTURA TANTOS ESPECÍMENES<br/>COMO PUEDAS';
         titleEl.style.display = 'none';
         finalStats.style.display = 'none';
@@ -639,7 +639,7 @@
         restartBtn.style.display = 'inline-block';
 
     } else {
-        mainMenuHeader.innerHTML = '<img id="brandLogo" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/brand/logo.png" alt="La Expedición" style="width: min(350px, 80vw); margin-bottom: 12px; image-rendering: pixelated;">';
+        mainMenuHeader.innerHTML = '<img id="brandLogo" src="img\logo.png" alt="La Expedición" style="width: min(350px, 80vw); margin-bottom: 12px; image-rendering: pixelated;">';
         finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas';
         titleEl.style.display = 'none';
         finalStats.style.display = 'none';
