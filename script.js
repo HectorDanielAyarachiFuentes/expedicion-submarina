@@ -36,6 +36,8 @@
   const bossHealthContainer = document.getElementById('bossHealthContainer');
   const bossHealthBar = document.getElementById('bossHealthBar');
   const gameplayHints = document.getElementById('gameplay-hints');
+  const hudLevelText = document.getElementById('hud-level-text');
+  const hudObjectiveText = document.getElementById('hud-objective-text');
   
   // ========= Sprites (UI) =========
   const BTN_SPRITE_URL='https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/blue-buttons.png';
@@ -150,7 +152,7 @@
 
   function reset(){
     state={ 
-      gamePhase: 'menu', // menu, playing, transition, gameover
+      gamePhase: 'menu',
       run:false, rescued:0, score:0, depth_s:0, lives:3, lifeAnim:0, spawn:0, speed:260, elapsed:0, inputLock:0.2,
       lightPhase:'off', lightVisible:false, lightTimer:0, lightToggles:0, lastMusicT:0,
       torpedoCooldown: 0,
@@ -163,13 +165,14 @@
     animals=[];
     torpedos = [];
     inkParticles = [];
-    computeLanes();
+    autoSize();
     initParticles();
+    if (gameplayHints) gameplayHints.classList.add('hidden');
   }
   
   function difficultyRaw(){ if (!state) return 0; return state.elapsed/180; }
   function currentSpawnPeriod(){
-    if (state.level === 3) return Infinity; // No regular spawns during boss fight
+    if (state.level === 3) return Infinity;
     const levelMulti = [1.0, 0.6, 0][state.level-1];
     let base=lerp(2.5,0.6,difficultyRaw());
     return Math.max(0.4, base * levelMulti);
@@ -217,8 +220,8 @@
         x: W - 150, y: H / 2,
         w: 200, h: 300,
         hp: 150, maxHp: 150,
-        state: 'idle', // idle, attacking, hit
-        attackTimer: 3, // time until next attack
+        state: 'idle',
+        attackTimer: 3,
         hitTimer: 0,
         tentacles: [],
     };
@@ -484,29 +487,29 @@
   
   function drawHUD(){ 
     if (!state) return; 
+    
+    // Actualizar el HUD del DOM
+    if(state.run) {
+        const levelConf = LEVEL_CONFIG[state.level-1];
+        let objectiveText = '';
+        if (levelConf.type === 'capture') objectiveText = `CAPTURES: ${state.rescued} / ${levelConf.goal}`;
+        else if (levelConf.type === 'survive') objectiveText = `SUPERVIVENCIA: ${Math.floor(levelConf.goal - state.levelObjectiveValue)}s`;
+        
+        hudLevelText.textContent = `NIVEL ${state.level}`;
+        hudObjectiveText.textContent = objectiveText;
+    }
+
+    // Dibujar el HUD inferior en el canvas
     hud.clearRect(0,0,W,H); 
     if (!state.run) return; 
-    const s=state, depthVal=Math.floor(s.depth_s||0), scoreVal=s.score||0, livesVal=s.lives||3; 
-    const padX=18, padY=18, lh=22;
+    const s=state, scoreVal=s.score||0, livesVal=s.lives||3, depthVal=Math.floor(s.depth_s||0); 
     
-    const logoWidth = logoHUD ? logoHUD.offsetWidth : 0;
-    const objectiveX = logoWidth + padX * 1.5;
-
+    const padX=18, padY=18, lh=22;
     hud.save(); 
     hud.fillStyle='#ffffff'; 
     hud.font='18px "Press Start 2P", monospace'; 
     hud.textAlign='left'; 
     hud.textBaseline='alphabetic';
-
-    const levelConf = LEVEL_CONFIG[s.level-1];
-    let objectiveText = '';
-    if (levelConf.type === 'capture') objectiveText = `CAPTURES: ${s.rescued} / ${levelConf.goal}`;
-    else if (levelConf.type === 'survive') objectiveText = `SUPERVIVENCIA: ${Math.floor(levelConf.goal - s.levelObjectiveValue)}s`;
-    
-    hud.fillText(`NIVEL ${s.level}`, objectiveX, padY + lh);
-    hud.fillStyle='#ffdd77';
-    hud.fillText(objectiveText, objectiveX, padY + lh*2);
-    hud.fillStyle='#ffffff';
 
     const rows=[{label:'SCORE',value:String(scoreVal)},{label:'DEPTH',value:depthVal+' m'},{label:'RECORD',value:String(highScore)}]; const totalRows=rows.length+2; const y0=H-padY-lh*totalRows;
     let maxLabelW=0; for(let i=0;i<rows.length;i++) maxLabelW=Math.max(maxLabelW, hud.measureText(rows[i].label).width);
@@ -545,31 +548,17 @@
     S.init(); 
     S.stop('music'); 
     S.loop('music'); 
-    mainMenu.style.display = 'block'; 
-    levelTransition.style.display = 'none'; 
-    titleEl.style.display='none'; 
-    brandLogo.style.display='block'; 
-    finalP.innerHTML='Captura tantos especímenes<br/>como puedas'; 
-    finalStats.style.display='none'; 
-    if(mainExtras) mainExtras.style.display='none'; 
     overlay.style.display='none'; 
-    overlayMode='menu'; 
-    startBtn.style.display='inline'; 
-    restartBtn.style.display='none'; 
-    refreshIcons();
-
+    
     if (gameplayHints) {
-        gameplayHints.style.opacity = 1;
-        setTimeout(() => {
-            if (gameplayHints) gameplayHints.style.opacity = 0;
-        }, 7000);
+        gameplayHints.classList.remove('hidden');
     }
     
     setTimeout(function(){ __starting=false; },200); 
   }
   
-  function loseGame(){ if(!state || state.gamePhase === 'gameover') return; state.gamePhase = 'gameover'; state.run=false; S.stop('music'); S.play('gameover'); if(state.score>highScore){ highScore=state.score; saveHighScore(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='Fin de la expedición'; finalP.textContent='Gracias por ser parte'; statScore.textContent='SCORE: '+state.score; statDepth.textContent='DEPTH: '+state.depth_s+' m'; statSpecimens.textContent='SPECIMENS: '+state.rescued; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline'; overlayMode='gameover'; overlay.style.display='grid'; if (bossHealthContainer) bossHealthContainer.classList.add('hidden'); }
-  function winGame(){ if(!state || state.gamePhase === 'gameover') return; state.gamePhase = 'gameover'; state.run=false; S.stop('music'); S.play('victory'); if(state.score>highScore){ highScore=state.score; saveHighScore(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='¡VICTORIA!'; titleEl.style.color = '#ffdd77'; finalP.textContent='¡Has conquistado las profundidades!'; statScore.textContent='SCORE: '+state.score; statDepth.textContent='DEPTH: '+state.depth_s+' m'; statSpecimens.textContent='SPECIMENS: '+state.rescued; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline'; overlayMode='gameover'; overlay.style.display='grid'; if (bossHealthContainer) bossHealthContainer.classList.add('hidden'); }
+  function loseGame(){ if(!state || state.gamePhase === 'gameover') return; state.gamePhase = 'gameover'; state.run=false; S.stop('music'); S.play('gameover'); if(state.score>highScore){ highScore=state.score; saveHighScore(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='Fin de la expedición'; finalP.textContent='Gracias por ser parte'; statScore.textContent='SCORE: '+state.score; statDepth.textContent='DEPTH: '+state.depth_s+' m'; statSpecimens.textContent='SPECIMENS: '+state.rescued; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline-block'; overlayMode='gameover'; overlay.style.display='grid'; if (bossHealthContainer) bossHealthContainer.classList.add('hidden'); if(gameplayHints) gameplayHints.classList.add('hidden'); }
+  function winGame(){ if(!state || state.gamePhase === 'gameover') return; state.gamePhase = 'gameover'; state.run=false; S.stop('music'); S.play('victory'); if(state.score>highScore){ highScore=state.score; saveHighScore(); } mainMenu.style.display = 'block'; levelTransition.style.display = 'none'; brandLogo.style.display='none'; titleEl.style.display='block'; titleEl.textContent='¡VICTORIA!'; titleEl.style.color = '#ffdd77'; finalP.textContent='¡Has conquistado las profundidades!'; statScore.textContent='SCORE: '+state.score; statDepth.textContent='DEPTH: '+state.depth_s+' m'; statSpecimens.textContent='SPECIMENS: '+state.rescued; finalStats.style.display='block'; if(mainExtras) mainExtras.style.display='none'; startBtn.style.display='none'; restartBtn.style.display='inline-block'; overlayMode='gameover'; overlay.style.display='grid'; if (bossHealthContainer) bossHealthContainer.classList.add('hidden'); if(gameplayHints) gameplayHints.classList.add('hidden'); }
 
   function checkLevelCompletion() {
     if (state.gamePhase !== 'playing') return;
@@ -616,35 +605,26 @@
 
   addEventListener('keydown', function(e){ keys[e.key]=true; if(e.code==='Space') e.preventDefault(); if(e.key==='Escape') { e.preventDefault(); openMainMenu(); } });
   addEventListener('keyup', function(e){ keys[e.key]=false; });
-  startBtn.onclick=function(e){ e.stopPropagation(); if(overlayMode==='pause'){ overlay.style.display='none'; if(state){ state.run=true; state.inputLock=0.15; } S.loop('music'); } else { start(); } };
+  startBtn.onclick=function(e){ e.stopPropagation(); if(overlayMode==='pause'){ overlay.style.display='none'; if(state){ state.run=true; state.inputLock=0.15; if(gameplayHints) gameplayHints.classList.remove('hidden'); } S.loop('music'); } else { start(); } };
   restartBtn.onclick=start; muteBtn.onclick=function(){ S.toggleMuted(); refreshIcons(); };
   
   function showMainMenuView(fromPause) {
     const mainMenuHeader = document.getElementById('mainMenuHeader');
-    const finalP = document.getElementById('final');
-    const finalStats = document.getElementById('finalStats');
-    const menuDivider = document.getElementById('menuDivider');
-    const mainExtras = document.getElementById('mainExtras');
-    const titleEl = document.getElementById('gameOverTitle');
-
+    
     if (fromPause) {
-        // --- VISTA DE PAUSA ---
         mainMenuHeader.innerHTML = '<img id="logoHUD" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/brand/logo_hud.png" alt="logo">';
         finalP.innerHTML = 'LA EXPEDICIÓN<br/>CAPTURA TANTOS ESPECÍMENES<br/>COMO PUEDAS';
         titleEl.style.display = 'none';
         finalStats.style.display = 'none';
-        menuDivider.style.display = 'block';
         mainExtras.style.display = 'block';
         startBtn.style.display = 'inline-block';
         restartBtn.style.display = 'inline-block';
 
     } else {
-        // --- VISTA DE MENÚ PRINCIPAL (INICIO) ---
         mainMenuHeader.innerHTML = '<img id="brandLogo" src="https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/brand/logo.png" alt="La Expedición" style="width: min(350px, 80vw); margin-bottom: 12px; image-rendering: pixelated;">';
         finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas';
         titleEl.style.display = 'none';
         finalStats.style.display = 'none';
-        menuDivider.style.display = 'block';
         mainExtras.style.display = 'none';
         startBtn.style.display = 'inline-block';
         restartBtn.style.display = 'none';
@@ -657,13 +637,13 @@
     overlay.style.display = 'grid';
   }
 
-  function openMainMenu(){ if(state && state.run){ state.run=false; S.pause('music'); showMainMenuView(true); } }
+  function openMainMenu(){ if(state && state.run){ state.run=false; S.pause('music'); showMainMenuView(true); if(gameplayHints) gameplayHints.classList.add('hidden'); } }
   infoBtn.onclick=openMainMenu;
-  logoHUD.addEventListener('click', function(){ wasRunningBeforeCredits=!!(state&&state.run); if(state){ state.run=false; } S.pause('music'); infoOverlay.style.display='grid'; });
-  closeInfo.onclick=function(){ infoOverlay.style.display='none'; if(wasRunningBeforeCredits && overlay.style.display==='none'){ if(state){ state.run=true; } S.loop('music'); } };
+  logoHUD.addEventListener('click', function(){ wasRunningBeforeCredits=!!(state&&state.run); if(state){ state.run=false; } S.pause('music'); infoOverlay.style.display='grid'; if(gameplayHints) gameplayHints.classList.add('hidden'); });
+  closeInfo.onclick=function(){ infoOverlay.style.display='none'; if(wasRunningBeforeCredits && overlay.style.display==='none'){ if(state){ state.run=true; } S.loop('music'); if(gameplayHints) gameplayHints.classList.remove('hidden'); } };
   fsBtn.onclick=function(){ toggleFullscreen(); };
   if(shareBtn){ shareBtn.onclick = async function(){ let wasRunning = !!(state && state.run); if(wasRunning){ state.run=false; S.pause('music'); } try{ if(navigator.share){ await navigator.share({ title:'Expedición Mardel', text:'¡He conquistado las profundidades! ¿Puedes tú?', url: location.href }); } }catch(_){} finally{ if(wasRunning && overlay.style.display==='none'){ state.run=true; S.loop('music'); } } }; }
-  overlay.addEventListener('click', function(e){ if(e.target===overlay && overlay.style.display!=='none' && restartBtn.style.display==='none' && state.gamePhase !== 'transition'){ if(overlayMode==='pause'){ overlay.style.display='none'; if(state){ state.run=true; state.inputLock=0.15; } S.loop('music'); } else { start(); } } });
+  overlay.addEventListener('click', function(e){ if(e.target===overlay && overlay.style.display!=='none' && restartBtn.style.display==='none' && state.gamePhase !== 'transition'){ if(overlayMode==='pause'){ overlay.style.display='none'; if(state){ state.run=true; state.inputLock=0.15; if(gameplayHints) gameplayHints.classList.remove('hidden');} S.loop('music'); } else { start(); } } });
 
   let dragId=-1, dragActive=false, dragY=0;
   function isOverUI(x,y){ const elts=[muteBtn, infoBtn, fsBtn, shareBtn, overlay, infoOverlay]; for (const el of elts){ if(!el) continue; const style=getComputedStyle(el); if(style.display==='none'||style.visibility==='hidden') continue; const r=el.getBoundingClientRect(); if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return true; } return false; }
@@ -674,7 +654,25 @@
   function canUseFullscreen(){ return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
   function toggleFullscreen(){ if(!canUseFullscreen()){document.body.classList.toggle('immersive');return;}const el=document.documentElement;try{if(!document.fullscreenElement&&!document.webkitFullscreenElement&&!document.msFullscreenElement){if(el.requestFullscreen)return el.requestFullscreen();if(el.webkitRequestFullscreen)return el.webkitRequestFullscreen();}else{if(document.exitFullscreen)return document.exitFullscreen();if(document.webkitExitFullscreen)return document.webkitExitFullscreen();}}catch(err){console.warn('Fullscreen no disponible',err);}}
 
-  function autoSize(){ const v={w:innerWidth,h:innerHeight}; [bgCanvas,cvs,fxCanvas,hudCanvas].forEach(c=>{ c.width=v.w; c.height=v.h; }); W=v.w; H=v.h; computeLanes(); if(!state || !state.run) { initParticles(); } }
+  function autoSize(){ 
+    const topHud = document.getElementById('top-hud');
+    let totalHudHeight = topHud ? topHud.offsetHeight : 0;
+    
+    // En dispositivos táctiles, la barra de controles se oculta, así que no la contamos.
+    if (window.matchMedia("(pointer: coarse)").matches) {
+        const hintsBar = document.getElementById('gameplay-hints');
+        if (hintsBar) {
+            totalHudHeight -= hintsBar.offsetHeight;
+        }
+    }
+
+    const v={w:innerWidth,h:innerHeight - totalHudHeight}; 
+    [bgCanvas,cvs,fxCanvas,hudCanvas].forEach(c=>{ c.width=v.w; c.height=v.h; }); 
+    W=v.w; 
+    H=v.h; 
+    computeLanes(); 
+    if(!state || !state.run) { initParticles(); } 
+  }
   window.addEventListener('resize', autoSize);
   
   autoSize(); reset(); requestAnimationFrame(loop); S.init(); refreshIcons();

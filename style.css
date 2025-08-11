@@ -8,6 +8,10 @@
     --accent-blue-light: #cfe9ff;
     --accent-yellow: #ffdd77;
     --accent-red: #b22222;
+
+    --controls-bar-height: 50px;
+    --status-bar-height: 80px;
+    --total-hud-height: calc(var(--controls-bar-height) + var(--status-bar-height));
 }
 
 html, body { 
@@ -18,168 +22,153 @@ html, body {
     overflow: hidden; 
 }
 
-/* ========= Capas de Canvas ========= */
+/* ========= Capas de Canvas (AJUSTADAS AL NUEVO LAYOUT) ========= */
 canvas { 
     position: fixed; 
-    inset: 0; 
+    left: 0;
+    top: var(--total-hud-height);
     width: 100vw; 
-    height: 100vh; 
+    height: calc(100vh - var(--total-hud-height));
     display: block; 
 }
 #bgCanvas { z-index: 0; }
 #gameCanvas { z-index: 1; }
 #fxCanvas { z-index: 2; pointer-events: none; }
-#hudCanvas { z-index: 3; pointer-events: none; }
+#hudCanvas { z-index: 3; pointer-events: none; } /* Solo para stats inferiores */
 
-/* ========= UI General y Overlays ========= */
-#overlay, #infoOverlay { 
-    position: fixed; 
-    inset: 0; 
-    display: grid; 
-    place-items: center; 
-    background: radial-gradient(ellipse at center, rgba(0,0,0,.75), rgba(0,0,0,.95)); 
-    color: var(--text-light); 
-    text-align: center; 
-    image-rendering: pixelated; 
-    z-index: 7; 
-    padding: 1rem; /* Padding para evitar que el contenido toque los bordes en móviles */
+/* ========= HUD SUPERIOR ========= */
+#top-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 6;
+    image-rendering: pixelated;
 }
 
-#infoOverlay {
-    display: none;
+/* Barra de Controles */
+#gameplay-hints {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    background: var(--bg-dark);
+    color: var(--text-light);
+    height: var(--controls-bar-height);
+    box-sizing: border-box;
+    transition: opacity 0.3s ease;
 }
 
-#overlay .card, #infoOverlay .card { 
-    background: var(--bg-card); 
-    border: 2px solid var(--accent-blue); 
-    box-shadow: inset -6px -6px 0 var(--accent-blue-dark), inset 6px 6px 0 var(--accent-blue); 
-    text-transform: uppercase; 
-    letter-spacing: .5px; 
-    padding: clamp(16px, 4vw, 24px) clamp(20px, 5vw, 28px); /* Padding responsivo */
-    width: 90vw; /* Usa el ancho de la pantalla en móviles */
-    max-width: 520px; /* Pero no más de 520px en pantallas grandes */
+#gameplay-hints.hidden {
+    opacity: 0;
+    pointer-events: none;
 }
 
-#overlay a, #infoOverlay a {
-    color: #8bf;
-    text-decoration: none;
-}
-#overlay a:hover, #infoOverlay a:hover {
-    text-decoration: underline;
+.hint {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
 }
 
-.divider { 
-    width: 86%; 
+kbd.key-icon {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    background: #334155; /* Gris oscuro */
+    color: var(--text-light);
+    border: 2px solid #64748b;
+    font-family: 'Press Start 2P', monospace;
+    height: 30px;
+}
+
+kbd.text-key {
+    width: 30px;
+    font-size: 1.2rem;
+}
+
+.key-arrow-up, .key-arrow-down {
+    width: 30px;
+}
+
+.key-arrow-up::before {
+    content: '';
+    width: 0; 
     height: 0; 
-    border-top: 3px solid #b6dcff; 
-    margin: 14px auto; 
-    opacity: .7; 
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 10px solid var(--accent-blue-light);
 }
 
-/* ========= Transición de Nivel ========= */
-#levelTransition { 
-    display: none; 
-    text-transform: uppercase; 
-}
-#levelTitle { 
-    font-size: clamp(1.5rem, 6vw, 2.2rem); /* Título responsivo */
-    margin-bottom: 0.5em; 
-    color: var(--accent-yellow); 
-}
-#levelDesc { 
-    font-size: clamp(1rem, 4vw, 1.2rem); /* Descripción responsiva */
+.key-arrow-down::before {
+    content: '';
+    width: 0; 
+    height: 0; 
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid var(--accent-blue-light);
 }
 
-/* ========= Botones y Elementos de UI ========= */
+kbd.key-spacebar {
+    width: 120px;
+    height: 26px;
+    background-color: var(--accent-blue-light);
+}
+
+/* Barra de Estado */
+#status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--status-bar-height);
+    background: var(--bg-dark);
+    padding: 0 20px;
+    border-bottom: 3px solid var(--accent-blue);
+    box-sizing: border-box;
+}
+
+#status-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+#logoHUD {
+    height: 56px;
+}
+
+#status-text {
+    color: var(--text-light);
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+#hud-objective-text {
+    color: var(--accent-yellow);
+}
+
+#status-right {
+    display: flex;
+    gap: 10px;
+}
+
 .spritebtn { 
     width: 56px; 
     height: 56px; 
     padding: 0; 
     border: none; 
     background: transparent; 
-    cursor: pointer; 
-    image-rendering: pixelated; 
-    display: inline-flex; 
-    align-items: center; 
-    justify-content: center;
-    transition: transform 0.1s ease;
+    cursor: pointer;
 }
+.spritebtn img { width: 100%; height: 100%; }
+.spritebtn:active { transform: translateY(2px); }
 
-.spritebtn img { 
-    width: 100%; 
-    height: 100%; 
-    display: block; 
-    image-rendering: pixelated; 
-}
-
-.spritebtn:active { 
-    transform: translateY(2px); 
-}
-
-#shareBtn { 
-    display: none; 
-}
-
-.imgbtn { 
-    background: transparent; 
-    border: 0; 
-    padding: 0; 
-    cursor: pointer; 
-}
-
-.imgbtn img { 
-    display: block; 
-    image-rendering: pixelated; 
-    width: min(220px, 58vw); 
-    height: auto; 
-    margin: 3px auto; 
-}
-
-.imgbtn:active {
-    transform: translateY(1px);
-}
-
-.text-fallback-button {
-    display: inline-block;
-    padding: 16px 28px;
-    margin: 8px auto;
-    background: var(--bg-card); 
-    color: var(--text-light); 
-    border: 2px solid var(--accent-blue); 
-    box-shadow: inset -6px -6px 0 var(--accent-blue-dark), inset 6px 6px 0 var(--accent-blue); 
-    text-transform: uppercase;
-    font-size: clamp(1.2rem, 5vw, 1.5rem); /* Tamaño de fuente responsivo */
-    letter-spacing: 1px;
-}
-
-/* ========= UI Flotante (HUD y controles) ========= */
-#ui-topright { 
-    position: fixed; 
-    top: 12px; 
-    right: 12px; 
-    display: flex; 
-    gap: 6px; 
-    align-items: center; 
-    z-index: 6; 
-}
-
-#ui-topleft { 
-    position: fixed; 
-    top: 12px; 
-    left: 12px; 
-    z-index: 6; 
-}
-#logoHUD { 
-    height: 56px; 
-    image-rendering: pixelated; 
-    display: block; 
-    cursor: pointer; 
-}
-
-/* ========= NUEVO: Barra de vida del Jefe ========= */
+/* ========= Barra de vida del Jefe ========= */
 #bossHealthContainer {
     position: fixed;
-    top: 20px;
+    top: var(--total-hud-height); /* Debajo de todo el HUD */
+    padding-top: 20px;
     left: 50%;
     transform: translateX(-50%);
     width: 80%;
@@ -189,173 +178,50 @@ canvas {
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     transition: opacity 0.5s ease, transform 0.5s ease;
 }
-
-#bossName {
-    text-align: center;
-    font-size: clamp(1rem, 4vw, 1.5rem);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-.health-bar-bg {
-    width: 100%;
-    height: 24px;
-    background-color: rgba(0,0,0,0.5);
-    border: 2px solid var(--text-light);
-    padding: 3px;
-    box-sizing: border-box;
-}
-
-#bossHealthBar {
-    width: 100%;
-    height: 100%;
-    background-color: var(--accent-red);
-    box-shadow: inset 0 0 5px rgba(255,255,255,0.4);
-    transition: width 0.3s ease-out; /* Animación suave al recibir daño */
-}
-
-/* ========= Clases de utilidad ========= */
-.hidden {
+#bossHealthContainer.hidden {
     opacity: 0;
     transform: translateX(-50%) translateY(-20px);
     pointer-events: none;
 }
+#bossName { font-size: clamp(1rem, 4vw, 1.5rem); margin-bottom: 8px; text-transform: uppercase; }
+.health-bar-bg { width: 100%; height: 24px; background-color: rgba(0,0,0,0.5); border: 2px solid var(--text-light); padding: 3px; box-sizing: border-box; }
+#bossHealthBar { width: 100%; height: 100%; background-color: var(--accent-red); transition: width 0.3s ease-out; }
+
+/* ========= Overlays y Menús (sin cambios) ========= */
+#overlay, #infoOverlay { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(0,0,0,.75), rgba(0,0,0,.95)); color: var(--text-light); text-align: center; z-index: 7; padding: 1rem;}
+#infoOverlay { display: none; }
+#overlay .card, #infoOverlay .card { background: var(--bg-card); border: 2px solid var(--accent-blue); box-shadow: inset -6px -6px 0 var(--accent-blue-dark), inset 6px 6px 0 var(--accent-blue); text-transform: uppercase; letter-spacing: .5px; padding: clamp(16px, 4vw, 24px) clamp(20px, 5vw, 28px); width: 90vw; max-width: 520px; }
+#overlay a, #infoOverlay a { color: #8bf; text-decoration: none; }
+#overlay a:hover, #infoOverlay a:hover { text-decoration: underline; }
+.divider { width: 86%; height: 0; border-top: 3px solid #b6dcff; margin: 14px auto; opacity: .7; }
+#levelTransition { display: none; text-transform: uppercase; }
+#levelTitle { font-size: clamp(1.5rem, 6vw, 2.2rem); margin-bottom: 0.5em; color: var(--accent-yellow); }
+#levelDesc { font-size: clamp(1rem, 4vw, 1.2rem); }
+.button-container { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+.imgbtn { background: transparent; border: 0; padding: 0; cursor: pointer; }
+.imgbtn img { display: block; image-rendering: pixelated; width: min(220px, 58vw); height: auto; margin: 3px auto; }
+.imgbtn:active { transform: translateY(1px); }
+.text-fallback-button { display: inline-block; padding: 16px 28px; margin: 8px auto; background: var(--bg-card); color: var(--text-light); border: 2px solid var(--accent-blue); box-shadow: inset -6px -6px 0 var(--accent-blue-dark), inset 6px 6px 0 var(--accent-blue); text-transform: uppercase; font-size: clamp(1.2rem, 5vw, 1.5rem); letter-spacing: 1px; }
 
 /* ========= Media Queries para Responsividad ========= */
-
-/* Tablets y pantallas medianas */
 @media (max-width: 820px) {
-    #logoHUD { 
-        height: 48px; 
-    }
-    .spritebtn {
-        width: 48px;
-        height: 48px;
-    }
+    #logoHUD, .spritebtn { height: 48px; width: 48px; }
+    .hint { gap: 0.5rem; }
+    kbd.spacebar { width: 80px; }
 }
 
-/* Móviles (pantallas táctiles o pequeñas) */
-@media (pointer: coarse), (max-width: 600px) { 
-    #fsBtn { 
-        display: none; 
-    } 
-    #shareBtn { 
-        display: inline-flex; 
-    }
-    .spritebtn {
-        width: 44px;
-        height: 44px;
-    }
-    #ui-topright {
-        gap: 4px;
-    }
-    #logoHUD {
-        height: 44px;
-    }
+@media (max-width: 600px) { 
+    #fsBtn, #shareBtn { display: none; }
+    #logoHUD, .spritebtn { height: 44px; width: 44px; }
+    .hint > span { display: none; }
+    #gameplay-hints { gap: 1rem; }
+    #status-left { gap: 10px; }
+    #status-text { font-size: 0.9rem; }
 }
 
-/* Modo inmersivo para ocultar controles */
-body.immersive #ui-topright,
-body.immersive #ui-topleft { 
-    opacity: 0.25; 
-    transition: opacity .2s; 
-}
-body.immersive #ui-topright:hover,
-body.immersive #ui-topleft:hover { 
-    opacity: 1; 
-}
-/* ... (todo tu CSS anterior) ... */
-
-/* Añade esto al final del archivo style.css */
-.button-container {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap; /* Para que los botones se apilen en pantallas muy pequeñas */
-}
-/* ... (todo tu CSS anterior) ... */
-
-.button-container {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-/* ========= NUEVO: ESTILOS PARA LOS CONTROLES EN PANTALLA ========= */
-#gameplay-hints {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 2.5rem;
-    align-items: center;
-    color: var(--text-light);
-    background: rgba(0, 24, 48, 0.7);
-    padding: 0.75rem 1.5rem;
-    border: 2px solid var(--accent-blue);
-    box-shadow: inset -4px -4px 0 var(--accent-blue-dark), inset 4px 4px 0 var(--accent-blue);
-    z-index: 5;
-    opacity: 0; /* Empieza oculto */
-    transition: opacity 0.5s ease-in-out;
-    pointer-events: none; /* No interfiere con el clic */
-}
-
-.hint {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: clamp(0.8rem, 2vw, 1rem);
-    text-transform: uppercase;
-}
-
-kbd.key-icon {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    background: var(--accent-blue-light);
-    color: var(--bg-dark);
-    border: 2px solid var(--accent-blue);
-    box-shadow: 1px 1px 0px var(--accent-blue-dark);
-    font-family: 'Press Start 2P', monospace;
-    height: 28px;
-    image-rendering: pixelated;
-}
-
-kbd.text-key {
-    width: 28px;
-    font-size: 1.1rem;
-}
-
-.arrow-up, .arrow-down {
-    width: 28px;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 14px 14px;
-}
-
-.arrow-up {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 4l-4 4h8l-4-4z' fill='%2306131f'/%3E%3C/svg%3E");
-}
-
-.arrow-down {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 12l4-4H4l4 4z' fill='%2306131f'/%3E%3C/svg%3E");
-}
-
-kbd.spacebar {
-    width: 100px;
-    height: 24px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 16'%3E%3Crect x='2' y='8' width='56' height='6' rx='2' fill='%2306131f'/%3E%3C/svg%3E");
-    background-size: 56px 12px;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-/* Ocultar en dispositivos táctiles ya que los controles son de teclado */
-@media (pointer: coarse), (max-width: 820px) {
-    #gameplay-hints {
-        display: none;
-    }
+@media (pointer: coarse) {
+    #gameplay-hints { display: none; }
+    canvas { top: var(--status-bar-height); height: calc(100vh - var(--status-bar-height)); }
+    #ui-topright, #ui-topleft { top: 12px; }
+    #bossHealthContainer { top: var(--status-bar-height); }
 }
