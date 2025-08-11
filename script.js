@@ -39,44 +39,60 @@
   const hudLevelText = document.getElementById('hud-level-text');
   const hudObjectiveText = document.getElementById('hud-objective-text');
   
-  // ========= Sprites (UI) =========
-  const BTN_SPRITE_URL='https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/blue-buttons.png';
-  const MODAL_BTN_URL='https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/gray-buttons.png';
-  let icoMuteURL=null,icoInfoURL=null,icoFSURL=null,icoShareURL=null; let grayExitURL=null,grayContinueURL=null,grayDiveURL=null,grayRetryURL=null;
-
-  loadImage(BTN_SPRITE_URL, function(img){ if(!img){ refreshIcons(); return; } const h=img.height; function slice(x,w){ const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d'); g.imageSmoothingEnabled=false; g.drawImage(img,x,0,w,h,0,0,w,h); return c.toDataURL('image/png'); }
-    icoMuteURL=slice(0,45); icoInfoURL=slice(46,45); icoFSURL=slice(91,45); icoShareURL=slice(136,45); refreshIcons(); });
-  loadImage(MODAL_BTN_URL, function(img){ if(!img) return; const w=img.width; function sliceY(y0,y1){ const h=(y1-y0+1)|0; const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d'); g.imageSmoothingEnabled=false; g.drawImage(img,0,y0,w,h,0,0,w,h); return c.toDataURL('image/png'); }
-    grayExitURL=sliceY(0,83); grayContinueURL=sliceY(84,166); grayDiveURL=sliceY(167,249); grayRetryURL=sliceY(250,332); setModalButtons(false); });
-
-  const iconSpeakerOn = makeDataUrl("<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#5aa4ff'/><stop offset='1' stop-color='#2b58a6'/></linearGradient></defs><rect x='2' y='2' width='52' height='52' rx='8' ry='8' fill='url(#g)' stroke='#0b214b' stroke-width='3'/><g transform='translate(28,28)'><path d='M-9,-8 h6 l8,-6 v28 l-8,-6 h-6 z' fill='#0b214b'/><path d='M6,-6 q6,6 0,12' fill='none' stroke='#0b214b' stroke-width='3' stroke-linecap='round'/><path d='M10,-10 q10,10 0,20' fill='none' stroke='#0b214b' stroke-width='3' stroke-linecap='round'/></g></svg>");
-  const iconInfo = makeDataUrl("<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#5aa4ff'/><stop offset='1' stop-color='#2b58a6'/></linearGradient></defs><rect x='2' y='2' width='52' height='52' rx='8' ry='8' fill='url(#g)' stroke='#0b214b' stroke-width='3'/><g transform='translate(28,28)'><circle r='10' fill='#0b214b'/><text x='0' y='6' text-anchor='middle' font-family='monospace' font-size='20' fill='#5aa4ff'>?</text></g></svg>");
-  function refreshIcons(){ muteBtn.innerHTML='<img alt="mute" src="'+(icoMuteURL||iconSpeakerOn)+'" />'; infoBtn.innerHTML='<img alt="info" src="'+(icoInfoURL||iconInfo)+'" />'; if(icoFSURL) fsBtn.innerHTML='<img alt="fullscreen" src="'+icoFSURL+'" />'; if(icoShareURL) shareBtn.innerHTML='<img alt="share" src="'+icoShareURL+'" />'; muteBtn.style.opacity=S.isMuted()?0.35:1; }
+  // ========= Sprites (UI) - VERSIÓN CON SVG GENERADOS =========
+  function createButtonSVG(iconContent, colors, viewBox = '-16 -16 32 32') {
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56' shape-rendering="crispEdges">
+      <defs>
+        <linearGradient id='grad-${colors.id}' x1='0' y1='0' x2='0' y2='1'>
+          <stop offset='0' stop-color='${colors.gradStart}'/>
+          <stop offset='1' stop-color='${colors.gradEnd}'/>
+        </linearGradient>
+      </defs>
+      <rect x='2' y='2' width='52' height='52' rx='8' ry='8' fill='url(#grad-${colors.id})' stroke='${colors.stroke}' stroke-width='3'/>
+      <g transform='translate(28,28)' shape-rendering="crispEdges">
+        <svg viewBox='${viewBox}' width='32' height='32'>${iconContent}</svg>
+      </g>
+    </svg>`;
+    return makeDataUrl(svg);
+  }
   
-  function setModalButtons(fromPause) { 
-    const startButtonSpan = '<span class="text-fallback-button">' + (fromPause ? 'Continuar' : 'Sumergirse') + '</span>';
-    const restartButtonSpan = '<span class="text-fallback-button">Reintentar</span>';
-    const closeButtonSpan = '<span class="text-fallback-button">Salir</span>';
+  const blueColors = { id: 'blue', gradStart: '#5aa4ff', gradEnd: '#2b58a6', stroke: '#0b214b', iconFill: '#0b214b' };
+  const grayColors = { id: 'gray', gradStart: '#e0e0e0', gradEnd: '#a0a0a0', stroke: '#404040', iconFill: '#202020' };
 
-    if (grayDiveURL) { 
-        const btnText = fromPause ? 'Continuar' : 'Sumergirse';
-        const btnImg = fromPause ? grayContinueURL : grayDiveURL;
-        startBtn.innerHTML='<img alt="'+btnText+'" src="'+btnImg+'" />'; 
-    } else {
-        startBtn.innerHTML = startButtonSpan;
-    }
-    
-    if (grayRetryURL) { 
-        restartBtn.innerHTML='<img alt="Reintentar" src="'+grayRetryURL+'" />'; 
-    } else {
-        restartBtn.innerHTML = restartButtonSpan;
-    }
-    
-    if (grayExitURL) { 
-        closeInfo.innerHTML='<img alt="Salir" src="'+grayExitURL+'" />'; 
-    } else {
-        closeInfo.innerHTML = closeButtonSpan;
-    }
+  const icoMutePath = `<path d='M-12,-8 H-5 L5,-14 V14 L-5,8 H-12 Z' fill='${blueColors.iconFill}'/> <path d='M8,-6 A10,10 0 0,1 8,6' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/> <path d='M12,-10 A15,15 0 0,1 12,10' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
+  const icoInfoPath = `<path d='M-10,-2 h20 v4 h-20z M-10,4 h20 v4 h-20z M-10,10 h20 v4 h-20z' transform='translate(-5 -8)' fill='${blueColors.iconFill}'/>`;
+  const icoFSPath = `<path d='M-12,-12 v5 h5 M12,-12 v5 h-5 M-12,12 v-5 h5 M12,12 v-5 h-5' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
+  const icoSharePath = `<circle cx='-9' cy='-6' r='4' fill='${blueColors.iconFill}'/> <circle cx='-9' cy='6' r='4' fill='${blueColors.iconFill}'/> <circle cx='9' cy='0' r='4' fill='${blueColors.iconFill}'/> <path d='M-5,-4 L5,0 M-5,4 L5,0' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
+  
+  const icoExitPath = `<path d='M-8,-8 L8,8 M8,-8 L-8,8' stroke='${grayColors.iconFill}' stroke-width='4' fill='none' stroke-linecap='round'/>`;
+  const icoContinuePath = `<path d='M-6,-10 L8,0 L-6,10 Z' fill='${grayColors.iconFill}'/>`;
+  const icoDivePath = `<path d='M0,-10 L0,0 M-6,0 L6,0 M0,0 l-8,8 m8,-8 l8,8' stroke='${grayColors.iconFill}' stroke-width='4' fill='none' stroke-linecap='round'/>`;
+  const icoRetryPath = `<path d='M10,0 A10,10 0 1,1 0,-10' stroke='${grayColors.iconFill}' stroke-width='4' fill='none'/><path d='M0,-15 l-5,5 h10 Z' fill='${grayColors.iconFill}'/>`;
+
+  const icoMuteURL = createButtonSVG(icoMutePath, blueColors);
+  const icoInfoURL = createButtonSVG(icoInfoPath, blueColors);
+  const icoFSURL = createButtonSVG(icoFSPath, blueColors);
+  const icoShareURL = createButtonSVG(icoSharePath, blueColors);
+  
+  const grayExitURL = createButtonSVG(icoExitPath, grayColors, '-12 -12 24 24');
+  const grayContinueURL = createButtonSVG(icoContinuePath, grayColors, '-10 -12 24 24');
+  const grayDiveURL = createButtonSVG(icoDivePath, grayColors, '-12 -12 24 24');
+  const grayRetryURL = createButtonSVG(icoRetryPath, grayColors, '-12 -12 24 24');
+
+  function refreshIcons(){ 
+    muteBtn.innerHTML=`<img alt="mute" src="${icoMuteURL}" />`; 
+    infoBtn.innerHTML=`<img alt="info" src="${icoInfoURL}" />`; 
+    fsBtn.innerHTML=`<img alt="fullscreen" src="${icoFSURL}" />`; 
+    shareBtn.innerHTML=`<img alt="share" src="${icoShareURL}" />`; 
+    muteBtn.style.opacity=S.isMuted()?0.35:1; 
+  }
+
+  function setModalButtons(fromPause){ 
+    const startText = fromPause ? 'Continuar' : 'Sumergirse';
+    const startURL = fromPause ? grayContinueURL : grayDiveURL;
+    startBtn.innerHTML=`<img alt="${startText}" src="${startURL}" />`;
+    restartBtn.innerHTML=`<img alt="Reintentar" src="${grayRetryURL}" />`;
+    closeInfo.innerHTML=`<img alt="Salir" src="${grayExitURL}" />`;
   }
   
   // ========= Audio =========
@@ -488,7 +504,6 @@
   function drawHUD(){ 
     if (!state) return; 
     
-    // Actualizar el HUD del DOM
     if(state.run) {
         const levelConf = LEVEL_CONFIG[state.level-1];
         let objectiveText = '';
@@ -499,7 +514,6 @@
         hudObjectiveText.textContent = objectiveText;
     }
 
-    // Dibujar el HUD inferior en el canvas
     hud.clearRect(0,0,W,H); 
     if (!state.run) return; 
     const s=state, scoreVal=s.score||0, livesVal=s.lives||3, depthVal=Math.floor(s.depth_s||0); 
@@ -658,7 +672,6 @@
     const topHud = document.getElementById('top-hud');
     let totalHudHeight = topHud ? topHud.offsetHeight : 0;
     
-    // En dispositivos táctiles, la barra de controles se oculta, así que no la contamos.
     if (window.matchMedia("(pointer: coarse)").matches) {
         const hintsBar = document.getElementById('gameplay-hints');
         if (hintsBar) {
