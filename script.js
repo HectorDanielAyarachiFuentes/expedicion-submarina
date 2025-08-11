@@ -39,7 +39,10 @@
   const hudLevelText = document.getElementById('hud-level-text');
   const hudObjectiveText = document.getElementById('hud-objective-text');
   
-  // ========= Sprites (UI) - VERSIÓN CON SVG GENERADOS =========
+  // ===================================================================
+  // ========= Sprites (UI) - VERSIÓN CON SVG GENERADOS Y CORREGIDOS =========
+  // ===================================================================
+
   function createButtonSVG(iconContent, colors, viewBox = '-16 -16 32 32') {
     const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56' shape-rendering="crispEdges">
       <defs>
@@ -59,10 +62,11 @@
   const blueColors = { id: 'blue', gradStart: '#5aa4ff', gradEnd: '#2b58a6', stroke: '#0b214b', iconFill: '#0b214b' };
   const grayColors = { id: 'gray', gradStart: '#e0e0e0', gradEnd: '#a0a0a0', stroke: '#404040', iconFill: '#202020' };
 
-  const icoMutePath = `<path d='M-12,-8 H-5 L5,-14 V14 L-5,8 H-12 Z' fill='${blueColors.iconFill}'/> <path d='M8,-6 A10,10 0 0,1 8,6' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/> <path d='M12,-10 A15,15 0 0,1 12,10' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
-  const icoInfoPath = `<path d='M-10,-2 h20 v4 h-20z M-10,4 h20 v4 h-20z M-10,10 h20 v4 h-20z' transform='translate(-5 -8)' fill='${blueColors.iconFill}'/>`;
-  const icoFSPath = `<path d='M-12,-12 v5 h5 M12,-12 v5 h-5 M-12,12 v-5 h5 M12,12 v-5 h-5' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
-  const icoSharePath = `<circle cx='-9' cy='-6' r='4' fill='${blueColors.iconFill}'/> <circle cx='-9' cy='6' r='4' fill='${blueColors.iconFill}'/> <circle cx='9' cy='0' r='4' fill='${blueColors.iconFill}'/> <path d='M-5,-4 L5,0 M-5,4 L5,0' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
+  // Definiciones de los iconos (Contenido SVG corregido)
+  const icoMutePath = `<path d='M-10,-8 h4 l8,-6 v28 l-8,-6 h-4 z' fill='${blueColors.iconFill}'/><path d='M2,-6 q6,6 0,12' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/><path d='M6,-10 q10,10 0,20' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
+  const icoInfoPath = `<path d='M-10,-8 h20 M-10,0 h20 M-10,8 h20' stroke='${blueColors.iconFill}' stroke-width='4' fill='none' stroke-linecap='round'/>`;
+  const icoFSPath = `<path d='M-14,-8 v-6 h6 M14,-8 v-6 h-6 M-14,8 v6 h6 M14,8 v6 h-6' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
+  const icoSharePath = `<circle cx='-9' cy='-6' r='4.5' fill='${blueColors.iconFill}'/> <circle cx='-9' cy='6' r='4.5' fill='${blueColors.iconFill}'/> <circle cx='9' cy='0' r='5' fill='${blueColors.iconFill}'/> <path d='M-6,-4 L6,0 L-6,4' stroke='${blueColors.iconFill}' stroke-width='3' fill='none' stroke-linecap='round'/>`;
   
   const icoExitPath = `<path d='M-8,-8 L8,8 M8,-8 L-8,8' stroke='${grayColors.iconFill}' stroke-width='4' fill='none' stroke-linecap='round'/>`;
   const icoContinuePath = `<path d='M-6,-10 L8,0 L-6,10 Z' fill='${grayColors.iconFill}'/>`;
@@ -114,12 +118,12 @@
   const HS_KEY='expedicion_hiscore_v2'; let highScore=0; try{ highScore=parseInt(localStorage.getItem(HS_KEY)||'0',10)||0; }catch(e){}
   function saveHighScore(){ try{ localStorage.setItem(HS_KEY,String(highScore)); }catch(e){} }
 
-  // ========= Assets =========
+ // ========= Assets =========
   let robotImg=null, robotReady=false, spriteW=96, spriteH=64, robotScale=2;
-  loadImage('https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/subastian.png', function(img){ if(img){ robotImg=img; robotReady=true; const targetH=64; const ratio=img.width/img.height; spriteH=targetH; spriteW=Math.round(targetH*ratio); } });
-  let creaturesImg=null, creaturesReady=false, cFrameW=0,cFrameH=0,cRows=0; loadImage('https://raw.githubusercontent.com/baltaz/the_expedition/main/Creatures/DeepseaCreatures_spritesheet.png', function(img){ if(img){ creaturesImg=img; cFrameW=Math.floor(img.width/2); cRows=Math.max(1,Math.floor(img.height/cFrameW)); cFrameH=Math.floor(img.height/cRows); creaturesReady=true; } });
-  let bgImg=null,bgReady=false,bgOffset=0,bgW=0,bgH=0,BG_BASE_SPEED=35; loadImage('https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/bg/bg_back.png', function(img){ if(img){ bgImg=img; bgReady=true; bgW=img.width; bgH=img.height; } });
-  let fgImg=null,fgReady=false,fgOffset=0,fgW=0,fgH=0,FG_BASE_SPEED=60; loadImage('https://raw.githubusercontent.com/baltaz/the_expedition/main/assets/bg/bg_front.png', function(img){ if(img){ fgImg=img; fgReady=true; fgW=img.width; fgH=img.height; } });
+  loadImage('img/subastian.png', function(img){ if(img){ robotImg=img; robotReady=true; const targetH=64; const ratio=img.width/img.height; spriteH=targetH; spriteW=Math.round(targetH*ratio); } });
+  let creaturesImg=null, creaturesReady=false, cFrameW=0,cFrameH=0,cRows=0; loadImage('img/DeepseaCreatures_spritesheet.png', function(img){ if(img){ creaturesImg=img; cFrameW=Math.floor(img.width/2); cRows=Math.max(1,Math.floor(img.height/cFrameW)); cFrameH=Math.floor(img.height/cRows); creaturesReady=true; } });
+  let bgImg=null,bgReady=false,bgOffset=0,bgW=0,bgH=0,BG_BASE_SPEED=35; loadImage('img/bg_back.png', function(img){ if(img){ bgImg=img; bgReady=true; bgW=img.width; bgH=img.height; } });
+  let fgImg=null,fgReady=false,fgOffset=0,fgW=0,fgH=0,FG_BASE_SPEED=60; loadImage('img/bg_front.png', function(img){ if(img){ fgImg=img; fgReady=true; fgW=img.width; fgH=img.height; } });
   
   // ========= Geometry & Utils =========
   let W=innerWidth, H=innerHeight; const LANES_N=5; let lanes=[];
@@ -690,3 +694,8 @@
   
   autoSize(); reset(); requestAnimationFrame(loop); S.init(); refreshIcons();
 })();
+
+
+
+
+
