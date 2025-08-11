@@ -119,6 +119,9 @@
   const ENFRIAMIENTO_TORPEDO = 1.5;
   let torpedos = [];
   
+  // NUEVO: Orden de armas para el ciclo
+  const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta'];
+
   const CONFIG_NIVELES = [
     { nombre: 'NIVEL 1: CAÑÓN DE MAR DEL PLATA', objetivo: 'Captura 10 especímenes', meta: 10, tipo: 'capture' },
     { nombre: 'NIVEL 2: FOSA ABISAL', objetivo: 'Sobrevive 60 segundos', meta: 60, tipo: 'survive' },
@@ -217,14 +220,12 @@
     for (let i = 0; i < numBalas; i++) {
         const angulo = (Math.random() - 0.5) * 0.2;
         const velocidad = 1600;
-        // Se crea la bala con un pequeño retraso en su posición inicial para simular un chorro
         const xOffset = (i / numBalas) * velocidad * 0.05; 
         proyectiles.push({ x: px + xOffset, y: py, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 12, h: 2, color: '#ff6363', vida: 0.8 });
     }
     
-    estadoJuego.enfriamientoArma = 3.0; // Recarga larga después de la ráfaga
+    estadoJuego.enfriamientoArma = 3.0;
     
-    // Reproducir sonido en ráfaga
     let soundCount = 0;
     const soundInterval = setInterval(() => {
         S.reproducir('machinegun');
@@ -324,12 +325,19 @@
     
     if(teclas[' '] && estadoJuego.bloqueoEntrada===0){ 
         disparar(); 
-        teclas[' '] = false; // Acción de un solo pulso para todas las armas
+        teclas[' '] = false;
     }
     if((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada===0){ lanzarTorpedo(); teclas['x']=teclas['X']=false; }
     if(teclas['1']) { estadoJuego.armaActual = 'garra'; }
     if(teclas['2']) { estadoJuego.armaActual = 'shotgun'; }
     if(teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
+    // NUEVO: Lógica para la tecla C
+    if(teclas['c'] || teclas['C']) {
+        const currentIndex = WEAPON_ORDER.indexOf(estadoJuego.armaActual);
+        const nextIndex = (currentIndex + 1) % WEAPON_ORDER.length;
+        estadoJuego.armaActual = WEAPON_ORDER[nextIndex];
+        teclas['c'] = teclas['C'] = false;
+    }
     
     const configNivel = CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
@@ -432,7 +440,6 @@
         let textoObjetivo = '';
         if (configNivel.tipo === 'capture') textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`;
         else if (configNivel.tipo === 'survive') textoObjetivo = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - estadoJuego.valorObjetivoNivel)}s`;
-        
         hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`;
         hudObjectiveText.textContent = textoObjetivo;
     }
@@ -442,7 +449,6 @@
     if (!estadoJuego.enEjecucion) return; 
 
     const s=estadoJuego, valorPuntuacion=s.puntuacion||0, valorVidas=s.vidas||3, valorProfundidad=Math.floor(s.profundidad_m||0); 
-    
     const padX=18, padY=18, lh=22;
     hud.save(); 
     hud.fillStyle='#ffffff'; 
@@ -462,7 +468,6 @@
     
     const gap=16; 
     const valueX=padX+maxAnchoEtiqueta+gap; 
-    
     let currentY = y0;
     for(let i=0;i<filas.length;i++){ hud.fillText(filas[i].label, padX, currentY); hud.fillText(filas[i].value, valueX, currentY); currentY += lh; }
     
@@ -493,7 +498,6 @@
     } else { // Garra
         hud.fillStyle = '#aaddff';
     }
-
     hud.fillText(armaTexto, valueX, currentY);
     currentY += lh;
 
@@ -505,31 +509,19 @@
 
     hud.restore();
     
-    if (s.nivel === 3 && s.jefe) {
-        const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1);
-        if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%';
-    } else {
-        if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none';
-    }
+    if (s.nivel === 3 && s.jefe) { const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1); if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%';
+    } else { if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none'; }
   }
   
   let ultimo=0; function bucle(t){ const dt=Math.min(0.033,(t-ultimo)/1000||0); ultimo=t; if(estadoJuego && estadoJuego.faseJuego==='playing') actualizar(dt); renderizar(dt); requestAnimationFrame(bucle); }
 
   let __iniciando=false; 
   function iniciarJuego(){ 
-    if(__iniciando) return; 
-    __iniciando=true; 
+    if(__iniciando) return; __iniciando=true; 
     if(estadoJuego&&estadoJuego.enEjecucion){ __iniciando=false; return; } 
-    reiniciar(); 
-    teclas={}; 
-    estadoJuego.bloqueoEntrada=0.2; 
-    estadoJuego.faseJuego = 'playing'; 
-    estadoJuego.enEjecucion=true; 
-    estadoJuego.aparicion=1.0; 
-    estadoJuego.luzVisible=true; 
-    S.init(); 
-    S.detener('music'); 
-    S.bucle('music'); 
+    reiniciar(); teclas={}; 
+    estadoJuego.bloqueoEntrada=0.2; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion=true; estadoJuego.aparicion=1.0; estadoJuego.luzVisible=true; 
+    S.init(); S.detener('music'); S.bucle('music'); 
     if(overlay) overlay.style.display='none'; 
     if (gameplayHints) gameplayHints.style.display = 'flex';
     setTimeout(function(){ __iniciando=false; },200); 

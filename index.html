@@ -27,6 +27,7 @@
                 </div>
             </div>
 
+            <!-- MODIFICADO: Se añade el hint para la tecla C -->
             <div id="gameplay-hints">
                 <div class="hint">
                     <span>MOVER</span>
@@ -34,8 +35,12 @@
                     <kbd class="key-icon key-arrow-down"></kbd>
                 </div>
                 <div class="hint">
-                    <span>CAPTURAR</span>
+                    <span>DISPARAR</span>
                     <kbd class="key-icon key-spacebar"></kbd>
+                </div>
+                 <div class="hint">
+                    <span>ARMA</span>
+                    <kbd class="key-icon text-key">C</kbd>
                 </div>
                 <div class="hint">
                     <span>TORPEDO</span>
@@ -94,7 +99,7 @@
         </div>
     </div>
 
-    <!-- Overlay de Información -->
+    <!-- MODIFICADO: Se añade el control de la tecla C -->
     <div id="infoOverlay" style="display: none;">
         <div class="menu-card">
             <h2>Información y Créditos</h2>
@@ -105,15 +110,15 @@
             <ul>
                 <li><strong>Mover:</strong> Flechas Arriba/Abajo o tocar/arrastrar izquierda.</li>
                 <li><strong>Disparar/Usar Arma:</strong> Barra Espaciadora o tocar derecha.</li>
+                <li><strong>Alternar Arma:</strong> Tecla 'C'.</li>
                 <li><strong>Torpedo:</strong> Tecla 'X' o tocar centro.</li>
-                <li><strong>Recargar Ametralladora:</strong> Tecla 'R'.</li>
                 <li><strong>Pausa:</strong> Tecla 'Esc'.</li>
             </ul>
-            <p><strong>Arsenal:</strong></p>
+            <p><strong>Arsenal (Selección Directa):</strong></p>
             <ul>
                 <li><strong>Tecla 1:</strong> Garfio de Captura (No letal).</li>
-                <li><strong>Tecla 2:</strong> Escopeta (Explosión masiva, recarga larga).</li>
-                <li><strong>Tecla 3:</strong> Ametralladora (Ráfaga completa, recarga larga).</li>
+                <li><strong>Tecla 2:</strong> Escopeta (Explosión masiva).</li>
+                <li><strong>Tecla 3:</strong> Ametralladora (Ráfaga completa).</li>
             </ul>
             <button id="closeInfo" class="menubtn">Cerrar</button>
         </div>
