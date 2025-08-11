@@ -102,7 +102,7 @@
   // ========= Audio =========
   const RAW='https://raw.githubusercontent.com/baltaz/the_expedition/main/sfx/';
   const MUSIC='https://raw.githubusercontent.com/baltaz/the_expedition/main/music/the%20expedition.mp3';
-  const S=(function(){ let created=false; const a={}; let _muted=false; const srcMap={ fire:RAW+'sfx_fire.mp3', lose:RAW+'sfx_lose.mp3', gameover:RAW+'sfx_gameover.mp3', music:MUSIC, torpedo: 'sonidos/torpedo.wav', boss_hit: 'sonidos/boss_hit.mp3', victory: 'https://cdn.freesound.org/previews/270/270319_5126113-lq.mp3', ink: 'https://cdn.freesound.org/previews/49/49110_391983-lq.mp3' };
+  const S=(function(){ let created=false; const a={}; let _muted=false; const srcMap={ fire:RAW+'sfx_fire.mp3', lose:RAW+'sfx_lose.mp3', gameover:RAW+'sfx_gameover.mp3', music:MUSIC, torpedo: 'sonidos/torpedo.wav', boss_hit: 'sonidos/boss_hit.mp3', victory: 'sonidos/victoria.mp3', ink: 'https://cdn.freesound.org/previews/49/49110_391983-lq.mp3' };
     function init(){ if(created) return; created=true; for(const k in srcMap){ const el=new Audio(srcMap[k]); el.preload='auto'; if(k==='music'){ el.loop=true; el.volume=0.35; } else { el.volume=0.5; } a[k]=el; } }
     function play(k){ const el=a[k]; if(!el) return; try{ el.currentTime=0; el.play(); }catch(e){} }
     function loop(k){ const el=a[k]; if(!el) return; if(el.paused){ try{ el.play(); }catch(e){} } }
