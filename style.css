@@ -9,6 +9,11 @@
     --accent-yellow: #ffdd77;
     --accent-red: #b22222;
 
+    /* Nuevas variables para el HUD */
+    --hud-bg-color: rgba(6, 19, 31, 0.65); /* Fondo semitransparente */
+    --hud-blur: 8px; /* Intensidad del desenfoque */
+    --hud-border-color: rgba(126, 203, 255, 0.4); /* Color de borde sutil */
+
     --controls-bar-height: 50px;
     --status-bar-height: 80px;
     --total-hud-height: calc(var(--controls-bar-height) + var(--status-bar-height));
@@ -34,9 +39,9 @@ canvas {
 #bgCanvas { z-index: 0; }
 #gameCanvas { z-index: 1; }
 #fxCanvas { z-index: 2; pointer-events: none; }
-#hudCanvas { z-index: 3; pointer-events: none; } /* Solo para stats inferiores */
+#hudCanvas { z-index: 3; pointer-events: none; }
 
-/* ========= HUD SUPERIOR ========= */
+/* ========= HUD SUPERIOR (DISEÑO MEJORADO) ========= */
 #top-hud {
     position: fixed;
     top: 0;
@@ -44,7 +49,21 @@ canvas {
     width: 100%;
     z-index: 6;
     image-rendering: pixelated;
+    
+    /* Efecto de vidrio esmerilado (Frosted Glass) */
+    background-color: var(--hud-bg-color);
+    backdrop-filter: blur(var(--hud-blur));
+    -webkit-backdrop-filter: blur(var(--hud-blur)); /* Para Safari */
+
+    /* Animación de entrada */
+    animation: fadeInHud 0.8s ease-out forwards;
 }
+
+@keyframes fadeInHud {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 
 /* Barra de Controles */
 #gameplay-hints {
@@ -52,7 +71,6 @@ canvas {
     justify-content: center;
     align-items: center;
     gap: 2rem;
-    background: var(--bg-dark);
     color: var(--text-light);
     height: var(--controls-bar-height);
     box-sizing: border-box;
@@ -62,25 +80,36 @@ canvas {
 #gameplay-hints.hidden {
     opacity: 0;
     pointer-events: none;
+    height: 0;
+    overflow: hidden;
 }
 
 .hint {
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    font-size: 0.9rem;
+    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
     text-transform: uppercase;
+    opacity: 0.8;
 }
 
 kbd.key-icon {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    background: #334155; /* Gris oscuro */
+    background: #334155;
     color: var(--text-light);
-    border: 2px solid #64748b;
+    border: 1px solid #64748b;
+    border-bottom: 3px solid #475569;
     font-family: 'Press Start 2P', monospace;
     height: 30px;
+    border-radius: 4px;
+    transition: all 0.1s ease-out;
+}
+
+kbd.key-icon:active {
+    transform: translateY(2px);
+    border-bottom-width: 1px;
 }
 
 kbd.text-key {
@@ -88,33 +117,10 @@ kbd.text-key {
     font-size: 1.2rem;
 }
 
-.key-arrow-up, .key-arrow-down {
-    width: 30px;
-}
-
-.key-arrow-up::before {
-    content: '';
-    width: 0; 
-    height: 0; 
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-bottom: 10px solid var(--accent-blue-light);
-}
-
-.key-arrow-down::before {
-    content: '';
-    width: 0; 
-    height: 0; 
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-top: 10px solid var(--accent-blue-light);
-}
-
-kbd.key-spacebar {
-    width: 120px;
-    height: 26px;
-    background-color: var(--accent-blue-light);
-}
+.key-arrow-up, .key-arrow-down { width: 30px; }
+.key-arrow-up::before { content: ''; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 10px solid var(--accent-blue-light); }
+.key-arrow-down::before { content: ''; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 10px solid var(--accent-blue-light); }
+kbd.key-spacebar { width: 120px; height: 26px; background-color: var(--accent-blue-light); }
 
 /* Barra de Estado */
 #status-bar {
@@ -122,75 +128,49 @@ kbd.key-spacebar {
     justify-content: space-between;
     align-items: center;
     height: var(--status-bar-height);
-    background: var(--bg-dark);
-    padding: 0 20px;
-    border-bottom: 3px solid var(--accent-blue);
+    padding: 0 clamp(10px, 3vw, 20px);
     box-sizing: border-box;
+    /* Borde inferior y sombra sutil para dar profundidad */
+    border-bottom: 1px solid var(--hud-border-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-#status-left {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-#logoHUD {
-    height: 56px;
-}
+#status-left { display: flex; align-items: center; gap: clamp(10px, 3vw, 20px); }
+#logoHUD { height: clamp(44px, 8vh, 56px); }
 
 #status-text {
     color: var(--text-light);
-    font-size: 1.1rem;
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
     line-height: 1.5;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
 
-#hud-objective-text {
-    color: var(--accent-yellow);
-}
-
-#status-right {
-    display: flex;
-    gap: 10px;
-}
+#hud-objective-text { color: var(--accent-yellow); }
+#status-right { display: flex; gap: 10px; }
 
 .spritebtn { 
-    width: 56px; 
-    height: 56px; 
+    width: clamp(44px, 8vh, 56px); 
+    height: clamp(44px, 8vh, 56px); 
     padding: 0; 
     border: none; 
     background: transparent; 
     cursor: pointer;
+    transition: transform 0.15s ease-out, opacity 0.2s ease-out;
 }
-.spritebtn img { width: 100%; height: 100%; }
-.spritebtn:active { transform: translateY(2px); }
+.spritebtn:hover { transform: scale(1.05); opacity: 1; }
+.spritebtn:active { transform: scale(0.95) translateY(2px); }
 
 /* ========= Barra de vida del Jefe ========= */
-#bossHealthContainer {
-    position: fixed;
-    top: var(--total-hud-height); /* Debajo de todo el HUD */
-    padding-top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
-    max-width: 600px;
-    z-index: 5;
-    color: var(--text-light);
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-}
-#bossHealthContainer.hidden {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-    pointer-events: none;
-}
+#bossHealthContainer { position: fixed; top: var(--total-hud-height); padding-top: 20px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; z-index: 5; color: var(--text-light); text-shadow: 2px 2px 4px rgba(0,0,0,0.8); transition: opacity 0.5s ease, transform 0.5s ease; }
+#bossHealthContainer.hidden { opacity: 0; transform: translateX(-50%) translateY(-20px); pointer-events: none; }
 #bossName { font-size: clamp(1rem, 4vw, 1.5rem); margin-bottom: 8px; text-transform: uppercase; }
 .health-bar-bg { width: 100%; height: 24px; background-color: rgba(0,0,0,0.5); border: 2px solid var(--text-light); padding: 3px; box-sizing: border-box; }
 #bossHealthBar { width: 100%; height: 100%; background-color: var(--accent-red); transition: width 0.3s ease-out; }
 
-/* ========= Overlays y Menús (sin cambios) ========= */
+/* ========= Overlays y Menús ========= */
 #overlay, #infoOverlay { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(0,0,0,.75), rgba(0,0,0,.95)); color: var(--text-light); text-align: center; z-index: 7; padding: 1rem;}
 #infoOverlay { display: none; }
-#overlay .card, #infoOverlay .card { background: var(--bg-card); border: 2px solid var(--accent-blue); box-shadow: inset -6px -6px 0 var(--accent-blue-dark), inset 6px 6px 0 var(--accent-blue); text-transform: uppercase; letter-spacing: .5px; padding: clamp(16px, 4vw, 24px) clamp(20px, 5vw, 28px); width: 90vw; max-width: 520px; }
+#overlay .card, #infoOverlay .card { background: var(--bg-card); border: 2px solid var(--accent-blue); box-shadow: inset -6px -6px 0 var(--accent-blue-dark), inset 6px 6px 0 var(--accent-blue), 0 0 25px rgba(0, 100, 200, 0.3); text-transform: uppercase; letter-spacing: .5px; padding: clamp(16px, 4vw, 24px) clamp(20px, 5vw, 28px); width: 90vw; max-width: 520px; }
 #overlay a, #infoOverlay a { color: #8bf; text-decoration: none; }
 #overlay a:hover, #infoOverlay a:hover { text-decoration: underline; }
 .divider { width: 86%; height: 0; border-top: 3px solid #b6dcff; margin: 14px auto; opacity: .7; }
@@ -198,30 +178,46 @@ kbd.key-spacebar {
 #levelTitle { font-size: clamp(1.5rem, 6vw, 2.2rem); margin-bottom: 0.5em; color: var(--accent-yellow); }
 #levelDesc { font-size: clamp(1rem, 4vw, 1.2rem); }
 .button-container { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
-.imgbtn { background: transparent; border: 0; padding: 0; cursor: pointer; }
+.imgbtn { background: transparent; border: 0; padding: 0; cursor: pointer; transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
 .imgbtn img { display: block; image-rendering: pixelated; width: min(220px, 58vw); height: auto; margin: 3px auto; }
-.imgbtn:active { transform: translateY(1px); }
+.imgbtn:hover { transform: scale(1.03); }
+.imgbtn:active { transform: scale(0.98) translateY(1px); }
 .text-fallback-button { display: inline-block; padding: 16px 28px; margin: 8px auto; background: var(--bg-card); color: var(--text-light); border: 2px solid var(--accent-blue); box-shadow: inset -6px -6px 0 var(--accent-blue-dark), inset 6px 6px 0 var(--accent-blue); text-transform: uppercase; font-size: clamp(1.2rem, 5vw, 1.5rem); letter-spacing: 1px; }
 
 /* ========= Media Queries para Responsividad ========= */
 @media (max-width: 820px) {
-    #logoHUD, .spritebtn { height: 48px; width: 48px; }
-    .hint { gap: 0.5rem; }
-    kbd.spacebar { width: 80px; }
+    /* En tablets, las pistas de control se apilan verticalmente */
+    .hint {
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.65rem;
+    }
+    #gameplay-hints {
+        gap: 1.5rem;
+    }
+    kbd.key-spacebar { width: 100px; }
 }
 
 @media (max-width: 600px) { 
+    /* En móviles, se ocultan botones menos importantes */
     #fsBtn, #shareBtn { display: none; }
-    #logoHUD, .spritebtn { height: 44px; width: 44px; }
+    
+    /* En móviles, las pistas de texto se ocultan para dar más espacio a los iconos */
     .hint > span { display: none; }
     #gameplay-hints { gap: 1rem; }
-    #status-left { gap: 10px; }
-    #status-text { font-size: 0.9rem; }
+    kbd.key-spacebar { width: 80px; }
 }
 
+/* Para dispositivos táctiles, la barra de pistas de teclado no es necesaria */
 @media (pointer: coarse) {
     #gameplay-hints { display: none; }
-    canvas { top: var(--status-bar-height); height: calc(100vh - var(--status-bar-height)); }
-    #ui-topright, #ui-topleft { top: 12px; }
+    
+    /* Recalcular la altura total del HUD y la posición de los canvas */
+    :root { --total-hud-height: var(--status-bar-height); }
+    
+    canvas { 
+        top: var(--status-bar-height); 
+        height: calc(100vh - var(--status-bar-height)); 
+    }
     #bossHealthContainer { top: var(--status-bar-height); }
 }
