@@ -3,19 +3,21 @@
 
 // Importamos la lógica de los niveles
 import * as Level4 from './level4.js';
-import * as Level5 from './level5.js'; // AÑADIDO
+import * as Level5 from './level5.js';
+import * as Level6 from './level6.js'; // NUEVO NIVEL 6
 
 // Importamos dependencias de game.js
 import { estadoJuego, jugador, W, H, carriles, ctx, generarAnimal, S, clamp, perderJuego } from './game.js';
 import { NUM_CARRILES } from './game.js';
 
-// --- CONFIGURACIÓN DE NIVELES (Añadimos el Nivel 5) ---
+// --- CONFIGURACIÓN DE NIVELES (Añadimos el Nivel 6) ---
 export const CONFIG_NIVELES = [
   { nombre: 'NIVEL 1: CAÑÓN DE MAR DEL PLATA', objetivo: 'Captura 10 especímenes', meta: 10, tipo: 'capture' },
   { nombre: 'NIVEL 2: FOSA ABISAL', objetivo: 'Sobrevive 60 segundos', meta: 60, tipo: 'survive' },
   { nombre: 'NIVEL 3: LA GUARIDA DEL KRAKEN', objetivo: 'Derrota al jefe', meta: 1, tipo: 'boss' },
   { nombre: 'NIVEL 4: CAMPO DE ESCOMBROS', objetivo: 'Sobrevive 90 segundos', meta: 90, tipo: 'survive' },
-  { nombre: 'NIVEL 5: COLAPSO DE LA FOSA', objetivo: 'Escapa durante 60 segundos', meta: 60, tipo: 'survive' } // AÑADIDO
+  { nombre: 'NIVEL 5: COLAPSO DE LA FOSA', objetivo: 'Escapa durante 60 segundos', meta: 60, tipo: 'survive' },
+  { nombre: 'NIVEL 6: EL VORTEX DE LAS PROFUNDIDADES', objetivo: 'Sobrevive 120 segundos', meta: 120, tipo: 'survive' } // NUEVO NIVEL 6
 ];
 
 // --- FUNCIONES DE CÁLCULO DE DIFICULTAD POR NIVEL ---
@@ -23,22 +25,23 @@ function dificultadBase() {
     if (!estadoJuego) return 0;
     return estadoJuego.tiempoTranscurrido / 180;
 }
+
 export function getLevelSpawnPeriod() {
-    // MODIFICADO: Incluir nivel 5 para desactivar spawn de animales
-    if (estadoJuego.nivel === 3 || estadoJuego.nivel === 4 || estadoJuego.nivel === 5) return Infinity;
-    const multiNivel = [1.0, 0.6, 0, 0, 0][estadoJuego.nivel - 1];
+    // MODIFICADO: Incluir niveles 3-6 para desactivar spawn de animales
+    if ([3, 4, 5, 6].includes(estadoJuego.nivel)) return Infinity;
+    const multiNivel = [1.0, 0.6, 0, 0, 0, 0][estadoJuego.nivel - 1];
     let base = 2.5 + (0.6 - 2.5) * dificultadBase();
     return Math.max(0.4, base * multiNivel);
 }
+
 export function getLevelSpeed() {
-    // MODIFICADO: Incluir nivel 5
-    const multiNivel = [1.0, 1.4, 1.0, 1.0, 0][estadoJuego.nivel - 1]; // La velocidad no aplica en nivel 5
+    // MODIFICADO: Incluir nivel 5 y 6
+    const multiNivel = [1.0, 1.4, 1.0, 1.0, 0, 0][estadoJuego.nivel - 1]; // La velocidad no aplica en niveles 5 y 6
     let spd = 260 + (520 - 260) * dificultadBase();
     return spd * multiNivel;
 }
 
 // --- LÓGICA ESPECÍFICA DEL NIVEL 3 (JEFE) ---
-// (Esta parte no cambia, se mantiene igual)
 function generarJefe() {
   estadoJuego.jefe = { x: W - 150, y: H / 2, w: 200, h: 300, hp: 150, maxHp: 150, estado: 'idle', timerAtaque: 3, timerGolpe: 0, tentaculos: [], };
   for (let i = 0; i < 6; i++) {
@@ -47,6 +50,7 @@ function generarJefe() {
   const bossHealthContainer = document.getElementById('bossHealthContainer');
   if (bossHealthContainer) bossHealthContainer.style.display = 'block';
 }
+
 function actualizarJefe(dt) {
   if (!estadoJuego.jefe) return;
   const jefe = estadoJuego.jefe;
@@ -94,53 +98,114 @@ function actualizarJefe(dt) {
     }
   }
 }
+
 function dibujarJefe() {
   if (!estadoJuego.jefe) return;
   const jefe = estadoJuego.jefe;
   ctx.save();
   if (jefe.timerGolpe > 0) ctx.filter = 'brightness(2.5)';
   ctx.strokeStyle = '#6a0dad'; ctx.lineWidth = 18; ctx.lineCap = 'round';
-  jefe.tentaculos.forEach(t => { ctx.beginPath(); ctx.moveTo(jefe.x, jefe.y); const a = t.angulo + Math.sin(estadoJuego.tiempoTranscurrido * 2 + t.fase) * 0.3; const midX = jefe.x + Math.cos(a) * t.largo * 0.5; const midY = jefe.y + Math.sin(a) * t.largo * 0.5; const endX = jefe.x + Math.cos(a + Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + t.fase) * 0.5) * t.largo; const endY = jefe.y + Math.sin(a + Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + t.fase) * 0.5) * t.largo; ctx.quadraticCurveTo(midX, midY, endX, endY); ctx.stroke(); });
-  ctx.fillStyle = '#8a2be2'; ctx.beginPath(); ctx.ellipse(jefe.x, jefe.y, jefe.w / 2, jefe.h / 2, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(jefe.x - 40, jefe.y - 50, 25, 0, Math.PI * 2); ctx.arc(jefe.x + 40, jefe.y - 50, 25, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#000'; ctx.beginPath(); let pupilaX = clamp(jugador.x * W, jefe.x - 50, jefe.x - 30); ctx.arc(pupilaX, jefe.y - 50, 10, 0, Math.PI * 2); pupilaX = clamp(jugador.x * W, jefe.x + 30, jefe.x + 50); ctx.arc(pupilaX, jefe.y - 50, 10, 0, Math.PI * 2); ctx.fill();
+  jefe.tentaculos.forEach(t => { 
+    ctx.beginPath(); 
+    ctx.moveTo(jefe.x, jefe.y); 
+    const a = t.angulo + Math.sin(estadoJuego.tiempoTranscurrido * 2 + t.fase) * 0.3; 
+    const midX = jefe.x + Math.cos(a) * t.largo * 0.5; 
+    const midY = jefe.y + Math.sin(a) * t.largo * 0.5; 
+    const endX = jefe.x + Math.cos(a + Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + t.fase) * 0.5) * t.largo; 
+    const endY = jefe.y + Math.sin(a + Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + t.fase) * 0.5) * t.largo; 
+    ctx.quadraticCurveTo(midX, midY, endX, endY); 
+    ctx.stroke(); 
+  });
+  ctx.fillStyle = '#8a2be2'; 
+  ctx.beginPath(); 
+  ctx.ellipse(jefe.x, jefe.y, jefe.w / 2, jefe.h / 2, 0, 0, Math.PI * 2); 
+  ctx.fill();
+  ctx.fillStyle = '#fff'; 
+  ctx.beginPath(); 
+  ctx.arc(jefe.x - 40, jefe.y - 50, 25, 0, Math.PI * 2); 
+  ctx.arc(jefe.x + 40, jefe.y - 50, 25, 0, Math.PI * 2); 
+  ctx.fill();
+  ctx.fillStyle = '#000'; 
+  ctx.beginPath(); 
+  let pupilaX = clamp(jugador.x * W, jefe.x - 50, jefe.x - 30); 
+  ctx.arc(pupilaX, jefe.y - 50, 10, 0, Math.PI * 2); 
+  pupilaX = clamp(jugador.x * W, jefe.x + 30, jefe.x + 50); 
+  ctx.arc(pupilaX, jefe.y - 50, 10, 0, Math.PI * 2); 
+  ctx.fill();
   if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
     if (jefe.datosAtaque.carga > 0) {
-      ctx.fillStyle = 'rgba(255, 50, 50, 0.4)'; ctx.fillRect(0, jefe.datosAtaque.y - 20, W, 40); ctx.strokeStyle = '#e04040'; ctx.lineWidth = 40; ctx.beginPath(); ctx.moveTo(W, jefe.datosAtaque.y); ctx.lineTo(W - 100, jefe.datosAtaque.y + (Math.random() - 0.5) * 20); ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 50, 50, 0.4)'; 
+      ctx.fillRect(0, jefe.datosAtaque.y - 20, W, 40); 
+      ctx.strokeStyle = '#e04040'; 
+      ctx.lineWidth = 40; 
+      ctx.beginPath(); 
+      ctx.moveTo(W, jefe.datosAtaque.y); 
+      ctx.lineTo(W - 100, jefe.datosAtaque.y + (Math.random() - 0.5) * 20); 
+      ctx.stroke();
     } else {
-      const tentaculoX = W - jefe.datosAtaque.progreso * (W + 200); ctx.strokeStyle = '#e04040'; ctx.lineWidth = 40; ctx.beginPath(); ctx.moveTo(tentaculoX + 200, jefe.datosAtaque.y - 20); ctx.lineTo(tentaculoX, jefe.datosAtaque.y); ctx.lineTo(tentaculoX + 200, jefe.datosAtaque.y + 20); ctx.stroke();
+      const tentaculoX = W - jefe.datosAtaque.progreso * (W + 200); 
+      ctx.strokeStyle = '#e04040'; 
+      ctx.lineWidth = 40; 
+      ctx.beginPath(); 
+      ctx.moveTo(tentaculoX + 200, jefe.datosAtaque.y - 20); 
+      ctx.lineTo(tentaculoX, jefe.datosAtaque.y); 
+      ctx.lineTo(tentaculoX + 200, jefe.datosAtaque.y + 20); 
+      ctx.stroke();
     }
   }
   ctx.restore();
 }
 
-// --- ROUTER DEL GESTOR DE NIVELES (AÑADIMOS EL CASO PARA EL NIVEL 5)---
+// --- ROUTER DEL GESTOR DE NIVELES (AÑADIMOS EL CASO PARA EL NIVEL 6)---
 export function initLevel(nivel) {
-    if (nivel === 3) {
-        generarJefe();
-    } else if (nivel === 4) {
-        Level4.init();
-    } else if (nivel === 5) { // AÑADIDO
-        Level5.init();
+    switch(nivel) {
+        case 3:
+            generarJefe();
+            break;
+        case 4:
+            Level4.init();
+            break;
+        case 5:
+            Level5.init();
+            break;
+        case 6: // NUEVO NIVEL 6
+            Level6.init();
+            break;
     }
 }
+
 export function updateLevel(dt) {
     if (!estadoJuego) return;
-    if (estadoJuego.nivel === 3) {
-        actualizarJefe(dt);
-    } else if (estadoJuego.nivel === 4) {
-        Level4.update(dt);
-    } else if (estadoJuego.nivel === 5) { // AÑADIDO
-        Level5.update(dt);
+    switch(estadoJuego.nivel) {
+        case 3:
+            actualizarJefe(dt);
+            break;
+        case 4:
+            Level4.update(dt);
+            break;
+        case 5:
+            Level5.update(dt);
+            break;
+        case 6: // NUEVO NIVEL 6
+            Level6.update(dt);
+            break;
     }
 }
+
 export function drawLevel() {
     if (!estadoJuego) return;
-    if (estadoJuego.nivel === 3) {
-        dibujarJefe();
-    } else if (estadoJuego.nivel === 4) {
-        Level4.draw();
-    } else if (estadoJuego.nivel === 5) { // AÑADIDO
-        Level5.draw();
+    switch(estadoJuego.nivel) {
+        case 3:
+            dibujarJefe();
+            break;
+        case 4:
+            Level4.draw();
+            break;
+        case 5:
+            Level5.draw();
+            break;
+        case 6: // NUEVO NIVEL 6
+            Level6.draw();
+            break;
     }
 }
