@@ -54,14 +54,15 @@ export function update(dt) {
         escombro.rotacion += escombro.vRot * dt;
 
         // Colisión con el jugador
-        const dist = Math.hypot((jugador.x * W) - escombro.x, (jugador.y * H) - escombro.y);
+        // === LÍNEA CORREGIDA ===
+        const dist = Math.hypot(jugador.x - escombro.x, jugador.y - escombro.y);
         if (dist < jugador.r + escombro.tamano / 2) {
             generarExplosion(escombro.x, escombro.y, '#cccccc');
             escombros.splice(i, 1);
             if (estadoJuego.vidas > 0) {
                 estadoJuego.vidas--;
                 estadoJuego.animVida = 0.6;
-                S.reproducir('choque'); // <-- MODIFICADO
+                S.reproducir('choque');
             }
             if (estadoJuego.vidas <= 0) {
                 perderJuego();

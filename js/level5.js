@@ -28,7 +28,7 @@ function generarEscombro() {
         tamano: tamano,
         rotacion: Math.random() * Math.PI * 2,
         vRot: velocidadRotacion,
-        hp: Math.ceil(tamano / 30) // Escombros más grandes necesitan más golpes
+        hp: Math.ceil(tamano / 30)
     });
 }
 
@@ -47,7 +47,7 @@ function generarCorriente() {
         maxDuracion: duracion,
         isLeft: desdeIzquierda
     });
-    S.reproducir('ink'); // Reutilizamos un sonido para la corriente
+    S.reproducir('ink');
 }
 
 
@@ -59,7 +59,6 @@ export function init() {
     corrientes = [];
     spawnTimerEscombros = 0.5;
     spawnTimerCorrientes = 3.0;
-    // Sobreescribimos la posición del jugador para que sea relativa a toda la pantalla
     jugador.x = W / 2;
     jugador.y = H - 100;
 }
@@ -67,59 +66,34 @@ export function init() {
 export function update(dt) {
     if (!estadoJuego || estadoJuego.nivel !== 5) return;
     
-    // 1. SCROLL VERTICAL: Mover todo hacia abajo para simular ascenso
+    // --- LÓGICA DEL NIVEL 5 (SIN MOVIMIENTO DEL JUGADOR) ---
+
+    // 1. SCROLL VERTICAL y corrientes
+    jugador.y -= VELOCIDAD_ASCENSO * dt;
     for (const escombro of escombrosCayendo) {
         escombro.y += VELOCIDAD_ASCENSO * dt;
     }
     for (const corriente of corrientes) {
         corriente.y += VELOCIDAD_ASCENSO * dt;
-    }
-    const jugadorPX = { x: jugador.x, y: jugador.y };
-
-    // 2. Control del jugador (modificado para movimiento libre)
-    const teclas = estadoJuego.teclasActivas;
-    let vx = 0;
-    let vy = -VELOCIDAD_ASCENSO;
-
-    if (teclas['ArrowUp']) vy -= 400;
-    if (teclas['ArrowDown']) vy += 400;
-    if (teclas['ArrowLeft']) vx -= 400;
-    if (teclas['ArrowRight']) vx += 400;
-
-    jugadorPX.x += vx * dt;
-    jugadorPX.y += vy * dt;
-    
-    // 3. Aplicar fuerza de corrientes
-    for (const corriente of corrientes) {
-        if (jugadorPX.y > corriente.y - corriente.ancho/2 && jugadorPX.y < corriente.y + corriente.ancho/2) {
-            jugadorPX.x += corriente.fuerza * dt;
+        if (jugador.y > corriente.y - corriente.ancho/2 && jugador.y < corriente.y + corriente.ancho/2) {
+            jugador.x += corriente.fuerza * dt;
         }
     }
-
-    // 4. Mantener al jugador en pantalla y comprobar si se queda atrás
-    jugadorPX.x = clamp(jugadorPX.x, jugador.r, W - jugador.r);
     
-    if (jugadorPX.y > H + jugador.r) { // Da un pequeño margen para salir
+    // 2. Comprobar si el jugador se queda atrás
+    if (jugador.y > H + jugador.r) {
          if (estadoJuego.vidas > 0) {
             estadoJuego.vidas--;
             estadoJuego.animVida = 0.6;
-            S.reproducir('choque'); // <-- MODIFICADO
-            jugadorPX.y = H - 50; // Reposicionar para darle una oportunidad
+            S.reproducir('choque');
+            jugador.y = H - 50;
         }
         if (estadoJuego.vidas <= 0) {
             perderJuego();
         }
     }
-    // Sujetar la posición Y del jugador para que no suba por encima de la pantalla
-    jugadorPX.y = clamp(jugadorPX.y, jugador.r, H + jugador.r);
-
-
-    // Actualizamos el objeto jugador global
-    jugador.x = jugadorPX.x;
-    jugador.y = jugadorPX.y;
-
-
-    // 5. Manejar spawners
+    
+    // 3. Manejar spawners
     spawnTimerEscombros -= dt;
     if (spawnTimerEscombros <= 0) {
         generarEscombro();
@@ -131,31 +105,28 @@ export function update(dt) {
         spawnTimerCorrientes = 2.5 + Math.random() * 2;
     }
 
-
-    // 6. Actualizar y comprobar colisiones para cada escombro
+    // 4. Actualizar y comprobar colisiones para cada escombro
     for (let i = escombrosCayendo.length - 1; i >= 0; i--) {
         const escombro = escombrosCayendo[i];
         escombro.y += escombro.vy * dt;
         escombro.rotacion += escombro.vRot * dt;
 
-        // Colisión con el jugador
         const dist = Math.hypot(jugador.x - escombro.x, jugador.y - escombro.y);
         if (dist < jugador.r + escombro.tamano / 2) {
             generarExplosion(escombro.x, escombro.y, '#cccccc');
             escombrosCayendo.splice(i, 1);
-            if (estadoJuego.vidas > 1) { // Daño masivo, pierde 2 vidas
+            if (estadoJuego.vidas > 1) {
                 estadoJuego.vidas -= 2;
                 estadoJuego.animVida = 0.6;
-                S.reproducir('choque'); // <-- MODIFICADO
+                S.reproducir('choque');
             } else if (estadoJuego.vidas > 0) {
-                S.reproducir('choque'); // <-- MODIFICADO
+                S.reproducir('choque');
                 estadoJuego.vidas = 0;
                 perderJuego();
             }
             continue;
         }
 
-        // Colisión con torpedos y proyectiles
         let destruido = false;
         const proyectilesTotales = [...torpedos, ...proyectiles];
         for (let j = proyectilesTotales.length - 1; j >= 0; j--) {
@@ -183,7 +154,6 @@ export function update(dt) {
         }
     }
     
-    // Actualizar corrientes
     for (let i = corrientes.length - 1; i >= 0; i--) {
         corrientes[i].duracion -= dt;
         if (corrientes[i].duracion <= 0 || corrientes[i].y > H + corrientes[i].ancho) {
@@ -195,8 +165,6 @@ export function update(dt) {
 
 export function draw() {
     if (!ctx) return;
-    
-    // Dibujar corrientes de agua
     for (const corriente of corrientes) {
         const alpha = clamp(corriente.duracion / corriente.maxDuracion, 0, 1) * 0.3;
         const gradX_start = corriente.isLeft ? 0 : W;
@@ -220,8 +188,6 @@ export function draw() {
         ctx.closePath();
         ctx.fill();
     }
-
-    // Dibujar escombros
     ctx.fillStyle = '#6D5A46';
     ctx.strokeStyle = '#413529';
     ctx.lineWidth = 2;

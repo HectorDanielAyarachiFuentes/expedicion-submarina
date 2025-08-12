@@ -66,12 +66,11 @@ function actualizarIconos() {
   }
 }
 
-// ========= Audio (S) - Exportado para que los niveles lo usen =========
+// ========= Audio (S) =========
 const PLAYLIST = [
     'canciones/Abismo_de_Acero.mp3',
     'canciones/Batalla_de_las_Profundidades.mp3'
 ];
-
 export const S = (function () {
     let creado = false;
     const a = {};
@@ -91,107 +90,26 @@ export const S = (function () {
         reload: 'sonidos/reload.wav'
     };
 
-    PLAYLIST.forEach((cancion, i) => {
-        mapaFuentes[`music_${i}`] = cancion;
-    });
-
-    function init() {
-        if (creado) return;
-        creado = true;
-        for (const k in mapaFuentes) {
-            try {
-                const el = new Audio(mapaFuentes[k]);
-                el.preload = 'auto';
-                if (k.startsWith('music_')) {
-                    el.loop = true;
-                    el.volume = 0.35;
-                } else {
-                    el.volume = 0.5;
-                }
-                a[k] = el;
-            } catch (e) {
-                console.warn(`No se pudo cargar el audio: ${mapaFuentes[k]}`);
-            }
-        }
-    }
-
+    PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
+    function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k.startsWith('music_')) { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } a[k] = el; } catch (e) { console.warn(`No se pudo cargar el audio: ${mapaFuentes[k]}`); } } }
     function reproducir(k) { const el = a[k]; if (!el) return; try { el.currentTime = 0; el.play(); } catch (e) { } }
-    
-    function detener(k) {
-        if (k === 'music' && musicaActual) k = musicaActual;
-        const el = a[k];
-        if (!el) return;
-        try {
-            el.pause();
-            el.currentTime = 0;
-        } catch (e) { }
-    }
-
-    function playRandomMusic() {
-        if (musicaActual) {
-            detener(musicaActual);
-        }
-        let nuevaCancionKey;
-        const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_'));
-        if (posiblesCanciones.length === 0) return;
-        
-        do {
-            const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length);
-            nuevaCancionKey = posiblesCanciones[indiceAleatorio];
-        } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual);
-
-        musicaActual = nuevaCancionKey;
-        const el = a[musicaActual];
-        if (el) {
-            try {
-                el.currentTime = 0;
-                el.play();
-            } catch (e) { }
-        }
-    }
-    
-    function pausar(k) {
-        if (k === 'music' && musicaActual) k = musicaActual;
-        const el = a[k];
-        if (!el) return;
-        try { el.pause(); } catch (e) { }
-    }
-    
-    function bucle(k) {
-        if (k === 'music' && musicaActual) k = musicaActual;
-        const el = a[k];
-        if (!el) return;
-        if (el.paused) try { el.play(); } catch (e) { }
-    }
-    
+    function detener(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; try { el.pause(); el.currentTime = 0; } catch (e) { } }
+    function playRandomMusic() { if (musicaActual) { detener(musicaActual); } let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual); musicaActual = nuevaCancionKey; const el = a[musicaActual]; if (el) { try { el.currentTime = 0; el.play(); } catch (e) { } } }
+    function pausar(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; try { el.pause(); } catch (e) { } }
+    function bucle(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; if (el.paused) try { el.play(); } catch (e) { } }
     function setSilenciado(m) { for (const k in a) { try { a[k].muted = !!m; } catch (e) { } } _silenciado = !!m; }
     function estaSilenciado() { return _silenciado; }
     function alternarSilenciado() { setSilenciado(!estaSilenciado()); }
-    
     return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic };
 })();
-
 
 // ========= Puntuación y Progreso del Jugador =========
 const CLAVE_PUNTUACION = 'expedicion_hiscore_v2';
 const CLAVE_NIVEL_MAX = 'expedicion_maxlevel_v2';
-
-let puntuacionMaxima = 0;
-try { puntuacionMaxima = parseInt(localStorage.getItem(CLAVE_PUNTUACION) || '0', 10) || 0; } catch (e) { }
-
-let nivelMaximoAlcanzado = 1;
-try { nivelMaximoAlcanzado = parseInt(localStorage.getItem(CLAVE_NIVEL_MAX) || '1', 10) || 1; } catch (e) { }
-
+let puntuacionMaxima = 0; try { puntuacionMaxima = parseInt(localStorage.getItem(CLAVE_PUNTUACION) || '0', 10) || 0; } catch (e) { }
+let nivelMaximoAlcanzado = 1; try { nivelMaximoAlcanzado = parseInt(localStorage.getItem(CLAVE_NIVEL_MAX) || '1', 10) || 1; } catch (e) { }
 function guardarPuntuacionMaxima() { try { localStorage.setItem(CLAVE_PUNTUACION, String(puntuacionMaxima)); } catch (e) { } }
-function guardarNivelMaximo() {
-    try {
-        const proximoNivelDesbloqueado = Math.min(estadoJuego.nivel + 1, Levels.CONFIG_NIVELES.length);
-        if (proximoNivelDesbloqueado > nivelMaximoAlcanzado) {
-            nivelMaximoAlcanzado = proximoNivelDesbloqueado;
-            localStorage.setItem(CLAVE_NIVEL_MAX, String(nivelMaximoAlcanzado));
-        }
-    } catch (e) { }
-}
+function guardarNivelMaximo() { try { const proximoNivelDesbloqueado = Math.min(estadoJuego.nivel + 1, Levels.CONFIG_NIVELES.length); if (proximoNivelDesbloqueado > nivelMaximoAlcanzado) { nivelMaximoAlcanzado = proximoNivelDesbloqueado; localStorage.setItem(CLAVE_NIVEL_MAX, String(nivelMaximoAlcanzado)); } } catch (e) { } }
 
 // ========= Recursos (Assets) =========
 let robotImg = null, robotListo = false, spriteAncho = 96, spriteAlto = 64, robotEscala = 2;
@@ -210,10 +128,8 @@ export let carriles = [];
 function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY = H * 0.82; for (let i = 0; i < NUM_CARRILES; i++) { const t = i / (NUM_CARRILES - 1); carriles.push(minY + t * (maxY - minY)); } }
 
 // ========= Partículas y Efectos =========
-let particulas = []; let particulasExplosion = []; let particulasTinta = [];
-let particulasBurbujas = [];
+let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [];
 export let proyectiles = [];
-
 function generarParticula(arr, opts) { arr.push({ x: opts.x, y: opts.y, vx: opts.vx, vy: opts.vy, r: opts.r, vida: opts.vida, vidaMax: opts.vida, color: opts.color, tw: Math.random() * Math.PI * 2, baseA: opts.baseA || 1 }); }
 function iniciarParticulas() {
     particulas.length = 0;
@@ -221,83 +137,10 @@ function iniciarParticulas() {
     const densidad = Math.max(40, Math.min(140, Math.floor((W * H) / 28000)));
     for (let i = 0; i < densidad; i++) generarParticula(particulas, { x: Math.random() * W, y: Math.random() * H, vx: -(8 + Math.random() * 22), vy: -(10 + Math.random() * 25), r: Math.random() * 2 + 1.2, vida: 999, color: '#cfe9ff', baseA: 0.25 + Math.random() * 0.25 });
 }
-function actualizarParticulas(dt) {
-    for (let arr of [particulas, particulasExplosion, particulasTinta, particulasBurbujas]) {
-        for (let i = arr.length - 1; i >= 0; i--) {
-            const p = arr[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; p.tw += dt * 2.0;
-            if (arr === particulasBurbujas) {
-                p.vy -= 40 * dt;
-                p.vx *= 0.98;
-            }
-            if (arr === particulas) {
-                if (p.x < -8 || p.y < -8) { p.x = W + 10 + Math.random() * 20; p.y = H * Math.random(); }
-            } else {
-                if (p.vida <= 0) { arr.splice(i, 1); }
-            }
-        }
-    }
-}
-function dibujarParticulas() {
-    if (!ctx) return;
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    for (const p of particulas) {
-        ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1);
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill();
-    }
-    for (const p of particulasExplosion) {
-        ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1);
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill();
-    }
-    ctx.globalCompositeOperation = 'source-over';
-    for (const p of particulasTinta) {
-        ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill();
-    }
-    ctx.strokeStyle = '#aae2ff';
-    ctx.lineWidth = 1.5;
-    for (const p of particulasBurbujas) {
-        ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.7;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.stroke();
-    }
-    ctx.restore();
-}
-
-function generarBurbujaPropulsion(x, y, isLevel5 = false) {
-    if (Math.random() > 0.6) {
-        const velocidadBaseX = isLevel5 ? 0 : 60;
-        const velocidadBaseY = isLevel5 ? 60 : 0;
-        const dispersion = 25;
-        generarParticula(particulasBurbujas, {
-            x: x, y: y,
-            vx: velocidadBaseX + (Math.random() - 0.5) * dispersion,
-            vy: velocidadBaseY + (Math.random() - 0.5) * dispersion - 20,
-            r: Math.random() * 2 + 1,
-            vida: 1 + Math.random() * 1.5,
-            color: ''
-        });
-    }
-}
-function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) {
-    for (let i = 0; i < 8; i++) {
-        const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
-        const dispersion = Math.PI / 4;
-        const angulo = anguloBase + (Math.random() - 0.5) * dispersion;
-        const velocidad = 30 + Math.random() * 40;
-        generarParticula(particulasBurbujas, {
-            x: x, y: y,
-            vx: Math.cos(angulo) * velocidad,
-            vy: Math.sin(angulo) * velocidad - 20,
-            r: Math.random() * 2.5 + 1.5,
-            vida: 0.8 + Math.random() * 0.5,
-            color: ''
-        });
-    }
-}
-
-function oscilarX() { return (estadoJuego && estadoJuego.nivel !== 5) ? Math.sin(estadoJuego.tiempoTranscurrido * 2 * Math.PI * 0.5) * 6 : 0; }
+function actualizarParticulas(dt) { for (let arr of [particulas, particulasExplosion, particulasTinta, particulasBurbujas]) { for (let i = arr.length - 1; i >= 0; i--) { const p = arr[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; p.tw += dt * 2.0; if (arr === particulasBurbujas) { p.vy -= 40 * dt; p.vx *= 0.98; } if (arr === particulas) { if (p.x < -8 || p.y < -8) { p.x = W + 10 + Math.random() * 20; p.y = H * Math.random(); } } else { if (p.vida <= 0) { arr.splice(i, 1); } } } } }
+function dibujarParticulas() { if (!ctx) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.strokeStyle = '#aae2ff'; ctx.lineWidth = 1.5; for (const p of particulasBurbujas) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.7; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); }
+function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 0.6) { const velocidadBaseX = isLevel5 ? 0 : 60; const velocidadBaseY = isLevel5 ? 60 : 0; const dispersion = 25; generarParticula(particulasBurbujas, { x: x, y: y, vx: velocidadBaseX + (Math.random() - 0.5) * dispersion, vy: velocidadBaseY + (Math.random() - 0.5) * dispersion - 20, r: Math.random() * 2 + 1, vida: 1 + Math.random() * 1.5, color: '' }); } }
+function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
 export function generarExplosion(x, y, color = '#ff8833') { for (let i = 0; i < 20; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * 100; generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * 2 + 1, vida: 0.4 + Math.random() * 0.4, color }); } }
 export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i = 0; i < 50; i++) { const ang = Math.random() * Math.PI * 2, spd = 20 + Math.random() * size; generarParticula(particulasTinta, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 15 + Math.random() * size * 0.8, vida: 2.5 + Math.random() * 2, color: '#101010' }); } }
 
@@ -305,7 +148,8 @@ export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i
 export let estadoJuego = null, jugador, animales;
 let teclas = {};
 let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
-let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = Math.PI / 36;
+let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = Math.PI / 24;
+const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
 export let torpedos = [];
 const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta'];
@@ -325,7 +169,7 @@ function reiniciar(nivelDeInicio = 1) {
         asesinatos: 0,
         teclasActivas: {},
     };
-    jugador = { x: 0.18, y: 0.5, vy: 0, r: 26, garra: null };
+    jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0 };
     if (nivelDeInicio === 5) {
         Levels.initLevel(5);
     }
@@ -342,13 +186,12 @@ function reiniciar(nivelDeInicio = 1) {
 function periodoAparicionActual() { return Levels.getLevelSpawnPeriod(); }
 function velocidadActual() { return Levels.getLevelSpeed(); }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
-function carrilOcupado(idx) { for (let i = 0; i < animales.length; i++) { const a = animales[i]; if (a.carril === idx && a.x > W * 0.25 && !a.capturado) return true; } return false; }
 
 export function generarAnimal(esEsbirroJefe = false) {
-    if (estadoJuego.nivel === 3 || estadoJuego.nivel === 4 || estadoJuego.nivel === 5) return;
-    const candidatos = []; for (let i = 0; i < carriles.length; i++) { if (!carrilOcupado(i)) candidatos.push(i); } if (!candidatos.length) return;
-    const indiceCarril = candidatos[(Math.random() * candidatos.length) | 0];
-    const y = carriles[indiceCarril];
+    if ((estadoJuego.nivel === 3 || estadoJuego.nivel === 4 || estadoJuego.nivel === 5) && !esEsbirroJefe) return;
+    const minY = H * 0.15;
+    const maxY = H * 0.85;
+    const y = minY + Math.random() * (maxY - minY);
     let velocidad = velocidadActual() + 60;
     let tipo = 'normal';
     if (estadoJuego.nivel === 2 && Math.random() < 0.3) {
@@ -360,14 +203,14 @@ export function generarAnimal(esEsbirroJefe = false) {
         velocidad = 650;
     }
     const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
-    animales.push({ x: W + 40, y, vx: -velocidad, r: 44, carril: indiceCarril, capturado: false, fila, frame: 0, timerFrame: 0, tamano: 96, semillaFase: Math.random() * Math.PI * 2, tipo: tipo });
+    animales.push({ x: W + 40, y, vx: -velocidad, r: 44, carril: -1, capturado: false, fila, frame: 0, timerFrame: 0, tamano: 96, semillaFase: Math.random() * Math.PI * 2, tipo: tipo });
 }
 
 function dispararGarfio() {
     if (!jugador || jugador.garra || !estadoJuego || estadoJuego.bloqueoEntrada > 0) return;
     const isLevel5 = estadoJuego.nivel === 5;
-    const baseX = isLevel5 ? jugador.x : (jugador.x * W + oscilarX());
-    const baseY = isLevel5 ? jugador.y : (jugador.y * H);
+    const baseX = isLevel5 ? jugador.x : jugador.x;
+    const baseY = isLevel5 ? jugador.y : jugador.y;
     const cannonX = isLevel5 ? baseX : baseX + 45;
     const cannonY = isLevel5 ? baseY - 45 : baseY;
     generarRafagaBurbujasDisparo(cannonX, cannonY, isLevel5);
@@ -380,8 +223,8 @@ function dispararGarfio() {
 function dispararShotgun() {
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
     const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : (jugador.x * W + oscilarX()) + 40;
-    const py = isLevel5 ? jugador.y - 40 : (jugador.y * H);
+    const px = isLevel5 ? jugador.x : jugador.x + 40;
+    const py = isLevel5 ? jugador.y - 40 : jugador.y;
     generarRafagaBurbujasDisparo(px, py, isLevel5);
     for (let i = 0; i < 25; i++) {
         const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
@@ -398,8 +241,8 @@ function dispararShotgun() {
 function dispararMetralleta() {
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
     const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : (jugador.x * W + oscilarX()) + 40;
-    const py = isLevel5 ? jugador.y - 40 : (jugador.y * H);
+    const px = isLevel5 ? jugador.x : jugador.x + 40;
+    const py = isLevel5 ? jugador.y - 40 : jugador.y;
     generarRafagaBurbujasDisparo(px, py, isLevel5);
     const numBalas = 30;
     for (let i = 0; i < numBalas; i++) {
@@ -433,8 +276,8 @@ function disparar() {
 function lanzarTorpedo() {
     if (!estadoJuego || !estadoJuego.enEjecucion || estadoJuego.enfriamientoTorpedo > 0) return;
     const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : (jugador.x * W + oscilarX());
-    const py = isLevel5 ? jugador.y : (jugador.y * H);
+    const px = isLevel5 ? jugador.x : jugador.x;
+    const py = isLevel5 ? jugador.y : jugador.y;
     if (isLevel5) {
         torpedos.push({ x: px, y: py, w: 6, h: 20, isVertical: true });
     } else {
@@ -453,39 +296,49 @@ function actualizar(dt) {
     estadoJuego.teclasActivas = teclas;
     const progresoProfundidad = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1);
     estadoJuego.profundidad_m = Math.max(estadoJuego.profundidad_m, Math.floor(lerp(0, 3900, progresoProfundidad)));
-    const isLevel5 = estadoJuego.nivel === 5;
-    if (!isLevel5) {
-        estadoJuego.velocidad = velocidadActual();
-        const arriba = !!teclas['ArrowUp'], abajo = !!teclas['ArrowDown'];
-        if (arriba || abajo) {
-            const propulsionX = jugador.x * W - 30;
-            const propulsionY = jugador.y * H;
-            generarBurbujaPropulsion(propulsionX, propulsionY, false);
-        }
-        if (arrastreActivo) { const targetYpx = clamp(arrastreY, H * 0.1, H * 0.9); const dy = targetYpx - (jugador.y * H); jugador.y = clamp(jugador.y + (Math.sign(dy) * (450 * Math.log(1 + Math.abs(dy) / 24)) * dt) / H, 0.1, 0.9); inclinacionRobotObjetivo = dy < -4 ? -INCLINACION_MAX : (dy > 4 ? INCLINACION_MAX : 0); }
-        else { jugador.vy = arriba ? -400 : abajo ? 400 : 0; jugador.y = clamp(jugador.y + (jugador.vy * dt / H), 0.1, 0.9); inclinacionRobotObjetivo = arriba ? -INCLINACION_MAX : (abajo ? INCLINACION_MAX : 0); }
-        inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dt);
-    } else {
-        if (teclas['ArrowUp'] || teclas['ArrowDown'] || teclas['ArrowLeft'] || teclas['ArrowRight']) {
-            const propulsionX = jugador.x;
-            const propulsionY = jugador.y + 30;
-            generarBurbujaPropulsion(propulsionX, propulsionY, true);
-        }
-        if (teclas['ArrowLeft']) inclinacionRobotObjetivo = -INCLINACION_MAX * 1.5;
-        else if (teclas['ArrowRight']) inclinacionRobotObjetivo = INCLINACION_MAX * 1.5;
-        else inclinacionRobotObjetivo = 0;
-        inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dt);
+    
+    let vx = 0, vy = 0;
+    if (teclas['ArrowUp']) vy -= 1;
+    if (teclas['ArrowDown']) vy += 1;
+    if (teclas['ArrowLeft']) vx -= 1;
+    if (teclas['ArrowRight']) vx += 1;
+    const len = Math.hypot(vx, vy);
+    if (len > 0) {
+        vx = (vx / len) * JUGADOR_VELOCIDAD;
+        vy = (vy / len) * JUGADOR_VELOCIDAD;
+        generarBurbujaPropulsion(jugador.x - 30, jugador.y, false);
     }
+    jugador.x += vx * dt;
+    jugador.y += vy * dt;
+    
+    Levels.updateLevel(dt); // Lógica específica de nivel (scroll, spawns, jefe, etc.)
+    
+    jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
+    jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
+    if (vy < 0) inclinacionRobotObjetivo = -INCLINACION_MAX;
+    else if (vy > 0) inclinacionRobotObjetivo = INCLINACION_MAX;
+    else inclinacionRobotObjetivo = 0;
+
+    const isLevel5 = estadoJuego.nivel === 5;
+    if(isLevel5){
+        if (teclas['ArrowLeft']) inclinacionRobotObjetivo -= INCLINACION_MAX * 1.5;
+        else if (teclas['ArrowRight']) inclinacionRobotObjetivo += INCLINACION_MAX * 1.5;
+    }
+    inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dt);
+
     if (teclas[' '] && estadoJuego.bloqueoEntrada === 0) { disparar(); teclas[' '] = false; }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
     if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
     if (teclas['2']) { estadoJuego.armaActual = 'shotgun'; }
     if (teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
     if (teclas['c'] || teclas['C']) { const currentIndex = WEAPON_ORDER.indexOf(estadoJuego.armaActual); const nextIndex = (currentIndex + 1) % WEAPON_ORDER.length; estadoJuego.armaActual = WEAPON_ORDER[nextIndex]; teclas['c'] = teclas['C'] = false; }
+    
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dt, configNivel.meta);
-    for (let i = animales.length - 1; i >= 0; i--) { const a = animales[i]; a.x += a.vx * dt; a.timerFrame += dt; if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; } if (!a.capturado && Math.hypot(jugador.x * W + oscilarX() - a.x, jugador.y * H - a.y) < jugador.r + 20) { animales.splice(i, 1); const antes = estadoJuego.vidas; if (estadoJuego.vidas > 0) estadoJuego.vidas--; if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir('choque'); } if (estadoJuego.vidas <= 0) perderJuego(); continue; } if (!a.capturado && a.x < -a.r) { animales.splice(i, 1); } }
+    
+    for (let i = animales.length - 1; i >= 0; i--) { const a = animales[i]; a.x += a.vx * dt; a.timerFrame += dt; if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; } if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + 20) { animales.splice(i, 1); const antes = estadoJuego.vidas; if (estadoJuego.vidas > 0) estadoJuego.vidas--; if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir('choque'); } if (estadoJuego.vidas <= 0) perderJuego(); continue; } if (!a.capturado && a.x < -a.r) { animales.splice(i, 1); } }
+    
     if (jugador.garra) {
         const g = jugador.garra;
         const spd = g.velocidad * dt;
@@ -507,8 +360,8 @@ function actualizar(dt) {
             if (g.recorrido >= g.alcance) g.fase = 'retorno';
         } else { // Fase de 'retorno'
             g.recorrido -= spd;
-            const targetX = estadoJuego.nivel === 5 ? jugador.x : (jugador.x * W + oscilarX());
-            const targetY = estadoJuego.nivel === 5 ? jugador.y : (jugador.y * H);
+            const targetX = jugador.x;
+            const targetY = jugador.y;
             g.x += (targetX - g.x) * 0.1;
             g.y += (targetY - g.y) * 0.1;
             if (g.golpeado) {
@@ -526,6 +379,7 @@ function actualizar(dt) {
             }
         }
     }
+    
     for (let i = torpedos.length - 1; i >= 0; i--) {
         const t = torpedos[i];
         if (t.isVertical) {
@@ -551,10 +405,11 @@ function actualizar(dt) {
             if (estadoJuego.jefe && p.x > estadoJuego.jefe.x - estadoJuego.jefe.w / 2) { generarExplosion(p.x, p.y, p.color); proyectiles.splice(i, 1); estadoJuego.jefe.hp -= 1; estadoJuego.jefe.timerGolpe = 0.15; S.reproducir('boss_hit'); if (estadoJuego.jefe.hp <= 0) { estadoJuego.valorObjetivoNivel = 1; estadoJuego.puntuacion += 5000; } }
         }
     }
+    
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dt; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dt);
     estadoJuego.aparicion -= dt; if (estadoJuego.aparicion <= 0) { generarAnimal(); estadoJuego.aparicion = periodoAparicionActual(); }
-    Levels.updateLevel(dt);
+    
     actualizarParticulas(dt);
     comprobarCompletadoNivel();
 }
@@ -568,8 +423,8 @@ function renderizar(dt) {
         for (let i = 0; i < animales.length; i++) { const a = animales[i]; const offsetFlotante = Math.sin(Math.PI * estadoJuego.tiempoTranscurrido + a.semillaFase) * 5; ctx.save(); if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)'; if (criaturasListas && cFilas > 0) { const sx = (a.frame % 2) * cFrameAncho, sy = (a.fila % cFilas) * cFrameAlto; ctx.imageSmoothingEnabled = false; ctx.drawImage(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, Math.round(a.x - a.tamano / 2), Math.round(a.y + offsetFlotante - a.tamano / 2), a.tamano, a.tamano); } else { ctx.fillStyle = a.tipo === 'aggressive' ? '#ff5e5e' : '#ffd95e'; ctx.beginPath(); ctx.arc(a.x, a.y + offsetFlotante, a.r, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
         if (jugador) {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
-            const px = isLevel5 ? jugador.x : (jugador.x * W + oscilarX());
-            const py = isLevel5 ? jugador.y : (jugador.y * H);
+            const px = jugador.x;
+            const py = jugador.y;
             ctx.save();
             ctx.translate(px, py);
             const anguloFinal = isLevel5 ? -Math.PI / 2 + inclinacionRobot : inclinacionRobot;
@@ -588,8 +443,8 @@ function renderizar(dt) {
         }
         if (jugador && jugador.garra) {
             const isLevel5 = estadoJuego.nivel === 5;
-            const hx0 = isLevel5 ? jugador.x : (jugador.x * W + oscilarX());
-            const hy0 = isLevel5 ? jugador.y : (jugador.y * H);
+            const hx0 = jugador.x;
+            const hy0 = jugador.y;
             ctx.save();
             ctx.strokeStyle = '#8ff';
             ctx.lineWidth = 2;
@@ -619,69 +474,9 @@ function renderizar(dt) {
     dibujarHUD();
 }
 
-function dibujarFondo(dt) { if (!estadoJuego || !bgCtx) return; const scrollFondo = estadoJuego.nivel !== 3 && estadoJuego.nivel !== 4 && estadoJuego.nivel !== 5; bgCtx.clearRect(0, 0, W, H); if (bgListo && bgAncho > 0 && bgAlto > 0) { const spd = BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) bgOffset = (bgOffset + spd * dt) % bgAncho; bgCtx.imageSmoothingEnabled = false; for (let x = -bgOffset; x < W + bgAncho; x += bgAncho) { for (let y = 0; y < H + bgAlto; y += bgAlto) { bgCtx.drawImage(bgImg, Math.round(x), Math.round(y), bgAncho, bgAlto); } } if (fgListo && fgAncho > 0 && fgAlto > 0) { const fspd = FG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) fgOffset = (fgOffset + fspd * dt) % fgAncho; const yBase = H - fgAlto; for (let xx = -fgOffset; xx < W + fgAncho; xx += fgAncho) { bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto); } } } else { bgCtx.fillStyle = '#06131f'; bgCtx.fillRect(0, 0, W, H); } }
-
-function dibujarMascaraLuz() {
-    if (!estadoJuego || !fx) return;
-    fx.clearRect(0, 0, W, H);
-    const isLevel5 = estadoJuego.nivel === 5;
-    const oscuridadObjetivo = estadoJuego.nivel === 1 ? estadoJuego.tiempoTranscurrido / 180 : (estadoJuego.nivel === 2 ? 0.95 : 1.0);
-    const alpha = lerp(0, 0.9, clamp(oscuridadObjetivo, 0, 1));
-    if (alpha <= 0.001) return;
-    fx.globalCompositeOperation = 'source-over';
-    fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
-    fx.fillRect(0, 0, W, H);
-    if (estadoJuego.luzVisible && jugador) {
-        const px = isLevel5 ? jugador.x : (jugador.x * W + oscilarX());
-        const py = isLevel5 ? jugador.y : (jugador.y * H);
-        const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
-        const ang = anguloBase + inclinacionRobot;
-        const ux = Math.cos(ang), uy = Math.sin(ang);
-        const vx = -Math.sin(ang), vy = Math.cos(ang);
-        const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11));
-        const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11));
-        const L = isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560);
-        const theta = Math.PI / 9;
-        const endx = ax + ux * L, endy = ay + uy * L;
-        const half = Math.tan(theta) * L;
-        const pTopX = endx + vx * half, pTopY = endy + vy * half;
-        const pBotX = endx - vx * half, pBotY = endy - vy * half;
-        let g = fx.createLinearGradient(ax, ay, endx, endy);
-        g.addColorStop(0.00, 'rgba(255,255,255,1.0)');
-        g.addColorStop(0.45, 'rgba(255,255,255,0.5)');
-        g.addColorStop(1.00, 'rgba(255,255,255,0.0)');
-        fx.globalCompositeOperation = 'destination-out';
-        fx.fillStyle = g;
-        fx.beginPath();
-        fx.moveTo(ax, ay);
-        fx.lineTo(pTopX, pTopY);
-        fx.lineTo(pBotX, pBotY);
-        fx.closePath();
-        fx.fill();
-        const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54);
-        rg.addColorStop(0, 'rgba(255,255,255,1.0)');
-        rg.addColorStop(1, 'rgba(255,255,255,0.0)');
-        fx.fillStyle = rg;
-        fx.beginPath();
-        fx.arc(ax, ay, 54, 0, Math.PI * 2);
-        fx.fill();
-        fx.globalCompositeOperation = 'lighter';
-        const gGlow = fx.createLinearGradient(ax, ay, endx, endy);
-        gGlow.addColorStop(0.00, 'rgba(255,255,255,0.14)');
-        gGlow.addColorStop(0.60, 'rgba(255,255,255,0.06)');
-        gGlow.addColorStop(1.00, 'rgba(255,255,255,0.00)');
-        fx.fillStyle = gGlow;
-        fx.beginPath();
-        fx.moveTo(ax, ay);
-        fx.lineTo(pTopX, pTopY);
-        fx.lineTo(pBotX, pBotY);
-        fx.closePath();
-        fx.fill();
-        fx.globalCompositeOperation = 'source-over';
-    }
-}
-
-function dibujarHUD() { if (!estadoJuego || !hudLevelText || !hudObjectiveText) return; if (estadoJuego.enEjecucion) { const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1]; let textoObjetivo = ''; if (configNivel.tipo === 'capture') textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; else if (configNivel.tipo === 'survive') textoObjetivo = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - estadoJuego.valorObjetivoNivel)}s`; else if (configNivel.tipo === 'boss') textoObjetivo = `JEFE: Derrota al Kraken`; hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`; hudObjectiveText.textContent = textoObjetivo; } if (!hud) return; hud.clearRect(0, 0, W, H); if (!estadoJuego.enEjecucion) return; const s = estadoJuego, valorPuntuacion = s.puntuacion || 0, valorVidas = s.vidas || 3, valorProfundidad = Math.floor(s.profundidad_m || 0); const padX = 18, padY = 18, lh = 22; hud.save(); hud.fillStyle = '#ffffff'; hud.font = '18px "Press Start 2P", monospace'; hud.textAlign = 'left'; hud.textBaseline = 'alphabetic'; hud.shadowColor = 'rgba(0,0,0,0.7)'; hud.shadowBlur = 4; const filas = [{ label: 'SCORE', value: String(valorPuntuacion) }, { label: 'DEPTH', value: valorProfundidad + ' m' }, { label: 'RECORD', value: String(puntuacionMaxima) }]; const totalFilas = filas.length + 4; const y0 = H - padY - lh * totalFilas; let maxAnchoEtiqueta = 0; const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO']; for (const label of todasLasEtiquetas) maxAnchoEtiqueta = Math.max(maxAnchoEtiqueta, hud.measureText(label).width); const gap = 16; const valueX = padX + maxAnchoEtiqueta + gap; let currentY = y0; for (let i = 0; i < filas.length; i++) { hud.fillText(filas[i].label, padX, currentY); hud.fillText(filas[i].value, valueX, currentY); currentY += lh; } hud.fillText('VIDAS', padX, currentY); hud.fillStyle = '#ff4d4d'; hud.fillText('♥'.repeat(valorVidas) + '♡'.repeat(Math.max(0, 3 - valorVidas)), valueX, currentY); hud.fillStyle = '#ffffff'; currentY += lh; hud.fillText('TORPEDO', padX, currentY); const torpedoListo = s.enfriamientoTorpedo <= 0; hud.fillStyle = torpedoListo ? '#66ff66' : '#ff6666'; hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO...', valueX, currentY); currentY += lh; hud.fillStyle = '#ffffff'; hud.fillText('ARMA', padX, currentY); let armaTexto = s.armaActual.toUpperCase(); if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; hud.fillStyle = '#ff6666'; } else { armaTexto += " (LISTA)"; hud.fillStyle = '#ffdd77'; } } else { hud.fillStyle = '#aaddff'; } hud.fillText(armaTexto, valueX, currentY); currentY += lh; hud.fillStyle = '#ffffff'; hud.fillText('ASESINO', padX, currentY); const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0]; hud.fillStyle = '#ff5e5e'; hud.fillText(rango.titulo, valueX, currentY); hud.restore(); if (s.nivel === 3 && s.jefe) { const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1); if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%'; } else { if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none'; } }
+function dibujarFondo(dt) { if (!estadoJuego || !bgCtx) return; const scrollFondo = estadoJuego.nivel !== 3 && estadoJuego.nivel !== 5; bgCtx.clearRect(0, 0, W, H); if (bgListo && bgAncho > 0 && bgAlto > 0) { const spd = BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) bgOffset = (bgOffset + spd * dt) % bgAncho; bgCtx.imageSmoothingEnabled = false; for (let x = -bgOffset; x < W + bgAncho; x += bgAncho) { for (let y = 0; y < H + bgAlto; y += bgAlto) { bgCtx.drawImage(bgImg, Math.round(x), Math.round(y), bgAncho, bgAlto); } } if (fgListo && fgAncho > 0 && fgAlto > 0) { const fspd = FG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) fgOffset = (fgOffset + fspd * dt) % fgAncho; const yBase = H - fgAlto; for (let xx = -fgOffset; xx < W + fgAncho; xx += fgAncho) { bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto); } } } else { bgCtx.fillStyle = '#06131f'; bgCtx.fillRect(0, 0, W, H); } }
+function dibujarMascaraLuz() { if (!estadoJuego || !fx) return; fx.clearRect(0, 0, W, H); const isLevel5 = estadoJuego.nivel === 5; const oscuridadObjetivo = estadoJuego.nivel === 1 ? estadoJuego.tiempoTranscurrido / 180 : (estadoJuego.nivel === 2 ? 0.95 : 1.0); const alpha = lerp(0, 0.9, clamp(oscuridadObjetivo, 0, 1)); if (alpha <= 0.001) return; fx.globalCompositeOperation = 'source-over'; fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')'; fx.fillRect(0, 0, W, H); if (estadoJuego.luzVisible && jugador) { const px = jugador.x; const py = jugador.y; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + inclinacionRobot; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11)); const L = isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560); const theta = Math.PI / 9; const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half; let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)'); fx.globalCompositeOperation = 'destination-out'; fx.fillStyle = g; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)'); fx.fillStyle = rg; fx.beginPath(); fx.arc(ax, ay, 54, 0, Math.PI * 2); fx.fill(); fx.globalCompositeOperation = 'lighter'; const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60, 'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(255,255,255,0.00)'); fx.fillStyle = gGlow; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over'; } }
+function dibujarHUD() { if (!estadoJuego || !hudLevelText || !hudObjectiveText) return; if (estadoJuego.enEjecucion) { const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1]; let textoObjetivo = ''; if (configNivel.tipo === 'capture') { textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; } else if (configNivel.tipo === 'survive') { textoObjetivo = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - estadoJuego.valorObjetivoNivel)}s`; } else if (configNivel.tipo === 'boss') { textoObjetivo = `JEFE: Derrota al Kraken`; } hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`; hudObjectiveText.textContent = textoObjetivo; } if (!hud) return; hud.clearRect(0, 0, W, H); if (!estadoJuego.enEjecucion) return; const s = estadoJuego, valorPuntuacion = s.puntuacion || 0, valorVidas = s.vidas || 3, valorProfundidad = Math.floor(s.profundidad_m || 0); const padX = 18, padY = 18, lh = 22; hud.save(); hud.fillStyle = '#ffffff'; hud.font = '18px "Press Start 2P", monospace'; hud.textAlign = 'left'; hud.textBaseline = 'alphabetic'; hud.shadowColor = 'rgba(0,0,0,0.7)'; hud.shadowBlur = 4; const filas = [{ label: 'SCORE', value: String(valorPuntuacion) }, { label: 'DEPTH', value: valorProfundidad + ' m' }, { label: 'RECORD', value: String(puntuacionMaxima) }]; const totalFilas = filas.length + 4; const y0 = H - padY - lh * totalFilas; let maxAnchoEtiqueta = 0; const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO']; for (const label of todasLasEtiquetas) { maxAnchoEtiqueta = Math.max(maxAnchoEtiqueta, hud.measureText(label).width); } const gap = 16; const valueX = padX + maxAnchoEtiqueta + gap; let currentY = y0; for (let i = 0; i < filas.length; i++) { hud.fillText(filas[i].label, padX, currentY); hud.fillText(filas[i].value, valueX, currentY); currentY += lh; } hud.fillText('VIDAS', padX, currentY); hud.fillStyle = '#ff4d4d'; hud.fillText('♥'.repeat(valorVidas) + '♡'.repeat(Math.max(0, 3 - valorVidas)), valueX, currentY); hud.fillStyle = '#ffffff'; currentY += lh; hud.fillText('TORPEDO', padX, currentY); const torpedoListo = s.enfriamientoTorpedo <= 0; hud.fillStyle = torpedoListo ? '#66ff66' : '#ff6666'; hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO...', valueX, currentY); currentY += lh; hud.fillStyle = '#ffffff'; hud.fillText('ARMA', padX, currentY); let armaTexto = s.armaActual.toUpperCase(); if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; hud.fillStyle = '#ff6666'; } else { armaTexto += " (LISTA)"; hud.fillStyle = '#ffdd77'; } } else { hud.fillStyle = '#aaddff'; } hud.fillText(armaTexto, valueX, currentY); currentY += lh; hud.fillStyle = '#ffffff'; hud.fillText('ASESINO', padX, currentY); const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0]; hud.fillStyle = '#ff5e5e'; hud.fillText(rango.titulo, valueX, currentY); hud.restore(); if (s.nivel === 3 && s.jefe) { const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1); if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%'; } else { if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none'; } }
 
 let __iniciando = false;
 function iniciarJuego(nivel = 1) {
@@ -699,12 +494,10 @@ function iniciarJuego(nivel = 1) {
     if (overlay) overlay.style.display = 'none';
     if (gameplayHints) {
         gameplayHints.style.display = 'flex';
-        gameplayHints.querySelectorAll('.hint[data-hint-type]').forEach(h => { h.style.display = 'none'; });
-        gameplayHints.querySelectorAll(`.hint[data-hint-type="${nivel === 5 ? 'escape' : 'normal'}"], .hint[data-hint-type="all"]`).forEach(h => { h.style.display = 'flex'; });
+        gameplayHints.querySelectorAll('[data-hint-type]').forEach(h => h.style.display = 'flex');
     }
     setTimeout(function () { __iniciando = false; }, 200);
 }
-
 
 export function perderJuego() { if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return; estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion = false; S.detener('music'); S.reproducir('gameover'); if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); } if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none'; if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; } if (finalP) finalP.textContent = 'Gracias por ser parte.'; if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados; if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none'; if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block'; modoSuperposicion = 'gameover'; if (overlay) overlay.style.display = 'grid'; if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none'; }
 function ganarJuego() {
@@ -748,7 +541,7 @@ function comprobarCompletadoNivel() {
     }
 }
 function activarTransicionNivel(proximoNivel) { estadoJuego.faseJuego = 'transition'; estadoJuego.enEjecucion = false; const config = Levels.CONFIG_NIVELES[proximoNivel - 1]; if (mainMenu) mainMenu.style.display = 'none'; if (levelTitle) levelTitle.textContent = config.nombre; if (levelDesc) levelDesc.textContent = config.objetivo; if (levelTransition) levelTransition.style.display = 'block'; if (overlay) overlay.style.display = 'grid'; setTimeout(() => { iniciarSiguienteNivel(proximoNivel); }, 4000); }
-function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; torpedos = []; proyectiles = []; estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) { gameplayHints.querySelectorAll('.hint[data-hint-type]').forEach(h => h.style.display = 'none'); gameplayHints.querySelectorAll(`.hint[data-hint-type="${nivel === 5 ? 'escape' : 'normal'}"], .hint[data-hint-type="all"]`).forEach(h => { h.style.display = 'flex'; }); } }
+function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; torpedos = []; proyectiles = []; estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) { gameplayHints.querySelectorAll('.hint[data-hint-type]').forEach(h => { h.style.display = 'flex'; }); } }
 function mostrarVistaMenuPrincipal(desdePausa) {
     if (!mainMenu) return;
     if (brandLogo) brandLogo.style.display = 'block';
@@ -761,7 +554,6 @@ function mostrarVistaMenuPrincipal(desdePausa) {
     if (mainMenu) mainMenu.style.display = 'block';
     if (levelTransition) levelTransition.style.display = 'none';
     if (overlay) overlay.style.display = 'grid';
-
     if (mainMenuContent) mainMenuContent.style.display = 'block';
     if (levelSelectContent) levelSelectContent.style.display = 'none';
 }
@@ -787,6 +579,7 @@ function poblarSelectorDeNiveles() {
         levelSelectorContainer.appendChild(btn);
     });
 }
+
 
 function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; S.pausar('music'); mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.style.display = 'none'; } }
 function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
