@@ -52,6 +52,11 @@ const levelSelectBtn = document.getElementById('levelSelectBtn');
 const levelSelectorContainer = document.getElementById('level-selector-container');
 const backToMainBtn = document.getElementById('backToMainBtn');
 
+// === NUEVAS REFERENCIAS PARA LA ANIMACIÓN ===
+const infoAnimCanvas = document.getElementById('infoAnimCanvas');
+const infoAnimCtx = infoAnimCanvas ? infoAnimCanvas.getContext('2d') : null;
+let animarSubmarino = false;
+
 function actualizarIconos() {
   if (!muteBtn) return;
   const slash = document.getElementById('muteSlash');
@@ -647,7 +652,46 @@ export function gameLoop(t) {
         actualizar(dt);
     }
     renderizar(dt);
+
+    if (animarSubmarino) {
+        renderizarSubmarinoBailarin(t);
+    }
+
     requestAnimationFrame(gameLoop);
+}
+
+function renderizarSubmarinoBailarin(t) {
+    if (!infoAnimCtx || !robotListo) return;
+
+    const w = infoAnimCanvas.width;
+    const h = infoAnimCanvas.height;
+    infoAnimCtx.clearRect(0, 0, w, h);
+    
+    const tiempo = t / 1000;
+    const danceX = Math.sin(tiempo * 5) * 10;
+    const danceY = Math.cos(tiempo * 7) * 8 + 5;
+    const danceRot = Math.sin(tiempo * 4) * (Math.PI / 16);
+    
+    for (let i = 0; i < 5; i++) {
+        const r = (Math.sin(tiempo * 3 + i * 2) + 1) / 2 * 3 + 1;
+        const x = (w / 2) - 30 + i * 15 + Math.sin(tiempo + i) * 5;
+        const y = h - ((tiempo * 20 + i * 30) % h);
+        infoAnimCtx.beginPath();
+        infoAnimCtx.arc(x, y, r, 0, Math.PI * 2);
+        infoAnimCtx.fillStyle = `rgba(207, 233, 255, ${r/5})`;
+        infoAnimCtx.fill();
+    }
+    
+    infoAnimCtx.save();
+    infoAnimCtx.translate(w / 2 + danceX, h / 2 + danceY);
+    infoAnimCtx.rotate(danceRot);
+    
+    infoAnimCtx.imageSmoothingEnabled = false;
+    const dw = spriteAncho * 2.5;
+    const dh = spriteAlto * 2.5;
+    infoAnimCtx.drawImage(robotImg, -dw / 2, -dh / 2, dw, dh);
+    
+    infoAnimCtx.restore();
 }
 
 // ========= Inicialización y Eventos =========
@@ -666,10 +710,29 @@ export function init() {
 
 
     if (muteBtn) muteBtn.onclick = function () { S.alternarSilenciado(); actualizarIconos(); };
-    if (infoBtn) { infoBtn.onclick = () => { estabaCorriendoAntesCreditos = !!(estadoJuego && estadoJuego.enEjecucion); if (estadoJuego) estadoJuego.enEjecucion = false; S.pausar('music'); if (infoOverlay) infoOverlay.style.display = 'grid'; if (gameplayHints) gameplayHints.style.display = 'none'; }; }
+    if (infoBtn) { 
+        infoBtn.onclick = () => { 
+            estabaCorriendoAntesCreditos = !!(estadoJuego && estadoJuego.enEjecucion); 
+            if (estadoJuego) estadoJuego.enEjecucion = false; 
+            S.pausar('music'); 
+            if (infoOverlay) infoOverlay.style.display = 'grid'; 
+            if (gameplayHints) gameplayHints.style.display = 'none';
+            animarSubmarino = true;
+        }; 
+    }
     if (githubBtn) githubBtn.onclick = () => window.open('https://github.com/HectorDanielAyarachiFuentes', '_blank');
     if (logoHUD) logoHUD.addEventListener('click', abrirMenuPrincipal);
-    if (closeInfo) { closeInfo.onclick = function () { if (infoOverlay) infoOverlay.style.display = 'none'; if (estabaCorriendoAntesCreditos && (!overlay || overlay.style.display === 'none')) { if (estadoJuego) { estadoJuego.enEjecucion = true; } S.bucle('music'); if (gameplayHints) gameplayHints.style.display = 'flex'; } }; }
+    if (closeInfo) { 
+        closeInfo.onclick = function () { 
+            if (infoOverlay) infoOverlay.style.display = 'none'; 
+            if (estabaCorriendoAntesCreditos && (!overlay || overlay.style.display === 'none')) { 
+                if (estadoJuego) { estadoJuego.enEjecucion = true; } 
+                S.bucle('music'); 
+                if (gameplayHints) gameplayHints.style.display = 'flex'; 
+            }
+            animarSubmarino = false;
+        }; 
+    }
     if (fsBtn) fsBtn.onclick = function () { alternarPantallaCompleta(); };
     if (shareBtn) { shareBtn.onclick = async function () { let estabaCorriendo = !!(estadoJuego && estadoJuego.enEjecucion); if (estabaCorriendo) { estadoJuego.enEjecucion = false; S.pausar('music'); } try { if (navigator.share) { await navigator.share({ title: 'La Expedición', text: '¡He conquistado las profundidades! ¿Puedes tú?', url: location.href }); } } catch (_) { } finally { if (estabaCorriendo && (!overlay || overlay.style.display === 'none')) { if (estadoJuego) estadoJuego.enEjecucion = true; S.bucle('music'); } } }; }
     if (overlay) { overlay.addEventListener('click', function (e) { if (e.target === overlay && overlay.style.display !== 'none' && (!restartBtn || restartBtn.style.display === 'none') && estadoJuego && estadoJuego.faseJuego !== 'transition' && levelSelectContent.style.display === 'none') { if (modoSuperposicion === 'pause') { overlay.style.display = 'none'; if (estadoJuego) { estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.15; if (gameplayHints) gameplayHints.style.display = 'flex'; } S.bucle('music'); } else { iniciarJuego(1); } } }); }

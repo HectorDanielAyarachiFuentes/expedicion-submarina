@@ -371,3 +371,102 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     content: '🔒'; /* Puedes usar un SVG si prefieres */
     font-size: 1.5rem;
 }
+
+/* ... (Todo tu CSS existente hasta el final) ... */
+
+/* ========= ESTILOS PARA LA VENTANA DE INFORMACIÓN (MEJORADA) ========= */
+.info-card {
+    max-width: 700px;
+    position: relative;
+    padding-top: 80px; /* Espacio para el canvas de animación */
+}
+
+#infoAnimCanvas {
+    position: absolute;
+    top: -60px; /* Que sobresalga un poco */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 120px;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+.creator-profile {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    text-align: left;
+    margin: 2rem 0;
+    flex-wrap: wrap; /* Para que se adapte en pantallas pequeñas */
+}
+
+.profile-pic {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid var(--accent-blue);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.creator-info {
+    flex-grow: 1;
+}
+
+.creator-info h3 {
+    margin: 0 0 0.5rem;
+    color: var(--accent-yellow);
+    font-size: 1.2rem;
+}
+
+.creator-bio {
+    font-family: monospace; /* Una fuente más legible para texto largo */
+    font-size: 0.9rem;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 10px 18px;
+    margin-top: 1rem;
+}
+.social-btn svg {
+    transition: transform 0.2s ease-out;
+}
+.social-btn:hover svg {
+    transform: scale(1.2) rotate(-10deg);
+}
+
+.gallery {
+    margin: 2.5rem 0 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--hud-border-color);
+}
+.gallery h4 {
+    margin: 0 0 1rem;
+    color: var(--accent-blue-light);
+}
+.gallery-item {
+    display: inline-block;
+    position: relative;
+}
+.gallery-item img {
+    max-width: 250px;
+    width: 100%;
+    border-radius: 8px;
+    border: 2px solid var(--hud-border-color);
+    transition: transform 0.3s ease;
+}
+.gallery-item:hover img {
+    transform: scale(1.05);
+}
+.gallery-caption {
+    font-family: monospace;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    opacity: 0.8;
+}
