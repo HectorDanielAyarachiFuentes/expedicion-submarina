@@ -27,22 +27,34 @@
                 </div>
             </div>
 
-            <!-- MODIFICADO: Se añade el hint para la tecla C -->
+            <!-- Controles/Hints del juego -->
             <div id="gameplay-hints">
-                <div class="hint">
+                <!-- HINT NORMAL (Niveles 1-4) -->
+                <div class="hint" data-hint-type="normal">
                     <span>MOVER</span>
                     <kbd class="key-icon key-arrow-up"></kbd>
                     <kbd class="key-icon key-arrow-down"></kbd>
                 </div>
-                <div class="hint">
+
+                <!-- HINT ESCAPE (Nivel 5) -->
+                <div class="hint hint-grid" data-hint-type="escape" style="display: none;">
+                    <span>MOVER</span>
+                    <kbd class="key-icon key-arrow-up"></kbd>
+                    <kbd class="key-icon key-arrow-left"></kbd>
+                    <kbd class="key-icon key-arrow-down"></kbd>
+                    <kbd class="key-icon key-arrow-right"></kbd>
+                </div>
+
+                <!-- HINTS COMUNES (Siempre visibles cuando los hints están activos) -->
+                <div class="hint" data-hint-type="all">
                     <span>DISPARAR</span>
                     <kbd class="key-icon key-spacebar"></kbd>
                 </div>
-                 <div class="hint">
+                 <div class="hint" data-hint-type="all">
                     <span>ARMA</span>
                     <kbd class="key-icon text-key">C</kbd>
                 </div>
-                <div class="hint">
+                <div class="hint" data-hint-type="all">
                     <span>TORPEDO</span>
                     <kbd class="key-icon text-key">X</kbd>
                 </div>
@@ -99,7 +111,6 @@
         </div>
     </div>
 
-    <!-- MODIFICADO: Se añade el control de la tecla C -->
     <div id="infoOverlay" style="display: none;">
         <div class="menu-card">
             <h2>Información y Créditos</h2>
@@ -108,7 +119,7 @@
             <hr>
             <p><strong>Controles:</strong></p>
             <ul>
-                <li><strong>Mover:</strong> Flechas Arriba/Abajo o tocar/arrastrar izquierda.</li>
+                <li><strong>Mover:</strong> Flechas Arriba/Abajo/Izquierda/Derecha o tocar/arrastrar.</li>
                 <li><strong>Disparar/Usar Arma:</strong> Barra Espaciadora o tocar derecha.</li>
                 <li><strong>Alternar Arma:</strong> Tecla 'C'.</li>
                 <li><strong>Torpedo:</strong> Tecla 'X' o tocar centro.</li>

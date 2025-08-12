@@ -1,19 +1,21 @@
 // js/levels.js
 'use strict';
 
-// Importamos la lógica del Nivel 4
+// Importamos la lógica de los niveles
 import * as Level4 from './level4.js';
+import * as Level5 from './level5.js'; // AÑADIDO
 
 // Importamos dependencias de game.js
 import { estadoJuego, jugador, W, H, carriles, ctx, generarAnimal, S, clamp, perderJuego } from './game.js';
 import { NUM_CARRILES } from './game.js';
 
-// --- CONFIGURACIÓN DE NIVELES (Añadimos el Nivel 4) ---
+// --- CONFIGURACIÓN DE NIVELES (Añadimos el Nivel 5) ---
 export const CONFIG_NIVELES = [
   { nombre: 'NIVEL 1: CAÑÓN DE MAR DEL PLATA', objetivo: 'Captura 10 especímenes', meta: 10, tipo: 'capture' },
   { nombre: 'NIVEL 2: FOSA ABISAL', objetivo: 'Sobrevive 60 segundos', meta: 60, tipo: 'survive' },
   { nombre: 'NIVEL 3: LA GUARIDA DEL KRAKEN', objetivo: 'Derrota al jefe', meta: 1, tipo: 'boss' },
-  { nombre: 'NIVEL 4: CAMPO DE ESCOMBROS', objetivo: 'Sobrevive 90 segundos', meta: 90, tipo: 'survive' }
+  { nombre: 'NIVEL 4: CAMPO DE ESCOMBROS', objetivo: 'Sobrevive 90 segundos', meta: 90, tipo: 'survive' },
+  { nombre: 'NIVEL 5: COLAPSO DE LA FOSA', objetivo: 'Escapa durante 60 segundos', meta: 60, tipo: 'survive' } // AÑADIDO
 ];
 
 // --- FUNCIONES DE CÁLCULO DE DIFICULTAD POR NIVEL ---
@@ -22,18 +24,21 @@ function dificultadBase() {
     return estadoJuego.tiempoTranscurrido / 180;
 }
 export function getLevelSpawnPeriod() {
-    if (estadoJuego.nivel === 3 || estadoJuego.nivel === 4) return Infinity;
-    const multiNivel = [1.0, 0.6, 0, 0][estadoJuego.nivel - 1];
+    // MODIFICADO: Incluir nivel 5 para desactivar spawn de animales
+    if (estadoJuego.nivel === 3 || estadoJuego.nivel === 4 || estadoJuego.nivel === 5) return Infinity;
+    const multiNivel = [1.0, 0.6, 0, 0, 0][estadoJuego.nivel - 1];
     let base = 2.5 + (0.6 - 2.5) * dificultadBase();
     return Math.max(0.4, base * multiNivel);
 }
 export function getLevelSpeed() {
-    const multiNivel = [1.0, 1.4, 1.0, 1.0][estadoJuego.nivel - 1];
+    // MODIFICADO: Incluir nivel 5
+    const multiNivel = [1.0, 1.4, 1.0, 1.0, 0][estadoJuego.nivel - 1]; // La velocidad no aplica en nivel 5
     let spd = 260 + (520 - 260) * dificultadBase();
     return spd * multiNivel;
 }
 
 // --- LÓGICA ESPECÍFICA DEL NIVEL 3 (JEFE) ---
+// (Esta parte no cambia, se mantiene igual)
 function generarJefe() {
   estadoJuego.jefe = { x: W - 150, y: H / 2, w: 200, h: 300, hp: 150, maxHp: 150, estado: 'idle', timerAtaque: 3, timerGolpe: 0, tentaculos: [], };
   for (let i = 0; i < 6; i++) {
@@ -109,12 +114,14 @@ function dibujarJefe() {
   ctx.restore();
 }
 
-// --- ROUTER DEL GESTOR DE NIVELES ---
+// --- ROUTER DEL GESTOR DE NIVELES (AÑADIMOS EL CASO PARA EL NIVEL 5)---
 export function initLevel(nivel) {
     if (nivel === 3) {
         generarJefe();
     } else if (nivel === 4) {
         Level4.init();
+    } else if (nivel === 5) { // AÑADIDO
+        Level5.init();
     }
 }
 export function updateLevel(dt) {
@@ -123,6 +130,8 @@ export function updateLevel(dt) {
         actualizarJefe(dt);
     } else if (estadoJuego.nivel === 4) {
         Level4.update(dt);
+    } else if (estadoJuego.nivel === 5) { // AÑADIDO
+        Level5.update(dt);
     }
 }
 export function drawLevel() {
@@ -131,5 +140,7 @@ export function drawLevel() {
         dibujarJefe();
     } else if (estadoJuego.nivel === 4) {
         Level4.draw();
+    } else if (estadoJuego.nivel === 5) { // AÑADIDO
+        Level5.draw();
     }
 }
