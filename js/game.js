@@ -45,14 +45,11 @@ const gameplayHints = document.getElementById('gameplay-hints');
 const hudLevelText = document.getElementById('hud-level-text');
 const hudObjectiveText = document.getElementById('hud-objective-text');
 
-// === NUEVAS REFERENCIAS PARA EL SELECTOR DE NIVELES ===
 const mainMenuContent = document.getElementById('mainMenuContent');
 const levelSelectContent = document.getElementById('levelSelectContent');
 const levelSelectBtn = document.getElementById('levelSelectBtn');
 const levelSelectorContainer = document.getElementById('level-selector-container');
 const backToMainBtn = document.getElementById('backToMainBtn');
-
-// === NUEVAS REFERENCIAS PARA LA ANIMACIÓN ===
 const infoAnimCanvas = document.getElementById('infoAnimCanvas');
 const infoAnimCtx = infoAnimCanvas ? infoAnimCanvas.getContext('2d') : null;
 let animarSubmarino = false;
@@ -69,10 +66,26 @@ function actualizarIconos() {
   }
 }
 
-// ========= Audio (S) - Exportado para que los niveles lo usen =========
-const RAW = 'https://raw.githubusercontent.com/baltaz/the_expedition/main/sfx/';
+// ========= Audio (S) - Exportado para que los niveles lo usen (CON RUTAS LOCALES) =========
 const MUSIC = 'sonidos/Abismo_de_Acero.mp3';
-export const S = (function () { let creado = false; const a = {}; let _silenciado = false; const mapaFuentes = { fire: RAW + 'sfx_fire.mp3', lose: RAW + 'sfx_lose.mp3', gameover: RAW + 'sfx_gameover.mp3', music: MUSIC, torpedo: 'sonidos/torpedo.wav', boss_hit: 'sonidos/boss_hit.mp3', victory: 'sonidos/victoria.mp3', ink: 'sonidos/ink.wav', shotgun: 'sonidos/shotgun.wav', machinegun: 'sonidos/machinegun.wav', reload: 'sonidos/reload.wav' }; function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k === 'music') { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } a[k] = el; } catch (e) { console.warn(`No se pudo cargar el audio: ${mapaFuentes[k]}`); } } } function reproducir(k) { const el = a[k]; if (!el) return; try { el.currentTime = 0; el.play(); } catch (e) { } } function bucle(k) { const el = a[k]; if (!el) return; if (el.paused) { try { el.play(); } catch (e) { } } } function detener(k) { const el = a[k]; if (!el) return; try { el.pause(); el.currentTime = 0; } catch (e) { } } function pausar(k) { const el = a[k]; if (!el) return; try { el.pause(); } catch (e) { } } function setSilenciado(m) { for (const k in a) { try { a[k].muted = !!m; } catch (e) { } } _silenciado = !!m; } function estaSilenciado() { return _silenciado; } function alternarSilenciado() { setSilenciado(!estaSilenciado()); } return { init, reproducir, bucle, detener, pausar, setSilenciado, estaSilenciado, alternarSilenciado }; })();
+export const S = (function () {
+    let creado = false;
+    const a = {};
+    let _silenciado = false;
+    const mapaFuentes = {
+        fire: 'sonidos/fire.wav',
+        lose: 'sonidos/lose.wav',
+        gameover: 'sonidos/gameover.wav',
+        music: MUSIC,
+        torpedo: 'sonidos/torpedo.wav',
+        boss_hit: 'sonidos/boss_hit.mp3',
+        victory: 'sonidos/victoria.mp3',
+        ink: 'sonidos/ink.wav',
+        shotgun: 'sonidos/shotgun.wav',
+        machinegun: 'sonidos/machinegun.wav',
+        reload: 'sonidos/reload.wav'
+    };
+    function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k === 'music') { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } a[k] = el; } catch (e) { console.warn(`No se pudo cargar el audio: ${mapaFuentes[k]}`); } } } function reproducir(k) { const el = a[k]; if (!el) return; try { el.currentTime = 0; el.play(); } catch (e) { } } function bucle(k) { const el = a[k]; if (!el) return; if (el.paused) { try { el.play(); } catch (e) { } } } function detener(k) { const el = a[k]; if (!el) return; try { el.pause(); el.currentTime = 0; } catch (e) { } } function pausar(k) { const el = a[k]; if (!el) return; try { el.pause(); } catch (e) { } } function setSilenciado(m) { for (const k in a) { try { a[k].muted = !!m; } catch (e) { } } _silenciado = !!m; } function estaSilenciado() { return _silenciado; } function alternarSilenciado() { setSilenciado(!estaSilenciado()); } return { init, reproducir, bucle, detener, pausar, setSilenciado, estaSilenciado, alternarSilenciado }; })();
 
 // ========= Puntuación y Progreso del Jugador =========
 const CLAVE_PUNTUACION = 'expedicion_hiscore_v2';
@@ -591,6 +604,7 @@ function iniciarJuego(nivel = 1) {
     if (__iniciando) return; __iniciando = true;
     if (estadoJuego && estadoJuego.enEjecucion) { __iniciando = false; return; }
     reiniciar(nivel);
+    Levels.initLevel(nivel);
     estadoJuego.bloqueoEntrada = 0.2;
     estadoJuego.faseJuego = 'playing';
     estadoJuego.enEjecucion = true;
@@ -747,39 +761,9 @@ let arrastreId = -1, arrastreActivo = false, arrastreY = 0;
 function estaSobreUI(x, y) { const elementos = [muteBtn, infoBtn, fsBtn, shareBtn, githubBtn, overlay, infoOverlay, levelSelectBtn, backToMainBtn]; for (const el of elementos) { if (!el) continue; const style = getComputedStyle(el); if (style.display === 'none' || style.visibility === 'hidden') continue; const r = el.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true; } return false; }
 
 export function init() {
+    // 1. EVENTOS DE TECLADO Y RATÓN (Puntero)
     addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
     addEventListener('keyup', function (e) { teclas[e.key] = false; });
-    if (startBtn) { startBtn.onclick = function (e) { e.stopPropagation(); if (modoSuperposicion === 'pause') { if (overlay) overlay.style.display = 'none'; if (estadoJuego) { estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.15; if (gameplayHints) gameplayHints.style.display = 'flex'; } S.bucle('music'); } else { iniciarJuego(1); } }; }
-    if (restartBtn) { restartBtn.onclick = () => iniciarJuego(1); }
-    if (levelSelectBtn) { levelSelectBtn.onclick = () => { if (mainMenuContent) mainMenuContent.style.display = 'none'; if (levelSelectContent) levelSelectContent.style.display = 'block'; poblarSelectorDeNiveles(); }; }
-    if (backToMainBtn) { backToMainBtn.onclick = () => { if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none'; }; }
-    if (muteBtn) muteBtn.onclick = function () { S.alternarSilenciado(); actualizarIconos(); };
-    if (infoBtn) {
-        infoBtn.onclick = () => {
-            estabaCorriendoAntesCreditos = !!(estadoJuego && estadoJuego.enEjecucion);
-            if (estadoJuego) estadoJuego.enEjecucion = false;
-            S.pausar('music');
-            if (infoOverlay) infoOverlay.style.display = 'grid';
-            if (gameplayHints) gameplayHints.style.display = 'none';
-            animarSubmarino = true;
-        };
-    }
-    if (githubBtn) githubBtn.onclick = () => window.open('https://github.com/HectorDanielAyarachiFuentes', '_blank');
-    if (logoHUD) logoHUD.addEventListener('click', abrirMenuPrincipal);
-    if (closeInfo) {
-        closeInfo.onclick = function () {
-            if (infoOverlay) infoOverlay.style.display = 'none';
-            if (estabaCorriendoAntesCreditos && (!overlay || overlay.style.display === 'none')) {
-                if (estadoJuego) { estadoJuego.enEjecucion = true; }
-                S.bucle('music');
-                if (gameplayHints) gameplayHints.style.display = 'flex';
-            }
-            animarSubmarino = false;
-        };
-    }
-    if (fsBtn) fsBtn.onclick = function () { alternarPantallaCompleta(); };
-    if (shareBtn) { shareBtn.onclick = async function () { let estabaCorriendo = !!(estadoJuego && estadoJuego.enEjecucion); if (estabaCorriendo) { estadoJuego.enEjecucion = false; S.pausar('music'); } try { if (navigator.share) { await navigator.share({ title: 'La Expedición', text: '¡He conquistado las profundidades! ¿Puedes tú?', url: location.href }); } } catch (_) { } finally { if (estabaCorriendo && (!overlay || overlay.style.display === 'none')) { if (estadoJuego) estadoJuego.enEjecucion = true; S.bucle('music'); } } }; }
-    if (overlay) { overlay.addEventListener('click', function (e) { if (e.target === overlay && overlay.style.display !== 'none' && (!restartBtn || restartBtn.style.display === 'none') && estadoJuego && estadoJuego.faseJuego !== 'transition' && levelSelectContent.style.display === 'none') { if (modoSuperposicion === 'pause') { overlay.style.display = 'none'; if (estadoJuego) { estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.15; if (gameplayHints) gameplayHints.style.display = 'flex'; } S.bucle('music'); } else { iniciarJuego(1); } } }); }
     window.addEventListener('pointerdown', (e) => {
         if (estaSobreUI(e.clientX, e.clientY)) return;
         const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
@@ -802,6 +786,100 @@ export function init() {
         if (e.pointerId === arrastreId) { arrastreActivo = false; arrastreId = -1; } teclas[' '] = false;
     }, { passive: false });
     window.addEventListener('resize', autoSize);
+
+    // 2. BOTONES DEL MENÚ PRINCIPAL
+    if (startBtn) {
+        startBtn.onclick = function (e) {
+            e.stopPropagation();
+            if (modoSuperposicion === 'pause') {
+                if (overlay) overlay.style.display = 'none';
+                if (estadoJuego) {
+                    estadoJuego.enEjecucion = true;
+                    estadoJuego.bloqueoEntrada = 0.15;
+                    if (gameplayHints) gameplayHints.style.display = 'flex';
+                }
+                S.bucle('music');
+            } else {
+                iniciarJuego(1);
+            }
+        };
+    }
+    if (restartBtn) {
+        restartBtn.onclick = () => iniciarJuego(1);
+    }
+    if (levelSelectBtn) {
+        levelSelectBtn.onclick = () => {
+            if (mainMenuContent) mainMenuContent.style.display = 'none';
+            if (levelSelectContent) levelSelectContent.style.display = 'block';
+            poblarSelectorDeNiveles();
+        };
+    }
+    if (backToMainBtn) {
+        backToMainBtn.onclick = () => {
+            if (mainMenuContent) mainMenuContent.style.display = 'block';
+            if (levelSelectContent) levelSelectContent.style.display = 'none';
+        };
+    }
+
+    // 3. BOTONES DE LA BARRA DE HUD SUPERIOR
+    if (muteBtn) { muteBtn.onclick = function () { S.alternarSilenciado(); actualizarIconos(); }; }
+    if (infoBtn) {
+        infoBtn.onclick = () => {
+            estabaCorriendoAntesCreditos = !!(estadoJuego && estadoJuego.enEjecucion);
+            if (estadoJuego) estadoJuego.enEjecucion = false;
+            S.pausar('music');
+            if (infoOverlay) infoOverlay.style.display = 'grid';
+            if (gameplayHints) gameplayHints.style.display = 'none';
+            animarSubmarino = true;
+        };
+    }
+    if (githubBtn) { githubBtn.onclick = () => window.open('https://github.com/HectorDanielAyarachiFuentes', '_blank'); }
+    if (fsBtn) { fsBtn.onclick = function () { alternarPantallaCompleta(); }; }
+    if (shareBtn) {
+        shareBtn.onclick = async function () {
+            let estabaCorriendo = !!(estadoJuego && estadoJuego.enEjecucion);
+            if (estabaCorriendo) { estadoJuego.enEjecucion = false; S.pausar('music'); }
+            try {
+                if (navigator.share) { await navigator.share({ title: 'La Expedición', text: '¡He conquistado las profundidades! ¿Puedes tú?', url: location.href }); }
+            } catch (_) { }
+            finally {
+                if (estabaCorriendo && (!overlay || overlay.style.display === 'none')) { if (estadoJuego) estadoJuego.enEjecucion = true; S.bucle('music'); }
+            }
+        };
+    }
+    
+    // 4. OTROS EVENTOS DE UI
+    if (logoHUD) { logoHUD.addEventListener('click', abrirMenuPrincipal); }
+    if (closeInfo) {
+        closeInfo.onclick = function () {
+            if (infoOverlay) infoOverlay.style.display = 'none';
+            if (estabaCorriendoAntesCreditos && (!overlay || overlay.style.display === 'none')) {
+                if (estadoJuego) { estadoJuego.enEjecucion = true; }
+                S.bucle('music');
+                if (gameplayHints) gameplayHints.style.display = 'flex';
+            }
+            animarSubmarino = false;
+        };
+    }
+    if (overlay) {
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay && overlay.style.display !== 'none' && (!restartBtn || restartBtn.style.display === 'none') && estadoJuego && estadoJuego.faseJuego !== 'transition' && levelSelectContent.style.display === 'none') {
+                if (modoSuperposicion === 'pause') {
+                    overlay.style.display = 'none';
+                    if (estadoJuego) {
+                        estadoJuego.enEjecucion = true;
+                        estadoJuego.bloqueoEntrada = 0.15;
+                        if (gameplayHints) gameplayHints.style.display = 'flex';
+                    }
+                    S.bucle('music');
+                } else {
+                    iniciarJuego(1);
+                }
+            }
+        });
+    }
+
+    // 5. INICIALIZACIÓN FINAL DEL JUEGO
     autoSize();
     S.init();
     actualizarIconos();
