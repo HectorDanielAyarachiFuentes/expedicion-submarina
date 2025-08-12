@@ -325,3 +325,49 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     border-radius: 6px;
     transition: width 0.3s ease-in-out;
 }
+
+/* ... (Todo tu CSS existente hasta el final) ... */
+
+/* ========= ESTILOS PARA EL SELECTOR DE NIVELES (AÑADIDO) ========= */
+#level-selector-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.levelbtn {
+    font-family: 'Press Start 2P', monospace;
+    width: 60px;
+    height: 60px;
+    background-color: var(--accent-blue-dark);
+    color: var(--text-light);
+    border: 2px solid var(--accent-blue);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.levelbtn:hover:not(:disabled) {
+    background-color: var(--accent-blue);
+    color: var(--bg-dark);
+    transform: scale(1.1);
+}
+
+.levelbtn:disabled {
+    background-color: #334155;
+    border-color: #64748b;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Estilo para el ícono de candado en botones deshabilitados */
+.levelbtn:disabled::before {
+    content: '🔒'; /* Puedes usar un SVG si prefieres */
+    font-size: 1.5rem;
+}
