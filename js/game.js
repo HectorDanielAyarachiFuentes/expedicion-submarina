@@ -66,11 +66,10 @@ function actualizarIconos() {
   }
 }
 
-// ========= Audio (S) - Exportado para que los niveles lo usen (CON MÚSICA DINÁMICA) =========
+// ========= Audio (S) - Exportado para que los niveles lo usen =========
 const PLAYLIST = [
     'canciones/Abismo_de_Acero.mp3',
     'canciones/Batalla_de_las_Profundidades.mp3'
-    // Puedes añadir más canciones aquí, por ejemplo: 'canciones/otra_cancion.mp3'
 ];
 
 export const S = (function () {
@@ -80,8 +79,8 @@ export const S = (function () {
     let musicaActual = null;
 
     const mapaFuentes = {
-        fire: 'sonidos/fire.wav',
-        lose: 'sonidos/lose.wav',
+        arpon: 'sonidos/arpon.wav',
+        choque: 'sonidos/choque.wav',
         gameover: 'sonidos/gameover.wav',
         torpedo: 'sonidos/torpedo.wav',
         boss_hit: 'sonidos/boss_hit.mp3',
@@ -171,6 +170,7 @@ export const S = (function () {
     
     return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic };
 })();
+
 
 // ========= Puntuación y Progreso del Jugador =========
 const CLAVE_PUNTUACION = 'expedicion_hiscore_v2';
@@ -374,7 +374,7 @@ function dispararGarfio() {
     const dx = isLevel5 ? 0 : 1;
     const dy = isLevel5 ? -1 : 0;
     jugador.garra = { x: baseX, y: baseY, dx, dy, velocidad: 1400, fase: 'ida', golpeado: null, alcance: H * 0.7, recorrido: 0 };
-    S.reproducir('fire');
+    S.reproducir('arpon');
 }
 
 function dispararShotgun() {
@@ -485,7 +485,7 @@ function actualizar(dt) {
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dt, configNivel.meta);
-    for (let i = animales.length - 1; i >= 0; i--) { const a = animales[i]; a.x += a.vx * dt; a.timerFrame += dt; if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; } if (!a.capturado && Math.hypot(jugador.x * W + oscilarX() - a.x, jugador.y * H - a.y) < jugador.r + 20) { animales.splice(i, 1); const antes = estadoJuego.vidas; if (estadoJuego.vidas > 0) estadoJuego.vidas--; if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir('lose'); } if (estadoJuego.vidas <= 0) perderJuego(); continue; } if (!a.capturado && a.x < -a.r) { animales.splice(i, 1); } }
+    for (let i = animales.length - 1; i >= 0; i--) { const a = animales[i]; a.x += a.vx * dt; a.timerFrame += dt; if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; } if (!a.capturado && Math.hypot(jugador.x * W + oscilarX() - a.x, jugador.y * H - a.y) < jugador.r + 20) { animales.splice(i, 1); const antes = estadoJuego.vidas; if (estadoJuego.vidas > 0) estadoJuego.vidas--; if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir('choque'); } if (estadoJuego.vidas <= 0) perderJuego(); continue; } if (!a.capturado && a.x < -a.r) { animales.splice(i, 1); } }
     if (jugador.garra) {
         const g = jugador.garra;
         const spd = g.velocidad * dt;
@@ -631,7 +631,6 @@ function dibujarMascaraLuz() {
     fx.globalCompositeOperation = 'source-over';
     fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
     fx.fillRect(0, 0, W, H);
-
     if (estadoJuego.luzVisible && jugador) {
         const px = isLevel5 ? jugador.x : (jugador.x * W + oscilarX());
         const py = isLevel5 ? jugador.y : (jugador.y * H);

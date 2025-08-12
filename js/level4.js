@@ -61,7 +61,7 @@ export function update(dt) {
             if (estadoJuego.vidas > 0) {
                 estadoJuego.vidas--;
                 estadoJuego.animVida = 0.6;
-                S.reproducir('lose');
+                S.reproducir('choque'); // <-- MODIFICADO
             }
             if (estadoJuego.vidas <= 0) {
                 perderJuego();
