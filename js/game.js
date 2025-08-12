@@ -66,17 +66,23 @@ function actualizarIconos() {
   }
 }
 
-// ========= Audio (S) - Exportado para que los niveles lo usen (CON RUTAS LOCALES) =========
-const MUSIC = 'sonidos/Abismo_de_Acero.mp3';
+// ========= Audio (S) - Exportado para que los niveles lo usen (CON MÚSICA DINÁMICA) =========
+const PLAYLIST = [
+    'canciones/Abismo_de_Acero.mp3',
+    'canciones/Batalla_de_las_Profundidades.mp3'
+    // Puedes añadir más canciones aquí, por ejemplo: 'canciones/otra_cancion.mp3'
+];
+
 export const S = (function () {
     let creado = false;
     const a = {};
     let _silenciado = false;
+    let musicaActual = null;
+
     const mapaFuentes = {
         fire: 'sonidos/fire.wav',
         lose: 'sonidos/lose.wav',
         gameover: 'sonidos/gameover.wav',
-        music: MUSIC,
         torpedo: 'sonidos/torpedo.wav',
         boss_hit: 'sonidos/boss_hit.mp3',
         victory: 'sonidos/victoria.mp3',
@@ -85,7 +91,86 @@ export const S = (function () {
         machinegun: 'sonidos/machinegun.wav',
         reload: 'sonidos/reload.wav'
     };
-    function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k === 'music') { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } a[k] = el; } catch (e) { console.warn(`No se pudo cargar el audio: ${mapaFuentes[k]}`); } } } function reproducir(k) { const el = a[k]; if (!el) return; try { el.currentTime = 0; el.play(); } catch (e) { } } function bucle(k) { const el = a[k]; if (!el) return; if (el.paused) { try { el.play(); } catch (e) { } } } function detener(k) { const el = a[k]; if (!el) return; try { el.pause(); el.currentTime = 0; } catch (e) { } } function pausar(k) { const el = a[k]; if (!el) return; try { el.pause(); } catch (e) { } } function setSilenciado(m) { for (const k in a) { try { a[k].muted = !!m; } catch (e) { } } _silenciado = !!m; } function estaSilenciado() { return _silenciado; } function alternarSilenciado() { setSilenciado(!estaSilenciado()); } return { init, reproducir, bucle, detener, pausar, setSilenciado, estaSilenciado, alternarSilenciado }; })();
+
+    PLAYLIST.forEach((cancion, i) => {
+        mapaFuentes[`music_${i}`] = cancion;
+    });
+
+    function init() {
+        if (creado) return;
+        creado = true;
+        for (const k in mapaFuentes) {
+            try {
+                const el = new Audio(mapaFuentes[k]);
+                el.preload = 'auto';
+                if (k.startsWith('music_')) {
+                    el.loop = true;
+                    el.volume = 0.35;
+                } else {
+                    el.volume = 0.5;
+                }
+                a[k] = el;
+            } catch (e) {
+                console.warn(`No se pudo cargar el audio: ${mapaFuentes[k]}`);
+            }
+        }
+    }
+
+    function reproducir(k) { const el = a[k]; if (!el) return; try { el.currentTime = 0; el.play(); } catch (e) { } }
+    
+    function detener(k) {
+        if (k === 'music' && musicaActual) k = musicaActual;
+        const el = a[k];
+        if (!el) return;
+        try {
+            el.pause();
+            el.currentTime = 0;
+        } catch (e) { }
+    }
+
+    function playRandomMusic() {
+        if (musicaActual) {
+            detener(musicaActual);
+        }
+        let nuevaCancionKey;
+        const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_'));
+        if (posiblesCanciones.length === 0) return;
+        
+        do {
+            const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length);
+            nuevaCancionKey = posiblesCanciones[indiceAleatorio];
+        } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual);
+
+        musicaActual = nuevaCancionKey;
+        const el = a[musicaActual];
+        if (el) {
+            try {
+                el.currentTime = 0;
+                el.play();
+            } catch (e) { }
+        }
+    }
+    
+    function pausar(k) {
+        if (k === 'music' && musicaActual) k = musicaActual;
+        const el = a[k];
+        if (!el) return;
+        try { el.pause(); } catch (e) { }
+    }
+    
+    function bucle(k) {
+        if (k === 'music' && musicaActual) k = musicaActual;
+        const el = a[k];
+        if (!el) return;
+        if (el.paused) try { el.play(); } catch (e) { }
+    }
+    
+    function setSilenciado(m) { for (const k in a) { try { a[k].muted = !!m; } catch (e) { } } _silenciado = !!m; }
+    function estaSilenciado() { return _silenciado; }
+    function alternarSilenciado() { setSilenciado(!estaSilenciado()); }
+    
+    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic };
+})();
 
 // ========= Puntuación y Progreso del Jugador =========
 const CLAVE_PUNTUACION = 'expedicion_hiscore_v2';
@@ -611,7 +696,7 @@ function iniciarJuego(nivel = 1) {
     estadoJuego.aparicion = 1.0;
     estadoJuego.luzVisible = true;
     S.init();
-    S.detener('music'); S.bucle('music');
+    S.playRandomMusic();
     if (overlay) overlay.style.display = 'none';
     if (gameplayHints) {
         gameplayHints.style.display = 'flex';
@@ -703,7 +788,6 @@ function poblarSelectorDeNiveles() {
         levelSelectorContainer.appendChild(btn);
     });
 }
-
 
 function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; S.pausar('music'); mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.style.display = 'none'; } }
 function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
