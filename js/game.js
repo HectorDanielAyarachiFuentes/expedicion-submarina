@@ -1,4 +1,3 @@
-// js/game.js
 'use strict';
 
 // Importamos la lógica de niveles
@@ -121,6 +120,18 @@ cargarImagen('img/bg_back.png', function (img) { if (img) { bgImg = img; bgListo
 let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0, FG_VELOCIDAD_BASE = 60;
 cargarImagen('img/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
 
+// MODIFICADO: Solo cargamos la imagen.
+let mierdeiImg = null, mierdeiListo = false;
+cargarImagen('img/mierdei.png', function(img) {
+    if (img) {
+        mierdeiImg = img;
+        mierdeiListo = true;
+    } else {
+        console.error("No se pudo cargar la imagen 'img/mierdei.png'. Asegúrate de que la ruta es correcta.");
+    }
+});
+
+
 // ========= Geometría y Utilidades (Exportamos las que se necesitan fuera) =========
 export let W = innerWidth, H = innerHeight;
 export const NUM_CARRILES = 5;
@@ -177,6 +188,7 @@ function reiniciar(nivelDeInicio = 1) {
     torpedos = [];
     proyectiles = [];
     particulasTinta = [];
+
     autoSize();
     iniciarParticulas();
     if (gameplayHints) gameplayHints.style.display = 'none';
@@ -189,21 +201,50 @@ function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 
 
 export function generarAnimal(esEsbirroJefe = false) {
     if ((estadoJuego.nivel === 3 || estadoJuego.nivel === 4 || estadoJuego.nivel === 5) && !esEsbirroJefe) return;
+
     const minY = H * 0.15;
     const maxY = H * 0.85;
     const y = minY + Math.random() * (maxY - minY);
     let velocidad = velocidadActual() + 60;
-    let tipo = 'normal';
-    if (estadoJuego.nivel === 2 && Math.random() < 0.3) {
-        tipo = 'aggressive';
-        velocidad *= 1.3;
+    
+    // Con 15% de probabilidad, aparecerá tu imagen en lugar de un pez.
+    if (mierdeiListo && Math.random() < 0.15) { 
+        const anchoDeseado = 350;
+        let altoDeseado = anchoDeseado;
+        if (mierdeiImg.width > 0) {
+            altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
+        }
+
+        animales.push({
+            x: W + anchoDeseado, y, 
+            vx: -velocidad * 0.7,
+            r: anchoDeseado / 2,
+            w: anchoDeseado,
+            h: altoDeseado,
+            capturado: false,
+            tipo: 'mierdei', 
+            semillaFase: Math.random() * Math.PI * 2,
+        });
+
+    } else {
+        let tipo = 'normal';
+        if (estadoJuego.nivel === 2 && Math.random() < 0.3) {
+            tipo = 'aggressive';
+            velocidad *= 1.3;
+        }
+        if (esEsbirroJefe) {
+            tipo = 'aggressive';
+            velocidad = 650;
+        }
+        const tamano = 96;
+        const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
+        animales.push({ 
+            x: W + tamano, y, vx: -velocidad, r: 44, 
+            w: tamano, h: tamano,
+            capturado: false, fila, frame: 0, timerFrame: 0, 
+            semillaFase: Math.random() * Math.PI * 2, tipo: tipo 
+        });
     }
-    if (esEsbirroJefe) {
-        tipo = 'aggressive';
-        velocidad = 650;
-    }
-    const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
-    animales.push({ x: W + 40, y, vx: -velocidad, r: 44, carril: -1, capturado: false, fila, frame: 0, timerFrame: 0, tamano: 96, semillaFase: Math.random() * Math.PI * 2, tipo: tipo });
 }
 
 function dispararGarfio() {
@@ -294,6 +335,7 @@ function actualizar(dt) {
     if (estadoJuego.enfriamientoTorpedo > 0) estadoJuego.enfriamientoTorpedo -= dt;
     if (estadoJuego.enfriamientoArma > 0) estadoJuego.enfriamientoArma -= dt;
     estadoJuego.teclasActivas = teclas;
+    
     const progresoProfundidad = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1);
     estadoJuego.profundidad_m = Math.max(estadoJuego.profundidad_m, Math.floor(lerp(0, 3900, progresoProfundidad)));
     
@@ -311,7 +353,7 @@ function actualizar(dt) {
     jugador.x += vx * dt;
     jugador.y += vy * dt;
     
-    Levels.updateLevel(dt); // Lógica específica de nivel (scroll, spawns, jefe, etc.)
+    Levels.updateLevel(dt);
     
     jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
     jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
@@ -337,7 +379,33 @@ function actualizar(dt) {
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dt, configNivel.meta);
     
-    for (let i = animales.length - 1; i >= 0; i--) { const a = animales[i]; a.x += a.vx * dt; a.timerFrame += dt; if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; } if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + 20) { animales.splice(i, 1); const antes = estadoJuego.vidas; if (estadoJuego.vidas > 0) estadoJuego.vidas--; if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir('choque'); } if (estadoJuego.vidas <= 0) perderJuego(); continue; } if (!a.capturado && a.x < -a.r) { animales.splice(i, 1); } }
+    for (let i = animales.length - 1; i >= 0; i--) { 
+        const a = animales[i]; 
+        a.x += a.vx * dt; 
+        
+        if (a.tipo !== 'mierdei') {
+            a.timerFrame += dt; 
+            if (a.timerFrame >= 0.2) { 
+                a.timerFrame -= 0.2; a.frame ^= 1; 
+            }
+        }
+        
+        if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) { 
+            animales.splice(i, 1); 
+            const antes = estadoJuego.vidas; 
+            if (estadoJuego.vidas > 0) estadoJuego.vidas--; 
+            if (estadoJuego.vidas < antes) { 
+                estadoJuego.animVida = 0.6; 
+                S.reproducir('choque'); 
+            } 
+            if (estadoJuego.vidas <= 0) perderJuego(); 
+            continue; 
+        } 
+        
+        if (a.x < -a.w) { 
+            animales.splice(i, 1); 
+        } 
+    }
     
     if (jugador.garra) {
         const g = jugador.garra;
@@ -349,7 +417,8 @@ function actualizar(dt) {
             if (estadoJuego.nivel !== 5) {
                 for (let j = 0; j < animales.length; j++) {
                     const aa = animales[j];
-                    if (!g.golpeado && !aa.capturado && aa.tipo === 'normal' && Math.hypot(aa.x - g.x, aa.y - g.y) < aa.r + 8) {
+                    const esCapturable = (aa.tipo === 'normal' || aa.tipo === 'mierdei');
+                    if (!g.golpeado && !aa.capturado && esCapturable && Math.hypot(aa.x - g.x, aa.y - g.y) < aa.r) {
                         g.golpeado = aa;
                         aa.capturado = true;
                         g.fase = 'retorno';
@@ -358,7 +427,7 @@ function actualizar(dt) {
                 }
             }
             if (g.recorrido >= g.alcance) g.fase = 'retorno';
-        } else { // Fase de 'retorno'
+        } else {
             g.recorrido -= spd;
             const targetX = jugador.x;
             const targetY = jugador.y;
@@ -371,7 +440,8 @@ function actualizar(dt) {
             if (g.recorrido <= 0) {
                 if (g.golpeado) {
                     estadoJuego.rescatados++;
-                    estadoJuego.puntuacion += puntosPorRescate();
+                    const puntos = g.golpeado.tipo === 'mierdei' ? 1000 : puntosPorRescate();
+                    estadoJuego.puntuacion += puntos;
                     const idx = animales.indexOf(g.golpeado);
                     if (idx !== -1) animales.splice(idx, 1);
                 }
@@ -380,29 +450,49 @@ function actualizar(dt) {
         }
     }
     
+    function chequearColisionProyectil(proyectil, esTorpedo) {
+        for (let j = animales.length - 1; j >= 0; j--) {
+            const a = animales[j];
+            if (!a.capturado && proyectil.x < a.x + a.w/2 && proyectil.x + (proyectil.w || 0) > a.x - a.w/2 && proyectil.y < a.y + a.h/2 && proyectil.y + (proyectil.h || 0) > a.y - a.h/2) {
+                generarExplosion(a.x, a.y, esTorpedo ? '#ff8833' : proyectil.color);
+                animales.splice(j, 1);
+                estadoJuego.asesinatos++;
+                return true;
+            }
+        }
+        if (estadoJuego.jefe && proyectil.x > estadoJuego.jefe.x - estadoJuego.jefe.w / 2) {
+            generarExplosion(proyectil.x, proyectil.y, esTorpedo ? '#ff8833' : proyectil.color);
+            estadoJuego.jefe.hp -= esTorpedo ? 10 : 1;
+            estadoJuego.jefe.timerGolpe = 0.15;
+            S.reproducir('boss_hit');
+            if (estadoJuego.jefe.hp <= 0) {
+                estadoJuego.valorObjetivoNivel = 1;
+                estadoJuego.puntuacion += 5000;
+            }
+            return true;
+        }
+        return false;
+    }
+
     for (let i = torpedos.length - 1; i >= 0; i--) {
         const t = torpedos[i];
-        if (t.isVertical) {
-            t.y -= 1200 * dt;
-            if (t.y < -t.h) { torpedos.splice(i, 1); continue; }
-        } else {
-            t.x += 1200 * dt;
-            if (t.x > W + t.w) { torpedos.splice(i, 1); continue; }
-        }
+        if (t.isVertical) { t.y -= 1200 * dt; } else { t.x += 1200 * dt; }
+        if (t.y < -t.h || t.x > W + t.w) { torpedos.splice(i, 1); continue; }
         if (estadoJuego.nivel !== 4 && estadoJuego.nivel !== 5) {
-            let golpe = false;
-            for (let j = animales.length - 1; j >= 0; j--) { const a = animales[j]; if (!a.capturado && t.x < a.x + a.r && t.x + t.w > a.x - a.r && t.y < a.y + a.r && t.y + t.h > a.y - a.r) { generarExplosion(a.x, a.y); animales.splice(j, 1); estadoJuego.asesinatos++; torpedos.splice(i, 1); golpe = true; break; } } if (golpe) continue;
-            if (estadoJuego.jefe && t.x > estadoJuego.jefe.x - estadoJuego.jefe.w / 2) { generarExplosion(t.x, t.y); torpedos.splice(i, 1); estadoJuego.jefe.hp -= 10; estadoJuego.jefe.timerGolpe = 0.15; S.reproducir('boss_hit'); if (estadoJuego.jefe.hp <= 0) { estadoJuego.valorObjetivoNivel = 1; estadoJuego.puntuacion += 5000; } }
+            if (chequearColisionProyectil(t, true)) {
+                torpedos.splice(i, 1);
+            }
         }
     }
+
     for (let i = proyectiles.length - 1; i >= 0; i--) {
         const p = proyectiles[i];
         p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt;
         if (p.vida <= 0 || p.x > W + 20 || p.x < -20 || p.y < -20 || p.y > H + 20) { proyectiles.splice(i, 1); continue; }
         if (estadoJuego.nivel !== 4 && estadoJuego.nivel !== 5) {
-            let golpe = false;
-            for (let j = animales.length - 1; j >= 0; j--) { const a = animales[j]; if (!a.capturado && p.x < a.x + a.r && p.x + p.w > a.x - a.r && p.y < a.y + a.r && p.y + p.h > a.y - a.r) { generarExplosion(a.x, a.y, p.color); animales.splice(j, 1); estadoJuego.asesinatos++; proyectiles.splice(i, 1); golpe = true; break; } } if (golpe) continue;
-            if (estadoJuego.jefe && p.x > estadoJuego.jefe.x - estadoJuego.jefe.w / 2) { generarExplosion(p.x, p.y, p.color); proyectiles.splice(i, 1); estadoJuego.jefe.hp -= 1; estadoJuego.jefe.timerGolpe = 0.15; S.reproducir('boss_hit'); if (estadoJuego.jefe.hp <= 0) { estadoJuego.valorObjetivoNivel = 1; estadoJuego.puntuacion += 5000; } }
+            if (chequearColisionProyectil(p, false)) {
+                proyectiles.splice(i, 1);
+            }
         }
     }
     
@@ -420,7 +510,34 @@ function renderizar(dt) {
     ctx.clearRect(0, 0, W, H);
     if (estadoJuego) {
         Levels.drawLevel();
-        for (let i = 0; i < animales.length; i++) { const a = animales[i]; const offsetFlotante = Math.sin(Math.PI * estadoJuego.tiempoTranscurrido + a.semillaFase) * 5; ctx.save(); if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)'; if (criaturasListas && cFilas > 0) { const sx = (a.frame % 2) * cFrameAncho, sy = (a.fila % cFilas) * cFrameAlto; ctx.imageSmoothingEnabled = false; ctx.drawImage(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, Math.round(a.x - a.tamano / 2), Math.round(a.y + offsetFlotante - a.tamano / 2), a.tamano, a.tamano); } else { ctx.fillStyle = a.tipo === 'aggressive' ? '#ff5e5e' : '#ffd95e'; ctx.beginPath(); ctx.arc(a.x, a.y + offsetFlotante, a.r, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+
+        for (let i = 0; i < animales.length; i++) {
+            const a = animales[i];
+            const offsetFlotante = Math.sin(Math.PI * estadoJuego.tiempoTranscurrido * 0.8 + a.semillaFase) * 8;
+            ctx.save();
+            
+            if (a.tipo === 'mierdei') {
+                const angulo = estadoJuego.tiempoTranscurrido * 0.5 + a.semillaFase;
+                ctx.translate(a.x, a.y + offsetFlotante);
+                ctx.rotate(angulo);
+                ctx.drawImage(mierdeiImg, -a.w / 2, -a.h / 2, a.w, a.h);
+
+            } else {
+                if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
+                if (criaturasListas && cFilas > 0) {
+                    const sx = (a.frame % 2) * cFrameAncho, sy = (a.fila % cFilas) * cFrameAlto;
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, Math.round(a.x - a.w / 2), Math.round(a.y + offsetFlotante - a.h / 2), a.w, a.h);
+                } else {
+                    ctx.fillStyle = a.tipo === 'aggressive' ? '#ff5e5e' : '#ffd95e';
+                    ctx.beginPath();
+                    ctx.arc(a.x, a.y + offsetFlotante, a.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.restore();
+        }
+        
         if (jugador) {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
             const px = jugador.x;
