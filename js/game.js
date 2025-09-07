@@ -8,7 +8,6 @@ export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 export function dificultadBase() {
     if (!estadoJuego) return 0;
-    // La dificultad base progresa un poco más rápido para las mecánicas del Nivel 1
     return estadoJuego.tiempoTranscurrido / 150;
 }
 function cargarImagen(url, cb) { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => cb(im); im.onerror = () => cb(null); im.src = url; }
@@ -199,16 +198,13 @@ function reiniciar(nivelDeInicio = 1) {
         teclasActivas: {},
         velocidadJuego: 1.0,
         slowMoTimer: 0,
+        levelFlags: {}, // >>> CAMBIO CLAVE <<< Objeto para que los niveles comuniquen flags al motor (ej: no mover el fondo)
     };
     
-    // >>> CAMBIO CLAVE <<<
-    // Nos aseguramos de limpiar cualquier valor de 'override' de niveles anteriores.
-    // Esto previene que la oscuridad del Nivel 2 "se filtre" a otros niveles.
-    delete estadoJuego.darknessOverride;
+    delete estadoJuego.darknessOverride; // Limpiamos la oscuridad del nivel 2, si existiera.
 
     jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0 };
     
-    // El gestor de niveles se encarga de llamar al 'init' del nivel correcto.
     Levels.initLevel(nivelDeInicio);
     
     animales = [];
@@ -245,10 +241,6 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
             semillaFase: Math.random() * Math.PI * 2,
         });
     } else {
-        // >>> CAMBIO CLAVE <<<
-        // Se ha eliminado la condición "|| (estadoJuego.nivel === 2 && Math.random() < 0.3)".
-        // Ahora la decisión de si un animal es 'aggressive' la toma el módulo del nivel
-        // y se lo comunica a esta función a través de `tipoForzado`.
         if (esEsbirroJefe) {
             tipo = 'aggressive';
         }
@@ -329,7 +321,7 @@ function disparar() {
             if (!jugador.garra) dispararGarfio();
             else if (jugador.garra.fase === 'ida') {
                 jugador.garra.fase = 'retorno';
-                Levels.onFallo(); // El módulo de nivel gestiona las consecuencias de un fallo
+                Levels.onFallo();
             }
             break;
         case 'shotgun': dispararShotgun(); break;
@@ -354,7 +346,6 @@ function lanzarTorpedo() {
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
 
-    // Manejo de Slow Motion
     if (estadoJuego.slowMoTimer > 0) {
         estadoJuego.slowMoTimer -= dt;
         if (estadoJuego.slowMoTimer <= 0) {
@@ -372,7 +363,6 @@ function actualizar(dt) {
     const progresoProfundidad = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1);
     estadoJuego.profundidad_m = Math.max(estadoJuego.profundidad_m, Math.floor(lerp(0, 3900, progresoProfundidad)));
     
-    // Movimiento del jugador
     let vx = 0, vy = 0;
     if (teclas['ArrowUp']) vy -= 1;
     if (teclas['ArrowDown']) vy += 1;
@@ -387,8 +377,6 @@ function actualizar(dt) {
     jugador.x += vx * dtAjustado;
     jugador.y += vy * dtAjustado;
     
-    // >>> CAMBIO CLAVE <<<
-    // Toda la lógica de spawning, misiones y reglas del nivel se delega al módulo de nivel activo.
     Levels.updateLevel(dtAjustado);
     
     jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
@@ -404,7 +392,6 @@ function actualizar(dt) {
     }
     inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dtAjustado);
 
-    // Entradas del jugador
     if (teclas[' '] && estadoJuego.bloqueoEntrada === 0) { disparar(); teclas[' '] = false; }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
     if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
@@ -412,12 +399,10 @@ function actualizar(dt) {
     if (teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
     if (teclas['c'] || teclas['C']) { const currentIndex = WEAPON_ORDER.indexOf(estadoJuego.armaActual); const nextIndex = (currentIndex + 1) % WEAPON_ORDER.length; estadoJuego.armaActual = WEAPON_ORDER[nextIndex]; teclas['c'] = teclas['C'] = false; }
     
-    // Actualización de objetivos
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dtAjustado, configNivel.meta);
     
-    // Actualización de animales y colisiones
     for (let i = animales.length - 1; i >= 0; i--) { 
         const a = animales[i]; 
         a.x += a.vx * dtAjustado; 
@@ -446,7 +431,6 @@ function actualizar(dt) {
         } 
     }
     
-    // Lógica de la garra
     if (jugador.garra) {
         const g = jugador.garra;
         const spd = g.velocidad * dtAjustado;
@@ -482,64 +466,56 @@ function actualizar(dt) {
                     estadoJuego.rescatados++;
                     const puntos = g.golpeado.tipo === 'mierdei' ? 1000 : puntosPorRescate();
                     estadoJuego.puntuacion += puntos;
-                    Levels.onAnimalCazado(g.golpeado.tipo); // Notifica al nivel
+                    Levels.onAnimalCazado(g.golpeado.tipo);
                     const idx = animales.indexOf(g.golpeado);
                     if (idx !== -1) animales.splice(idx, 1);
                 } else {
-                    Levels.onFallo(); // Notifica al nivel
+                    Levels.onFallo();
                 }
                 jugador.garra = null;
             }
         }
     }
     
-    // Colisiones de proyectiles
-    function chequearColisionProyectil(proyectil, esTorpedo) {
+    // >>> CAMBIO CLAVE <<<
+    // Esta función ahora SÓLO se encarga de las colisiones con animales normales.
+    // La colisión con el jefe es responsabilidad del módulo level3.js.
+    function chequearColisionProyectil(proyectil) {
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
             if (!a.capturado && proyectil.x < a.x + a.w/2 && proyectil.x + (proyectil.w || 0) > a.x - a.w/2 && proyectil.y < a.y + a.h/2 && proyectil.y + (proyectil.h || 0) > a.y - a.h/2) {
-                generarExplosion(a.x, a.y, esTorpedo ? '#ff8833' : proyectil.color);
-                Levels.onAnimalCazado(a.tipo); // Notifica al nivel
+                generarExplosion(a.x, a.y, proyectil.color);
+                Levels.onAnimalCazado(a.tipo);
                 animales.splice(j, 1);
                 estadoJuego.asesinatos++;
                 return true;
             }
         }
-        if (estadoJuego.jefe && proyectil.x > estadoJuego.jefe.x - estadoJuego.jefe.w / 2) {
-            generarExplosion(proyectil.x, proyectil.y, esTorpedo ? '#ff8833' : proyectil.color);
-            estadoJuego.jefe.hp -= esTorpedo ? 10 : 1;
-            estadoJuego.jefe.timerGolpe = 0.15;
-            S.reproducir('boss_hit');
-            if (estadoJuego.jefe.hp <= 0) {
-                estadoJuego.valorObjetivoNivel = 1;
-                estadoJuego.puntuacion += 5000;
-            }
-            return true;
-        }
         return false;
     }
 
-    // Actualización de torpedos
     for (let i = torpedos.length - 1; i >= 0; i--) {
         const t = torpedos[i];
-        if (t.isVertical) { t.y -= 1200 * dtAjustado; } else { t.x += 1200 * dtAjustado; }
-        if (t.y < -t.h || t.x > W + t.w) { torpedos.splice(i, 1); continue; }
-        if (estadoJuego.nivel !== 4 && estadoJuego.nivel !== 5) {
-            if (chequearColisionProyectil(t, true)) {
-                torpedos.splice(i, 1);
-            }
+        t.x += (t.isVertical ? 0 : 1200) * dtAjustado;
+        t.y -= (t.isVertical ? 1200 : 0) * dtAjustado;
+        if (t.y < -t.h || t.x > W + t.w) { 
+            torpedos.splice(i, 1); 
+            continue; 
+        }
+        if (chequearColisionProyectil(t)) {
+            torpedos.splice(i, 1);
         }
     }
 
-    // Actualización de proyectiles
     for (let i = proyectiles.length - 1; i >= 0; i--) {
         const p = proyectiles[i];
         p.x += p.vx * dtAjustado; p.y += p.vy * dtAjustado; p.vida -= dtAjustado;
-        if (p.vida <= 0 || p.x > W + 20 || p.x < -20 || p.y < -20 || p.y > H + 20) { proyectiles.splice(i, 1); continue; }
-        if (estadoJuego.nivel !== 4 && estadoJuego.nivel !== 5) {
-            if (chequearColisionProyectil(p, false)) {
-                proyectiles.splice(i, 1);
-            }
+        if (p.vida <= 0 || p.x > W + 20 || p.x < -20 || p.y < -20 || p.y > H + 20) {
+            proyectiles.splice(i, 1);
+            continue;
+        }
+        if (chequearColisionProyectil(p)) {
+            proyectiles.splice(i, 1);
         }
     }
     
@@ -555,7 +531,7 @@ function renderizar(dt) {
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
     if (estadoJuego) {
-        // El módulo del nivel puede dibujar sus propios elementos (fondos, efectos, etc.)
+        // La llamada a drawLevel() es la que permitirá que level3.js dibuje al jefe.
         Levels.drawLevel();
 
         for (let i = 0; i < animales.length; i++) {
@@ -570,7 +546,6 @@ function renderizar(dt) {
                 ctx.drawImage(mierdeiImg, -a.w / 2, -a.h / 2, a.w, a.h);
 
             } else {
-                // Filtros visuales para tipos de animales especiales/de misión
                 if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
                 if (a.tipo === 'rojo') ctx.filter = 'sepia(1) saturate(5) hue-rotate(-40deg)';
                 if (a.tipo === 'dorado') ctx.filter = 'brightness(1.5) saturate(3) hue-rotate(15deg)';
@@ -642,23 +617,47 @@ function renderizar(dt) {
     dibujarHUD();
 }
 
-function dibujarFondo(dt) { if (!estadoJuego || !bgCtx) return; const scrollFondo = estadoJuego.nivel !== 3 && estadoJuego.nivel !== 5; bgCtx.clearRect(0, 0, W, H); if (bgListo && bgAncho > 0 && bgAlto > 0) { const spd = BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) bgOffset = (bgOffset + spd * dt) % bgAncho; bgCtx.imageSmoothingEnabled = false; for (let x = -bgOffset; x < W + bgAncho; x += bgAncho) { for (let y = 0; y < H + bgAlto; y += bgAlto) { bgCtx.drawImage(bgImg, Math.round(x), Math.round(y), bgAncho, bgAlto); } } if (fgListo && fgAncho > 0 && fgAlto > 0) { const fspd = FG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) fgOffset = (fgOffset + fspd * dt) % fgAncho; const yBase = H - fgAlto; for (let xx = -fgOffset; xx < W + fgAncho; xx += fgAncho) { bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto); } } } else { bgCtx.fillStyle = '#06131f'; bgCtx.fillRect(0, 0, W, H); } }
+function dibujarFondo(dt) {
+    if (!estadoJuego || !bgCtx) return;
+    // >>> CAMBIO CLAVE <<<
+    // La decisión de si el fondo se mueve o no, ahora depende de un flag que el nivel puede activar/desactivar.
+    // Por defecto, se mueve. El Nivel 3 lo pondrá en `false`.
+    const scrollFondo = estadoJuego.levelFlags.scrollBackground !== false;
+    
+    bgCtx.clearRect(0, 0, W, H);
+    if (bgListo && bgAncho > 0 && bgAlto > 0) {
+        const spd = BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2));
+        if (scrollFondo) bgOffset = (bgOffset + spd * dt) % bgAncho;
+        bgCtx.imageSmoothingEnabled = false;
+        for (let x = -bgOffset; x < W + bgAncho; x += bgAncho) {
+            for (let y = 0; y < H + bgAlto; y += bgAlto) {
+                bgCtx.drawImage(bgImg, Math.round(x), Math.round(y), bgAncho, bgAlto);
+            }
+        }
+        if (fgListo && fgAncho > 0 && fgAlto > 0) {
+            const fspd = FG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2));
+            if (scrollFondo) fgOffset = (fgOffset + fspd * dt) % fgAncho;
+            const yBase = H - fgAlto;
+            for (let xx = -fgOffset; xx < W + fgAncho; xx += fgAncho) {
+                bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto);
+            }
+        }
+    } else {
+        bgCtx.fillStyle = '#06131f';
+        bgCtx.fillRect(0, 0, W, H);
+    }
+}
 
 function dibujarMascaraLuz() {
     if (!estadoJuego || !fx) return;
     fx.clearRect(0, 0, W, H);
     const isLevel5 = estadoJuego.nivel === 5;
 
-    // >>> CAMBIO CLAVE <<<
-    // 1. Calcula una oscuridad base que progresa con el tiempo del juego.
     const oscuridadBase = estadoJuego.tiempoTranscurrido / 180;
-    
-    // 2. Usa la oscuridad base, a menos que el módulo del nivel activo haya establecido un valor específico.
     const oscuridadObjetivo = estadoJuego.darknessOverride !== undefined 
         ? estadoJuego.darknessOverride 
         : oscuridadBase;
 
-    // Se eliminó la lógica `if/else` que dependía del número de nivel.
     const alpha = lerp(0, 0.9, clamp(oscuridadObjetivo, 0, 1));
     if (alpha <= 0.001) return;
     
@@ -676,7 +675,6 @@ function dibujarHUD() {
     if (estadoJuego.enEjecucion) {
         hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`;
         
-        // El motor pregunta al gestor de niveles por el estado de la misión.
         const mision = Levels.getEstadoMision();
         if (mision) {
             hudObjectiveText.innerHTML = `<span class="mission-title">${mision.texto}</span>${mision.progreso}`;
@@ -739,8 +737,18 @@ function dibujarHUD() {
     hud.fillStyle = '#ff5e5e';
     hud.fillText(rango.titulo, valueX, currentY);
     hud.restore();
-    if (s.nivel === 3 && s.jefe) { const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1); if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%'; } 
-    else { if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none'; }
+    
+    // >>> CAMBIO CLAVE <<<
+    // Esta lógica se mantiene, pero ahora es más genérica. No comprueba el nivel,
+    // solo si existe un jefe en el estado del juego. Como solo level3.js crea un jefe,
+    // esta barra solo aparecerá en el nivel 3.
+    if (s.jefe) {
+        if (bossHealthContainer) bossHealthContainer.style.display = 'block';
+        const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1);
+        if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%';
+    } else {
+        if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none';
+    }
 }
 
 let __iniciando = false;
