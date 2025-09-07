@@ -71,8 +71,8 @@ function actualizarIconos() {
 
 // ========= Audio (S) =========
 const PLAYLIST = [
-    'canciones/Abismo_de_Acero.mp3',
-    'canciones/Batalla_de_las_Profundidades.mp3'
+    '../canciones/Abismo_de_Acero.mp3',
+    '../canciones/Batalla_de_las_Profundidades.mp3'
 ];
 export const S = (function () {
     let creado = false;
@@ -81,16 +81,16 @@ export const S = (function () {
     let musicaActual = null;
 
     const mapaFuentes = {
-        arpon: 'sonidos/arpon.wav',
-        choque: 'sonidos/choque.wav',
-        gameover: 'sonidos/gameover.wav',
-        torpedo: 'sonidos/torpedo.wav',
-        boss_hit: 'sonidos/boss_hit.mp3',
-        victory: 'sonidos/victoria.mp3',
-        ink: 'sonidos/ink.wav',
-        shotgun: 'sonidos/shotgun.wav',
-        machinegun: 'sonidos/machinegun.wav',
-        reload: 'sonidos/reload.wav'
+        arpon: '../sonidos/arpon.wav',
+        choque: '../sonidos/choque.wav',
+        gameover: '../sonidos/gameover.wav',
+        torpedo: '../sonidos/torpedo.wav',
+        boss_hit: '../sonidos/boss_hit.mp3',
+        victory: '../sonidos/victoria.mp3',
+        ink: '../sonidos/ink.wav',
+        shotgun: '../sonidos/shotgun.wav',
+        machinegun: '../sonidos/machinegun.wav',
+        reload: '../sonidos/reload.wav'
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
@@ -484,11 +484,12 @@ function actualizar(dt) {
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
             if (!a.capturado && proyectil.x < a.x + a.w/2 && proyectil.x + (proyectil.w || 0) > a.x - a.w/2 && proyectil.y < a.y + a.h/2 && proyectil.y + (proyectil.h || 0) > a.y - a.h/2) {
-                generarExplosion(a.x, a.y, proyectil.color);
-                Levels.onAnimalCazado(a.tipo);
-                animales.splice(j, 1);
-                estadoJuego.asesinatos++;
-                return true;
+            generarExplosion(a.x, a.y, proyectil.color);
+            Levels.onAnimalCazado(a.tipo);
+            Levels.onKill(a.tipo);
+            animales.splice(j, 1);
+            estadoJuego.asesinatos++;
+            return true;
             }
         }
         return false;

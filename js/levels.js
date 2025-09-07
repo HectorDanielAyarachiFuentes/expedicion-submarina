@@ -8,6 +8,7 @@ import * as Level4 from './level4.js';
 import * as Level5 from './level5.js';
 import * as Level6 from './level6.js';
 import * as Level7 from './level7.js';
+import * as Level8 from './level8.js';
 
 // Importamos dependencias de game.js
 import { estadoJuego, dificultadBase } from './game.js';
@@ -21,7 +22,8 @@ export const CONFIG_NIVELES = [
   { nombre: 'NIVEL 4: CAMPO DE ESCOMBROS', objetivo: 'Sobrevive 90 segundos', meta: 90, tipo: 'survive', speedMultiplier: 1.0 },
   { nombre: 'NIVEL 5: COLAPSO DE LA FOSA', objetivo: 'Escapa durante 60 segundos', meta: 60, tipo: 'survive', speedMultiplier: 0 }, // Velocidad controlada por el nivel
   { nombre: 'NIVEL 6: EL VORTEX DE LAS PROFUNDIDADES', objetivo: 'Sobrevive 120 segundos', meta: 120, tipo: 'survive', speedMultiplier: 0 }, // Velocidad controlada por el nivel
-  { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Captura 15 caras.", meta: 15, tipo: 'capture', speedMultiplier: 1.2 }
+  { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Captura 15 caras.", meta: 15, tipo: 'capture', speedMultiplier: 1.2 },
+  { nombre: "NIVEL 8: ABISMO PROFUNDO", objetivo: "Captura 25 especímenes dorados", meta: 25, tipo: 'capture', speedMultiplier: 1.5 }
 ];
 
 // 3. MAPA DE MÓDULOS DE NIVEL
@@ -35,6 +37,7 @@ const levelModules = {
     5: Level5,
     6: Level6,
     7: Level7,
+    8: Level8,
 };
 
 // Guardamos una referencia al módulo del nivel que está activo
@@ -107,6 +110,16 @@ export function onAnimalCazado(tipoAnimal) {
 export function onFallo() {
     if (activeLevelModule && typeof activeLevelModule.onFallo === 'function') {
         activeLevelModule.onFallo();
+    }
+}
+
+/**
+ * Notifica al nivel activo que un enemigo fue eliminado.
+ * @param {string} tipoAnimal
+ */
+export function onKill(tipoAnimal) {
+    if (activeLevelModule && typeof activeLevelModule.onKill === 'function') {
+        activeLevelModule.onKill(tipoAnimal);
     }
 }
 

@@ -32,6 +32,11 @@ export function init() {
     console.log("Inicializando Nivel 4: Campo de Escombros");
     escombros = [];
     spawnTimer = 1.5;
+    // Limpiar el jefe del nivel anterior
+    estadoJuego.jefe = null;
+    // Ocultar la barra de vida del jefe si está visible
+    const bossHealthContainer = document.getElementById('bossHealthContainer');
+    if (bossHealthContainer) bossHealthContainer.style.display = 'none';
 }
 
 export function update(dt) {

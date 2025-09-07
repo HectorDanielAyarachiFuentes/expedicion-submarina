@@ -145,6 +145,15 @@ export function onAnimalCazado(tipoAnimal) {
     if (mision.tipo === 'CAZAR_ESPECIAL' && tipoAnimal === mision.objetivo.tipo) completarMision();
 }
 
+export function onKill(tipoAnimal) {
+    const mision = levelState.misionActual;
+    if (!mision) return;
+
+    if (mision.tipo === 'CONTAR_TIPO' && tipoAnimal === mision.objetivo.tipo) mision.progreso++;
+    if (mision.tipo === 'CONTAR_TOTAL') mision.progreso++;
+    if (mision.tipo === 'CAZAR_ESPECIAL' && tipoAnimal === mision.objetivo.tipo) completarMision();
+}
+
 export function onFallo() {
     levelState.rachaAciertos = 0;
     if (levelState.misionActual && levelState.misionActual.tipo === 'RACHA') {
