@@ -157,7 +157,8 @@ function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
 export function generarExplosion(x, y, color = '#ff8833') { for (let i = 0; i < 20; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * 100; generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * 2 + 1, vida: 0.4 + Math.random() * 0.4, color }); } }
 export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i = 0; i < 50; i++) { const ang = Math.random() * Math.PI * 2, spd = 20 + Math.random() * size; generarParticula(particulasTinta, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 15 + Math.random() * size * 0.8, vida: 2.5 + Math.random() * 2, color: '#101010' }); } }
-// Funciones de utilidad para que los niveles las usen
+
+// ========= Funciones de Recompensa (disponibles para los niveles) =========
 export function limpiarTodosLosAnimales() {
     animales.forEach(a => generarExplosion(a.x, a.y, '#aaffff'));
     animales = [];
@@ -171,6 +172,7 @@ export function activarSlowMotion(duracion) {
         estadoJuego.slowMoTimer = duracion;
     }
 }
+
 // ========= Lógica del Juego (Estado y Entidades - Exportamos los necesarios) =========
 export let estadoJuego = null, jugador, animales;
 let teclas = {};
@@ -198,8 +200,15 @@ function reiniciar(nivelDeInicio = 1) {
         velocidadJuego: 1.0,
         slowMoTimer: 0,
     };
-    jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0 };
+    
+    // >>> CAMBIO CLAVE <<<
+    // Nos aseguramos de limpiar cualquier valor de 'override' de niveles anteriores.
+    // Esto previene que la oscuridad del Nivel 2 "se filtre" a otros niveles.
+    delete estadoJuego.darknessOverride;
 
+    jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0 };
+    
+    // El gestor de niveles se encarga de llamar al 'init' del nivel correcto.
     Levels.initLevel(nivelDeInicio);
     
     animales = [];
@@ -236,10 +245,17 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
             semillaFase: Math.random() * Math.PI * 2,
         });
     } else {
-        if (esEsbirroJefe || (estadoJuego.nivel === 2 && Math.random() < 0.3)) {
+        // >>> CAMBIO CLAVE <<<
+        // Se ha eliminado la condición "|| (estadoJuego.nivel === 2 && Math.random() < 0.3)".
+        // Ahora la decisión de si un animal es 'aggressive' la toma el módulo del nivel
+        // y se lo comunica a esta función a través de `tipoForzado`.
+        if (esEsbirroJefe) {
             tipo = 'aggressive';
         }
-        if (tipo === 'aggressive') velocidad *= 1.3;
+
+        if (tipo === 'aggressive') {
+            velocidad *= 1.3;
+        }
         
         const tamano = 96;
         const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
@@ -313,7 +329,7 @@ function disparar() {
             if (!jugador.garra) dispararGarfio();
             else if (jugador.garra.fase === 'ida') {
                 jugador.garra.fase = 'retorno';
-                Levels.onFallo(); 
+                Levels.onFallo(); // El módulo de nivel gestiona las consecuencias de un fallo
             }
             break;
         case 'shotgun': dispararShotgun(); break;
@@ -338,6 +354,7 @@ function lanzarTorpedo() {
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
 
+    // Manejo de Slow Motion
     if (estadoJuego.slowMoTimer > 0) {
         estadoJuego.slowMoTimer -= dt;
         if (estadoJuego.slowMoTimer <= 0) {
@@ -355,6 +372,7 @@ function actualizar(dt) {
     const progresoProfundidad = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1);
     estadoJuego.profundidad_m = Math.max(estadoJuego.profundidad_m, Math.floor(lerp(0, 3900, progresoProfundidad)));
     
+    // Movimiento del jugador
     let vx = 0, vy = 0;
     if (teclas['ArrowUp']) vy -= 1;
     if (teclas['ArrowDown']) vy += 1;
@@ -368,9 +386,11 @@ function actualizar(dt) {
     }
     jugador.x += vx * dtAjustado;
     jugador.y += vy * dtAjustado;
-
+    
+    // >>> CAMBIO CLAVE <<<
+    // Toda la lógica de spawning, misiones y reglas del nivel se delega al módulo de nivel activo.
     Levels.updateLevel(dtAjustado);
-        
+    
     jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
     jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
     if (vy < 0) inclinacionRobotObjetivo = -INCLINACION_MAX;
@@ -384,6 +404,7 @@ function actualizar(dt) {
     }
     inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dtAjustado);
 
+    // Entradas del jugador
     if (teclas[' '] && estadoJuego.bloqueoEntrada === 0) { disparar(); teclas[' '] = false; }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
     if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
@@ -391,10 +412,12 @@ function actualizar(dt) {
     if (teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
     if (teclas['c'] || teclas['C']) { const currentIndex = WEAPON_ORDER.indexOf(estadoJuego.armaActual); const nextIndex = (currentIndex + 1) % WEAPON_ORDER.length; estadoJuego.armaActual = WEAPON_ORDER[nextIndex]; teclas['c'] = teclas['C'] = false; }
     
+    // Actualización de objetivos
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dtAjustado, configNivel.meta);
     
+    // Actualización de animales y colisiones
     for (let i = animales.length - 1; i >= 0; i--) { 
         const a = animales[i]; 
         a.x += a.vx * dtAjustado; 
@@ -423,6 +446,7 @@ function actualizar(dt) {
         } 
     }
     
+    // Lógica de la garra
     if (jugador.garra) {
         const g = jugador.garra;
         const spd = g.velocidad * dtAjustado;
@@ -458,23 +482,24 @@ function actualizar(dt) {
                     estadoJuego.rescatados++;
                     const puntos = g.golpeado.tipo === 'mierdei' ? 1000 : puntosPorRescate();
                     estadoJuego.puntuacion += puntos;
-                    Levels.onAnimalCazado(g.golpeado.tipo);
+                    Levels.onAnimalCazado(g.golpeado.tipo); // Notifica al nivel
                     const idx = animales.indexOf(g.golpeado);
                     if (idx !== -1) animales.splice(idx, 1);
                 } else {
-                    Levels.onFallo();
+                    Levels.onFallo(); // Notifica al nivel
                 }
                 jugador.garra = null;
             }
         }
     }
     
+    // Colisiones de proyectiles
     function chequearColisionProyectil(proyectil, esTorpedo) {
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
             if (!a.capturado && proyectil.x < a.x + a.w/2 && proyectil.x + (proyectil.w || 0) > a.x - a.w/2 && proyectil.y < a.y + a.h/2 && proyectil.y + (proyectil.h || 0) > a.y - a.h/2) {
                 generarExplosion(a.x, a.y, esTorpedo ? '#ff8833' : proyectil.color);
-                Levels.onAnimalCazado(a.tipo);
+                Levels.onAnimalCazado(a.tipo); // Notifica al nivel
                 animales.splice(j, 1);
                 estadoJuego.asesinatos++;
                 return true;
@@ -494,6 +519,7 @@ function actualizar(dt) {
         return false;
     }
 
+    // Actualización de torpedos
     for (let i = torpedos.length - 1; i >= 0; i--) {
         const t = torpedos[i];
         if (t.isVertical) { t.y -= 1200 * dtAjustado; } else { t.x += 1200 * dtAjustado; }
@@ -505,6 +531,7 @@ function actualizar(dt) {
         }
     }
 
+    // Actualización de proyectiles
     for (let i = proyectiles.length - 1; i >= 0; i--) {
         const p = proyectiles[i];
         p.x += p.vx * dtAjustado; p.y += p.vy * dtAjustado; p.vida -= dtAjustado;
@@ -528,6 +555,7 @@ function renderizar(dt) {
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
     if (estadoJuego) {
+        // El módulo del nivel puede dibujar sus propios elementos (fondos, efectos, etc.)
         Levels.drawLevel();
 
         for (let i = 0; i < animales.length; i++) {
@@ -542,6 +570,7 @@ function renderizar(dt) {
                 ctx.drawImage(mierdeiImg, -a.w / 2, -a.h / 2, a.w, a.h);
 
             } else {
+                // Filtros visuales para tipos de animales especiales/de misión
                 if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
                 if (a.tipo === 'rojo') ctx.filter = 'sepia(1) saturate(5) hue-rotate(-40deg)';
                 if (a.tipo === 'dorado') ctx.filter = 'brightness(1.5) saturate(3) hue-rotate(15deg)';
@@ -614,18 +643,45 @@ function renderizar(dt) {
 }
 
 function dibujarFondo(dt) { if (!estadoJuego || !bgCtx) return; const scrollFondo = estadoJuego.nivel !== 3 && estadoJuego.nivel !== 5; bgCtx.clearRect(0, 0, W, H); if (bgListo && bgAncho > 0 && bgAlto > 0) { const spd = BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) bgOffset = (bgOffset + spd * dt) % bgAncho; bgCtx.imageSmoothingEnabled = false; for (let x = -bgOffset; x < W + bgAncho; x += bgAncho) { for (let y = 0; y < H + bgAlto; y += bgAlto) { bgCtx.drawImage(bgImg, Math.round(x), Math.round(y), bgAncho, bgAlto); } } if (fgListo && fgAncho > 0 && fgAlto > 0) { const fspd = FG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) fgOffset = (fgOffset + fspd * dt) % fgAncho; const yBase = H - fgAlto; for (let xx = -fgOffset; xx < W + fgAncho; xx += fgAncho) { bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto); } } } else { bgCtx.fillStyle = '#06131f'; bgCtx.fillRect(0, 0, W, H); } }
-function dibujarMascaraLuz() { if (!estadoJuego || !fx) return; fx.clearRect(0, 0, W, H); const isLevel5 = estadoJuego.nivel === 5; const oscuridadObjetivo = estadoJuego.nivel === 1 ? estadoJuego.tiempoTranscurrido / 180 : (estadoJuego.nivel === 2 ? 0.95 : 1.0); const alpha = lerp(0, 0.9, clamp(oscuridadObjetivo, 0, 1)); if (alpha <= 0.001) return; fx.globalCompositeOperation = 'source-over'; fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')'; fx.fillRect(0, 0, W, H); if (estadoJuego.luzVisible && jugador) { const px = jugador.x; const py = jugador.y; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + inclinacionRobot; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11)); const L = isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560); const theta = Math.PI / 9; const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half; let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)'); fx.globalCompositeOperation = 'destination-out'; fx.fillStyle = g; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)'); fx.fillStyle = rg; fx.beginPath(); fx.arc(ax, ay, 54, 0, Math.PI * 2); fx.fill(); fx.globalCompositeOperation = 'lighter'; const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60, 'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(255,255,255,0.00)'); fx.fillStyle = gGlow; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over'; } }
+
+function dibujarMascaraLuz() {
+    if (!estadoJuego || !fx) return;
+    fx.clearRect(0, 0, W, H);
+    const isLevel5 = estadoJuego.nivel === 5;
+
+    // >>> CAMBIO CLAVE <<<
+    // 1. Calcula una oscuridad base que progresa con el tiempo del juego.
+    const oscuridadBase = estadoJuego.tiempoTranscurrido / 180;
+    
+    // 2. Usa la oscuridad base, a menos que el módulo del nivel activo haya establecido un valor específico.
+    const oscuridadObjetivo = estadoJuego.darknessOverride !== undefined 
+        ? estadoJuego.darknessOverride 
+        : oscuridadBase;
+
+    // Se eliminó la lógica `if/else` que dependía del número de nivel.
+    const alpha = lerp(0, 0.9, clamp(oscuridadObjetivo, 0, 1));
+    if (alpha <= 0.001) return;
+    
+    fx.globalCompositeOperation = 'source-over';
+    fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
+    fx.fillRect(0, 0, W, H);
+    if (estadoJuego.luzVisible && jugador) {
+        const px = jugador.x; const py = jugador.y; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + inclinacionRobot; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11)); const L = isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560); const theta = Math.PI / 9; const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half; let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)'); fx.globalCompositeOperation = 'destination-out'; fx.fillStyle = g; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)'); fx.fillStyle = rg; fx.beginPath(); fx.arc(ax, ay, 54, 0, Math.PI * 2); fx.fill(); fx.globalCompositeOperation = 'lighter'; const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60, 'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(255,255,255,0.00)'); fx.fillStyle = gGlow; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over';
+    }
+}
+
 function dibujarHUD() {
     if (!estadoJuego || !hudLevelText || !hudObjectiveText) return;
 
     if (estadoJuego.enEjecucion) {
         hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`;
         
+        // El motor pregunta al gestor de niveles por el estado de la misión.
         const mision = Levels.getEstadoMision();
         if (mision) {
             hudObjectiveText.innerHTML = `<span class="mission-title">${mision.texto}</span>${mision.progreso}`;
         } else {
-            hudObjectiveText.innerHTML = ''; 
+            hudObjectiveText.innerHTML = '';
             const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
             let textoObjetivo = '';
             if (configNivel.tipo === 'capture') { textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; } 
@@ -692,7 +748,6 @@ function iniciarJuego(nivel = 1) {
     if (__iniciando) return; __iniciando = true;
     if (estadoJuego && estadoJuego.enEjecucion) { __iniciando = false; return; }
     reiniciar(nivel);
-    Levels.initLevel(nivel); 
     estadoJuego.bloqueoEntrada = 0.2;
     estadoJuego.faseJuego = 'playing';
     estadoJuego.enEjecucion = true;
