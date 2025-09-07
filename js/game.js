@@ -8,7 +8,8 @@ export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 export function dificultadBase() {
     if (!estadoJuego) return 0;
-    return estadoJuego.tiempoTranscurrido / 180;
+    // La dificultad base progresa un poco más rápido para las mecánicas del Nivel 1
+    return estadoJuego.tiempoTranscurrido / 150;
 }
 function cargarImagen(url, cb) { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => cb(im); im.onerror = () => cb(null); im.src = url; }
 
@@ -124,7 +125,6 @@ cargarImagen('img/bg_back.png', function (img) { if (img) { bgImg = img; bgListo
 let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0, FG_VELOCIDAD_BASE = 60;
 cargarImagen('img/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
 
-// MODIFICADO: Solo cargamos la imagen.
 export let mierdeiImg = null, mierdeiListo = false;
 cargarImagen('img/mierdei.png', function(img) {
     if (img) {
@@ -134,7 +134,6 @@ cargarImagen('img/mierdei.png', function(img) {
         console.error("No se pudo cargar la imagen 'img/mierdei.png'. Asegúrate de que la ruta es correcta.");
     }
 });
-
 
 // ========= Geometría y Utilidades (Exportamos las que se necesitan fuera) =========
 export let W = innerWidth, H = innerHeight;
@@ -158,6 +157,173 @@ function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
 export function generarExplosion(x, y, color = '#ff8833') { for (let i = 0; i < 20; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * 100; generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * 2 + 1, vida: 0.4 + Math.random() * 0.4, color }); } }
 export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i = 0; i < 50; i++) { const ang = Math.random() * Math.PI * 2, spd = 20 + Math.random() * size; generarParticula(particulasTinta, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 15 + Math.random() * size * 0.8, vida: 2.5 + Math.random() * 2, color: '#101010' }); } }
+
+
+// =================================================================================
+// ========= NUEVO: SISTEMA DE MISIONES Y LÓGICA DE NIVEL 1 MEJORADA =========
+// =================================================================================
+
+// --- Constantes de Configuración del Nivel 1 ---
+const PERIODO_SPAWN_INICIAL = 2.5;
+const PERIODO_SPAWN_MINIMO = 0.35;
+const FACTOR_ACELERACION = 0.05;
+const PROBABILIDAD_OLEADA_PEQUENA = 0.15;
+const TIEMPO_ENTRE_MEGA_OLEADAS = 35;
+const ANIMALES_EN_MEGA_OLEADA = 12;
+const RETRASO_ENTRE_ANIMALES_OLEADA = 0.1;
+
+// --- Constantes del Sistema de Misiones ---
+const TIEMPO_ENTRE_MISIONES = 15;
+
+// --- Funciones de Recompensa ---
+export function limpiarTodosLosAnimales() {
+    animales.forEach(a => generarExplosion(a.x, a.y, '#aaffff'));
+    animales = [];
+}
+export function agregarPuntos(cantidad) {
+    if (estadoJuego) estadoJuego.puntuacion += cantidad;
+}
+function activarSlowMotion(duracion) {
+    if (estadoJuego) {
+        estadoJuego.velocidadJuego = 0.5; // El juego irá a la mitad de la velocidad
+        estadoJuego.slowMoTimer = duracion;
+    }
+}
+
+// --- Pool de Misiones Posibles ---
+const poolDeMisiones = [
+    {
+        id: 1, texto: "MISIÓN: ¡Caza 5 animales rojos!", tipo: 'CONTAR_TIPO',
+        objetivo: { tipo: 'rojo', cantidad: 5 },
+        recompensa: () => { activarSlowMotion(3); agregarPuntos(200); }
+    },
+    {
+        id: 2, texto: "MISIÓN: ¡Elimina 10 animales en 20 segundos!", tipo: 'CONTAR_TOTAL',
+        objetivo: { cantidad: 10 }, tiempoLimite: 20,
+        recompensa: () => { limpiarTodosLosAnimales(); agregarPuntos(500); }
+    },
+    {
+        id: 3, texto: "MISIÓN: ¡Logra una racha de 7 capturas/eliminaciones!", tipo: 'RACHA',
+        objetivo: { cantidad: 7 },
+        recompensa: () => { if(estadoJuego) estadoJuego.spawnTimer += 5; agregarPuntos(750); } // Da 5s de respiro
+    },
+    {
+        id: 4, texto: "¡ESPECIAL! ¡Atrapa al animal DORADO!", tipo: 'CAZAR_ESPECIAL',
+        objetivo: { tipo: 'dorado' },
+        alIniciar: () => { setTimeout(() => generarAnimal(false, 'dorado'), 1000); },
+        recompensa: () => { agregarPuntos(2000); }
+    }
+];
+
+function iniciarNuevaMision() {
+    if (estadoJuego.misionActual) return;
+    const misionElegida = poolDeMisiones[Math.floor(Math.random() * poolDeMisiones.length)];
+    estadoJuego.misionActual = {
+        ...misionElegida,
+        progreso: 0,
+        tiempoRestante: misionElegida.tiempoLimite || 0,
+    };
+    if (estadoJuego.misionActual.alIniciar) {
+        estadoJuego.misionActual.alIniciar();
+    }
+}
+
+function completarMision() {
+    if (!estadoJuego.misionActual) return;
+    estadoJuego.misionActual.recompensa();
+    estadoJuego.misionActual = null;
+    // ===== LA LÍNEA CORREGIDA ESTÁ AQUÍ =====
+    estadoJuego.tiempoParaProximaMision = TIEMPO_ENTRE_MISIONES + 5; // Da un respiro extra
+}
+
+function fallarMision() {
+    if (!estadoJuego) return;
+    estadoJuego.misionActual = null;
+    estadoJuego.tiempoParaProximaMision = TIEMPO_ENTRE_MISIONES;
+}
+
+function actualizarMisiones(dt) {
+    if (!estadoJuego) return;
+    if (!estadoJuego.misionActual) {
+        estadoJuego.tiempoParaProximaMision -= dt;
+        if (estadoJuego.tiempoParaProximaMision <= 0) {
+            iniciarNuevaMision();
+        }
+        return;
+    }
+    const mision = estadoJuego.misionActual;
+    if (mision.tiempoLimite) {
+        mision.tiempoRestante -= dt;
+        if (mision.tiempoRestante <= 0) {
+            fallarMision(); return;
+        }
+    }
+    if ((mision.tipo.startsWith('CONTAR') && mision.progreso >= mision.objetivo.cantidad) ||
+        (mision.tipo === 'RACHA' && estadoJuego.rachaAciertos >= mision.objetivo.cantidad)) {
+        completarMision();
+    }
+}
+
+function onAnimalCazado(tipoAnimal) {
+    if (!estadoJuego) return;
+    estadoJuego.rachaAciertos++;
+    const mision = estadoJuego.misionActual;
+    if (!mision) return;
+
+    if (mision.tipo === 'CONTAR_TIPO' && tipoAnimal === mision.objetivo.tipo) mision.progreso++;
+    if (mision.tipo === 'CONTAR_TOTAL') mision.progreso++;
+    if (mision.tipo === 'CAZAR_ESPECIAL' && tipoAnimal === mision.objetivo.tipo) completarMision();
+}
+
+function onFallo() {
+    if (!estadoJuego) return;
+    estadoJuego.rachaAciertos = 0;
+    if (estadoJuego.misionActual && estadoJuego.misionActual.tipo === 'RACHA') {
+        fallarMision();
+    }
+}
+
+function getEstadoMision() {
+    if (!estadoJuego || !estadoJuego.misionActual) return null;
+    const mision = estadoJuego.misionActual;
+    let objetivoStr = '';
+    if (mision.objetivo.cantidad) {
+        const progreso = mision.tipo === 'RACHA' ? estadoJuego.rachaAciertos : mision.progreso;
+        objetivoStr = `${progreso} / ${mision.objetivo.cantidad}`;
+    }
+    if (mision.tiempoLimite) {
+        objetivoStr += ` | TIEMPO: ${Math.ceil(mision.tiempoRestante)}`;
+    }
+    return { texto: mision.texto, progreso: objetivoStr };
+}
+
+// --- Lógica de Spawning para el Nivel 1 ---
+function getSpawnPeriod() {
+    const base = PERIODO_SPAWN_INICIAL + (0.8 - PERIODO_SPAWN_INICIAL) * dificultadBase();
+    const spawnPeriod = base * Math.exp(-estadoJuego.tiempoTranscurrido * FACTOR_ACELERACION);
+    const variacion = spawnPeriod * 0.1 * (Math.random() - 0.5);
+    return Math.max(PERIODO_SPAWN_MINIMO, spawnPeriod + variacion);
+}
+
+function iniciarMegaOleada() {
+    for (let i = 0; i < ANIMALES_EN_MEGA_OLEADA; i++) {
+        setTimeout(() => generarAnimal(), i * RETRASO_ENTRE_ANIMALES_OLEADA * 1000);
+    }
+}
+
+function manejarSpawnNormal() {
+    if (Math.random() < PROBABILIDAD_OLEADA_PEQUENA) {
+        const cantidad = Math.random() < 0.7 ? 2 : 3;
+        for (let i = 0; i < cantidad; i++) {
+            // Genera animales normales o rojos para la misión
+            setTimeout(() => generarAnimal(false, Math.random() < 0.2 ? 'rojo' : 'normal'), i * 200);
+        }
+    } else {
+        generarAnimal(false, Math.random() < 0.2 ? 'rojo' : 'normal');
+    }
+    estadoJuego.spawnTimer = getSpawnPeriod();
+}
+
 
 // ========= Lógica del Juego (Estado y Entidades - Exportamos los necesarios) =========
 export let estadoJuego = null, jugador, animales;
@@ -183,11 +349,23 @@ function reiniciar(nivelDeInicio = 1) {
         enfriamientoArma: 0,
         asesinatos: 0,
         teclasActivas: {},
+        // --- Variables de estado para Nivel 1 y Misiones ---
+        spawnTimer: 0,
+        megaOleadaTimer: TIEMPO_ENTRE_MEGA_OLEADAS,
+        tiempoParaProximaMision: 8, // Primera misión a los 8 segundos
+        misionActual: null,
+        rachaAciertos: 0,
+        velocidadJuego: 1.0, // 1.0 = normal, < 1.0 = lento
+        slowMoTimer: 0,
     };
     jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0 };
-    if (nivelDeInicio === 5) {
-        Levels.initLevel(5);
+    
+    if (nivelDeInicio === 1) {
+        estadoJuego.spawnTimer = PERIODO_SPAWN_INICIAL;
+    } else {
+        Levels.initLevel(nivelDeInicio);
     }
+    
     animales = [];
     torpedos = [];
     proyectiles = [];
@@ -202,50 +380,43 @@ function reiniciar(nivelDeInicio = 1) {
 function velocidadActual() { return Levels.getLevelSpeed(); }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
-export function generarAnimal(esEsbirroJefe = false) {
-    if (estadoJuego.nivel >= 3 && estadoJuego.nivel <= 7 && !esEsbirroJefe) return;
+export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
+    // Si no estamos en Nivel 1 y no es un animal especial, usamos la lógica de Levels.js
+    if (estadoJuego.nivel !== 1 && !esEsbirroJefe && !tipoForzado) {
+        if (estadoJuego.nivel >= 3 && estadoJuego.nivel <= 7) return; // Lógica original para esos niveles
+    }
 
     const minY = H * 0.15;
     const maxY = H * 0.85;
     const y = minY + Math.random() * (maxY - minY);
     let velocidad = velocidadActual() + 60;
 
-    // Con 15% de probabilidad, aparecerá tu imagen en lugar de un pez.
-    if (mierdeiListo && Math.random() < 0.15) { 
-        const anchoDeseado = 350;
-        let altoDeseado = anchoDeseado;
-        if (mierdeiImg.width > 0) {
-            altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
-        }
+    // Determina el tipo de animal
+    let tipo = tipoForzado || 'normal';
+    if (tipoForzado === null && mierdeiListo && Math.random() < 0.15) {
+        tipo = 'mierdei';
+    }
 
+    if (tipo === 'mierdei') {
+        const anchoDeseado = 350;
+        let altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
         animales.push({
-            x: W + anchoDeseado, y, 
-            vx: -velocidad * 0.7,
-            r: anchoDeseado / 2,
-            w: anchoDeseado,
-            h: altoDeseado,
-            capturado: false,
-            tipo: 'mierdei', 
+            x: W + anchoDeseado, y, vx: -velocidad * 0.7, r: anchoDeseado / 2,
+            w: anchoDeseado, h: altoDeseado, capturado: false, tipo: 'mierdei',
             semillaFase: Math.random() * Math.PI * 2,
         });
-
     } else {
-        let tipo = 'normal';
-        if (estadoJuego.nivel === 2 && Math.random() < 0.3) {
+        if (esEsbirroJefe || (estadoJuego.nivel === 2 && Math.random() < 0.3)) {
             tipo = 'aggressive';
-            velocidad *= 1.3;
         }
-        if (esEsbirroJefe) {
-            tipo = 'aggressive';
-            velocidad = 650;
-        }
+        if (tipo === 'aggressive') velocidad *= 1.3;
+        
         const tamano = 96;
         const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
-        animales.push({ 
-            x: W + tamano, y, vx: -velocidad, r: 44, 
-            w: tamano, h: tamano,
-            capturado: false, fila, frame: 0, timerFrame: 0, 
-            semillaFase: Math.random() * Math.PI * 2, tipo: tipo 
+        animales.push({
+            x: W + tamano, y, vx: -velocidad, r: 44, w: tamano, h: tamano,
+            capturado: false, fila, frame: 0, timerFrame: 0,
+            semillaFase: Math.random() * Math.PI * 2, tipo: tipo
         });
     }
 }
@@ -310,7 +481,10 @@ function disparar() {
     switch (estadoJuego.armaActual) {
         case 'garra':
             if (!jugador.garra) dispararGarfio();
-            else if (jugador.garra.fase === 'ida') jugador.garra.fase = 'retorno';
+            else if (jugador.garra.fase === 'ida') {
+                jugador.garra.fase = 'retorno';
+                onFallo(); // Un retorno manual se considera un fallo para la racha
+            }
             break;
         case 'shotgun': dispararShotgun(); break;
         case 'metralleta': dispararMetralleta(); break;
@@ -333,10 +507,20 @@ function lanzarTorpedo() {
 
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
-    estadoJuego.tiempoTranscurrido += dt;
-    estadoJuego.bloqueoEntrada = Math.max(0, estadoJuego.bloqueoEntrada - dt);
-    if (estadoJuego.enfriamientoTorpedo > 0) estadoJuego.enfriamientoTorpedo -= dt;
-    if (estadoJuego.enfriamientoArma > 0) estadoJuego.enfriamientoArma -= dt;
+
+    // Manejo de Slow Motion (Tiempo Bala) por recompensa de misión
+    if (estadoJuego.slowMoTimer > 0) {
+        estadoJuego.slowMoTimer -= dt;
+        if (estadoJuego.slowMoTimer <= 0) {
+            estadoJuego.velocidadJuego = 1.0;
+        }
+    }
+    const dtAjustado = dt * estadoJuego.velocidadJuego;
+
+    estadoJuego.tiempoTranscurrido += dtAjustado;
+    estadoJuego.bloqueoEntrada = Math.max(0, estadoJuego.bloqueoEntrada - dtAjustado);
+    if (estadoJuego.enfriamientoTorpedo > 0) estadoJuego.enfriamientoTorpedo -= dtAjustado;
+    if (estadoJuego.enfriamientoArma > 0) estadoJuego.enfriamientoArma -= dtAjustado;
     estadoJuego.teclasActivas = teclas;
     
     const progresoProfundidad = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1);
@@ -353,10 +537,28 @@ function actualizar(dt) {
         vy = (vy / len) * JUGADOR_VELOCIDAD;
         generarBurbujaPropulsion(jugador.x - 30, jugador.y, false);
     }
-    jugador.x += vx * dt;
-    jugador.y += vy * dt;
+    jugador.x += vx * dtAjustado;
+    jugador.y += vy * dtAjustado;
     
-    Levels.updateLevel(dt);
+    // --- LÓGICA DE ACTUALIZACIÓN ESPECÍFICA POR NIVEL ---
+    if (estadoJuego.nivel === 1) {
+        // Lógica de spawn, oleadas y misiones para el Nivel 1
+        actualizarMisiones(dt); // Las misiones usan tiempo real (dt) para no ralentizarse
+        estadoJuego.spawnTimer -= dtAjustado;
+        estadoJuego.megaOleadaTimer -= dtAjustado;
+
+        if (estadoJuego.megaOleadaTimer <= 0) {
+            iniciarMegaOleada();
+            estadoJuego.megaOleadaTimer = TIEMPO_ENTRE_MEGA_OLEADAS;
+            estadoJuego.spawnTimer = getSpawnPeriod() * 2.5; // Respiro tras la oleada
+        }
+        if (estadoJuego.spawnTimer <= 0) {
+            manejarSpawnNormal();
+        }
+    } else {
+        // Lógica para otros niveles (la que ya tenías)
+        Levels.updateLevel(dtAjustado);
+    }
     
     jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
     jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
@@ -369,7 +571,7 @@ function actualizar(dt) {
         if (teclas['ArrowLeft']) inclinacionRobotObjetivo -= INCLINACION_MAX * 1.5;
         else if (teclas['ArrowRight']) inclinacionRobotObjetivo += INCLINACION_MAX * 1.5;
     }
-    inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dt);
+    inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dtAjustado);
 
     if (teclas[' '] && estadoJuego.bloqueoEntrada === 0) { disparar(); teclas[' '] = false; }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
@@ -380,14 +582,14 @@ function actualizar(dt) {
     
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
-    else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dt, configNivel.meta);
+    else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dtAjustado, configNivel.meta);
     
     for (let i = animales.length - 1; i >= 0; i--) { 
         const a = animales[i]; 
-        a.x += a.vx * dt; 
+        a.x += a.vx * dtAjustado; 
         
         if (a.tipo !== 'mierdei') {
-            a.timerFrame += dt; 
+            a.timerFrame += dtAjustado; 
             if (a.timerFrame >= 0.2) { 
                 a.timerFrame -= 0.2; a.frame ^= 1; 
             }
@@ -412,7 +614,7 @@ function actualizar(dt) {
     
     if (jugador.garra) {
         const g = jugador.garra;
-        const spd = g.velocidad * dt;
+        const spd = g.velocidad * dtAjustado;
         if (g.fase === 'ida') {
             g.x += g.dx * spd;
             g.y += g.dy * spd;
@@ -420,7 +622,7 @@ function actualizar(dt) {
             if (estadoJuego.nivel !== 5) {
                 for (let j = 0; j < animales.length; j++) {
                     const aa = animales[j];
-                    const esCapturable = (aa.tipo === 'normal' || aa.tipo === 'mierdei');
+                    const esCapturable = (aa.tipo !== 'aggressive');
                     if (!g.golpeado && !aa.capturado && esCapturable && Math.hypot(aa.x - g.x, aa.y - g.y) < aa.r) {
                         g.golpeado = aa;
                         aa.capturado = true;
@@ -445,8 +647,11 @@ function actualizar(dt) {
                     estadoJuego.rescatados++;
                     const puntos = g.golpeado.tipo === 'mierdei' ? 1000 : puntosPorRescate();
                     estadoJuego.puntuacion += puntos;
+                    onAnimalCazado(g.golpeado.tipo); // Hook de Misión
                     const idx = animales.indexOf(g.golpeado);
                     if (idx !== -1) animales.splice(idx, 1);
+                } else {
+                    onFallo(); // Hook de Misión
                 }
                 jugador.garra = null;
             }
@@ -458,6 +663,7 @@ function actualizar(dt) {
             const a = animales[j];
             if (!a.capturado && proyectil.x < a.x + a.w/2 && proyectil.x + (proyectil.w || 0) > a.x - a.w/2 && proyectil.y < a.y + a.h/2 && proyectil.y + (proyectil.h || 0) > a.y - a.h/2) {
                 generarExplosion(a.x, a.y, esTorpedo ? '#ff8833' : proyectil.color);
+                onAnimalCazado(a.tipo); // Hook de Misión
                 animales.splice(j, 1);
                 estadoJuego.asesinatos++;
                 return true;
@@ -479,7 +685,7 @@ function actualizar(dt) {
 
     for (let i = torpedos.length - 1; i >= 0; i--) {
         const t = torpedos[i];
-        if (t.isVertical) { t.y -= 1200 * dt; } else { t.x += 1200 * dt; }
+        if (t.isVertical) { t.y -= 1200 * dtAjustado; } else { t.x += 1200 * dtAjustado; }
         if (t.y < -t.h || t.x > W + t.w) { torpedos.splice(i, 1); continue; }
         if (estadoJuego.nivel !== 4 && estadoJuego.nivel !== 5) {
             if (chequearColisionProyectil(t, true)) {
@@ -490,7 +696,7 @@ function actualizar(dt) {
 
     for (let i = proyectiles.length - 1; i >= 0; i--) {
         const p = proyectiles[i];
-        p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt;
+        p.x += p.vx * dtAjustado; p.y += p.vy * dtAjustado; p.vida -= dtAjustado;
         if (p.vida <= 0 || p.x > W + 20 || p.x < -20 || p.y < -20 || p.y > H + 20) { proyectiles.splice(i, 1); continue; }
         if (estadoJuego.nivel !== 4 && estadoJuego.nivel !== 5) {
             if (chequearColisionProyectil(p, false)) {
@@ -499,10 +705,10 @@ function actualizar(dt) {
         }
     }
     
-    for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dt; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
-    estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dt);
+    for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dtAjustado; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
+    estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dtAjustado);
     
-    actualizarParticulas(dt);
+    actualizarParticulas(dtAjustado);
     comprobarCompletadoNivel();
 }
 
@@ -525,7 +731,11 @@ function renderizar(dt) {
                 ctx.drawImage(mierdeiImg, -a.w / 2, -a.h / 2, a.w, a.h);
 
             } else {
+                // Filtros visuales para tipos de animales especiales/de misión
                 if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
+                if (a.tipo === 'rojo') ctx.filter = 'sepia(1) saturate(5) hue-rotate(-40deg)';
+                if (a.tipo === 'dorado') ctx.filter = 'brightness(1.5) saturate(3) hue-rotate(15deg)';
+
                 if (criaturasListas && cFilas > 0) {
                     const sx = (a.frame % 2) * cFrameAncho, sy = (a.fila % cFilas) * cFrameAlto;
                     ctx.imageSmoothingEnabled = false;
@@ -595,14 +805,89 @@ function renderizar(dt) {
 
 function dibujarFondo(dt) { if (!estadoJuego || !bgCtx) return; const scrollFondo = estadoJuego.nivel !== 3 && estadoJuego.nivel !== 5; bgCtx.clearRect(0, 0, W, H); if (bgListo && bgAncho > 0 && bgAlto > 0) { const spd = BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) bgOffset = (bgOffset + spd * dt) % bgAncho; bgCtx.imageSmoothingEnabled = false; for (let x = -bgOffset; x < W + bgAncho; x += bgAncho) { for (let y = 0; y < H + bgAlto; y += bgAlto) { bgCtx.drawImage(bgImg, Math.round(x), Math.round(y), bgAncho, bgAlto); } } if (fgListo && fgAncho > 0 && fgAlto > 0) { const fspd = FG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)); if (scrollFondo) fgOffset = (fgOffset + fspd * dt) % fgAncho; const yBase = H - fgAlto; for (let xx = -fgOffset; xx < W + fgAncho; xx += fgAncho) { bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto); } } } else { bgCtx.fillStyle = '#06131f'; bgCtx.fillRect(0, 0, W, H); } }
 function dibujarMascaraLuz() { if (!estadoJuego || !fx) return; fx.clearRect(0, 0, W, H); const isLevel5 = estadoJuego.nivel === 5; const oscuridadObjetivo = estadoJuego.nivel === 1 ? estadoJuego.tiempoTranscurrido / 180 : (estadoJuego.nivel === 2 ? 0.95 : 1.0); const alpha = lerp(0, 0.9, clamp(oscuridadObjetivo, 0, 1)); if (alpha <= 0.001) return; fx.globalCompositeOperation = 'source-over'; fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')'; fx.fillRect(0, 0, W, H); if (estadoJuego.luzVisible && jugador) { const px = jugador.x; const py = jugador.y; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + inclinacionRobot; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11)); const L = isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560); const theta = Math.PI / 9; const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half; let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)'); fx.globalCompositeOperation = 'destination-out'; fx.fillStyle = g; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)'); fx.fillStyle = rg; fx.beginPath(); fx.arc(ax, ay, 54, 0, Math.PI * 2); fx.fill(); fx.globalCompositeOperation = 'lighter'; const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60, 'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(255,255,255,0.00)'); fx.fillStyle = gGlow; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over'; } }
-function dibujarHUD() { if (!estadoJuego || !hudLevelText || !hudObjectiveText) return; if (estadoJuego.enEjecucion) { const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1]; let textoObjetivo = ''; if (configNivel.tipo === 'capture') { textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; } else if (configNivel.tipo === 'survive') { textoObjetivo = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - estadoJuego.valorObjetivoNivel)}s`; } else if (configNivel.tipo === 'boss') { textoObjetivo = `JEFE: Derrota al Kraken`; } hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`; hudObjectiveText.textContent = textoObjetivo; } if (!hud) return; hud.clearRect(0, 0, W, H); if (!estadoJuego.enEjecucion) return; const s = estadoJuego, valorPuntuacion = s.puntuacion || 0, valorVidas = s.vidas || 3, valorProfundidad = Math.floor(s.profundidad_m || 0); const padX = 18, padY = 18, lh = 22; hud.save(); hud.fillStyle = '#ffffff'; hud.font = '18px "Press Start 2P", monospace'; hud.textAlign = 'left'; hud.textBaseline = 'alphabetic'; hud.shadowColor = 'rgba(0,0,0,0.7)'; hud.shadowBlur = 4; const filas = [{ label: 'SCORE', value: String(valorPuntuacion) }, { label: 'DEPTH', value: valorProfundidad + ' m' }, { label: 'RECORD', value: String(puntuacionMaxima) }]; const totalFilas = filas.length + 4; const y0 = H - padY - lh * totalFilas; let maxAnchoEtiqueta = 0; const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO']; for (const label of todasLasEtiquetas) { maxAnchoEtiqueta = Math.max(maxAnchoEtiqueta, hud.measureText(label).width); } const gap = 16; const valueX = padX + maxAnchoEtiqueta + gap; let currentY = y0; for (let i = 0; i < filas.length; i++) { hud.fillText(filas[i].label, padX, currentY); hud.fillText(filas[i].value, valueX, currentY); currentY += lh; } hud.fillText('VIDAS', padX, currentY); hud.fillStyle = '#ff4d4d'; hud.fillText('♥'.repeat(valorVidas) + '♡'.repeat(Math.max(0, 3 - valorVidas)), valueX, currentY); hud.fillStyle = '#ffffff'; currentY += lh; hud.fillText('TORPEDO', padX, currentY); const torpedoListo = s.enfriamientoTorpedo <= 0; hud.fillStyle = torpedoListo ? '#66ff66' : '#ff6666'; hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO...', valueX, currentY); currentY += lh; hud.fillStyle = '#ffffff'; hud.fillText('ARMA', padX, currentY); let armaTexto = s.armaActual.toUpperCase(); if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; hud.fillStyle = '#ff6666'; } else { armaTexto += " (LISTA)"; hud.fillStyle = '#ffdd77'; } } else { hud.fillStyle = '#aaddff'; } hud.fillText(armaTexto, valueX, currentY); currentY += lh; hud.fillStyle = '#ffffff'; hud.fillText('ASESINO', padX, currentY); const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0]; hud.fillStyle = '#ff5e5e'; hud.fillText(rango.titulo, valueX, currentY); hud.restore(); if (s.nivel === 3 && s.jefe) { const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1); if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%'; } else { if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none'; } }
+function dibujarHUD() {
+    if (!estadoJuego || !hudLevelText || !hudObjectiveText) return;
+
+    if (estadoJuego.enEjecucion) {
+        hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`;
+        
+        // --- Lógica del HUD para mostrar Misiones o el Objetivo del Nivel ---
+        const mision = getEstadoMision();
+        if (mision) {
+            // Usa innerHTML para permitir un estilo simple para el título de la misión
+            hudObjectiveText.innerHTML = `<span style="color: #ffdd77; font-weight: bold;">${mision.texto}</span><br>${mision.progreso}`;
+        } else {
+            // Si no hay misión, muestra el objetivo normal del nivel
+            hudObjectiveText.innerHTML = ''; // Limpiar por si acaso
+            const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
+            let textoObjetivo = '';
+            if (configNivel.tipo === 'capture') { textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; } 
+            else if (configNivel.tipo === 'survive') { textoObjetivo = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - estadoJuego.valorObjetivoNivel)}s`; } 
+            else if (configNivel.tipo === 'boss') { textoObjetivo = `JEFE: Derrota al Kraken`; }
+            hudObjectiveText.textContent = textoObjetivo;
+        }
+    }
+
+    if (!hud) return;
+    hud.clearRect(0, 0, W, H);
+    if (!estadoJuego.enEjecucion) return;
+
+    const s = estadoJuego, valorPuntuacion = s.puntuacion || 0, valorVidas = s.vidas || 3, valorProfundidad = Math.floor(s.profundidad_m || 0);
+    const padX = 18, padY = 18, lh = 22;
+    hud.save();
+    hud.fillStyle = '#ffffff';
+    hud.font = '18px "Press Start 2P", monospace';
+    hud.textAlign = 'left';
+    hud.textBaseline = 'alphabetic';
+    hud.shadowColor = 'rgba(0,0,0,0.7)';
+    hud.shadowBlur = 4;
+    const filas = [{ label: 'SCORE', value: String(valorPuntuacion) }, { label: 'DEPTH', value: valorProfundidad + ' m' }, { label: 'RECORD', value: String(puntuacionMaxima) }];
+    const totalFilas = filas.length + 4;
+    const y0 = H - padY - lh * totalFilas;
+    let maxAnchoEtiqueta = 0;
+    const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO'];
+    for (const label of todasLasEtiquetas) { maxAnchoEtiqueta = Math.max(maxAnchoEtiqueta, hud.measureText(label).width); }
+    const gap = 16;
+    const valueX = padX + maxAnchoEtiqueta + gap;
+    let currentY = y0;
+    for (let i = 0; i < filas.length; i++) { hud.fillText(filas[i].label, padX, currentY); hud.fillText(filas[i].value, valueX, currentY); currentY += lh; }
+    hud.fillText('VIDAS', padX, currentY);
+    hud.fillStyle = '#ff4d4d';
+    hud.fillText('♥'.repeat(valorVidas) + '♡'.repeat(Math.max(0, 3 - valorVidas)), valueX, currentY);
+    hud.fillStyle = '#ffffff';
+    currentY += lh;
+    hud.fillText('TORPEDO', padX, currentY);
+    const torpedoListo = s.enfriamientoTorpedo <= 0;
+    hud.fillStyle = torpedoListo ? '#66ff66' : '#ff6666';
+    hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO...', valueX, currentY);
+    currentY += lh;
+    hud.fillStyle = '#ffffff';
+    hud.fillText('ARMA', padX, currentY);
+    let armaTexto = s.armaActual.toUpperCase();
+    if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta') {
+        if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; hud.fillStyle = '#ff6666'; } 
+        else { armaTexto += " (LISTA)"; hud.fillStyle = '#ffdd77'; }
+    } else { hud.fillStyle = '#aaddff'; }
+    hud.fillText(armaTexto, valueX, currentY);
+    currentY += lh;
+    hud.fillStyle = '#ffffff';
+    hud.fillText('ASESINO', padX, currentY);
+    const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0];
+    hud.fillStyle = '#ff5e5e';
+    hud.fillText(rango.titulo, valueX, currentY);
+    hud.restore();
+    if (s.nivel === 3 && s.jefe) { const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1); if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%'; } 
+    else { if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none'; }
+}
 
 let __iniciando = false;
 function iniciarJuego(nivel = 1) {
     if (__iniciando) return; __iniciando = true;
     if (estadoJuego && estadoJuego.enEjecucion) { __iniciando = false; return; }
     reiniciar(nivel);
-    Levels.initLevel(nivel);
+    // Levels.initLevel se llama dentro de reiniciar para el Nivel 1,
+    // pero lo dejamos aquí por si se inicia directamente en otro nivel.
+    if (nivel !== 1) Levels.initLevel(nivel); 
     estadoJuego.bloqueoEntrada = 0.2;
     estadoJuego.faseJuego = 'playing';
     estadoJuego.enEjecucion = true;
