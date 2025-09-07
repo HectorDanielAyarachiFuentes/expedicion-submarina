@@ -2,14 +2,16 @@
 'use strict';
 
 // Importamos la lógica de los niveles
+import * as Level1 from './level1.js';
+import * as Level2 from './level2.js';
+import * as Level3 from './level3.js';
 import * as Level4 from './level4.js';
 import * as Level5 from './level5.js';
 import * as Level6 from './level6.js'; // NUEVO NIVEL 6
 import * as Level7 from './level7.js';
 
 // Importamos dependencias de game.js
-import { estadoJuego, jugador, W, H, carriles, ctx, generarAnimal, S, clamp, perderJuego } from './game.js';
-import { NUM_CARRILES } from './game.js';
+import { estadoJuego, dificultadBase } from './game.js';
 
 // --- CONFIGURACIÓN DE NIVELES (Añadimos el Nivel 6) ---
 export const CONFIG_NIVELES = [
@@ -22,147 +24,35 @@ export const CONFIG_NIVELES = [
   { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Captura 15 caras.", meta: 15, tipo: 'capture' }
 ];
 
-// --- FUNCIONES DE CÁLCULO DE DIFICULTAD POR NIVEL ---
-function dificultadBase() {
-    if (!estadoJuego) return 0;
-    return estadoJuego.tiempoTranscurrido / 180;
-}
-
 export function getLevelSpawnPeriod() {
-    // MODIFICADO: Incluir niveles 3-6 para desactivar spawn de animales
-    if ([3, 4, 5, 6, 7].includes(estadoJuego.nivel)) return Infinity;
-    const multiNivel = [1.0, 0.6, 0, 0, 0, 0, 0][estadoJuego.nivel - 1];
+    // MODIFICADO: La lógica de spawn ahora está en cada módulo de nivel.
+    // Esta función devuelve Infinity para los niveles que la gestionan por su cuenta.
+    if ([1, 2, 3, 4, 5, 6, 7].includes(estadoJuego.nivel)) return Infinity;
+    
+    // Lógica de fallback para niveles sin módulo específico (ninguno por ahora)
+    const multiNivel = 1.0;
     let base = 2.5 + (0.6 - 2.5) * dificultadBase();
     return Math.max(0.4, base * multiNivel);
 }
 
 export function getLevelSpeed() {
     // MODIFICADO: Incluir nivel 5 y 6
-    const multiNivel = [1.0, 1.4, 1.0, 1.0, 0, 0, 1.2][estadoJuego.nivel - 1]; // La velocidad no aplica en niveles 5 y 6
+    const multiNivel = [1.0, 1.4, 1.0, 1.0, 0, 0, 1.2][estadoJuego.nivel - 1] ?? 1.0; // La velocidad no aplica en niveles 5 y 6
     let spd = 260 + (520 - 260) * dificultadBase();
     return spd * multiNivel;
-}
-
-// --- LÓGICA ESPECÍFICA DEL NIVEL 3 (JEFE) ---
-function generarJefe() {
-  estadoJuego.jefe = { x: W - 150, y: H / 2, w: 200, h: 300, hp: 150, maxHp: 150, estado: 'idle', timerAtaque: 3, timerGolpe: 0, tentaculos: [], };
-  for (let i = 0; i < 6; i++) {
-    estadoJuego.jefe.tentaculos.push({ angulo: (i / 5 - 0.5) * Math.PI * 0.8, largo: 150 + Math.random() * 50, fase: Math.random() * Math.PI * 2, });
-  }
-  const bossHealthContainer = document.getElementById('bossHealthContainer');
-  if (bossHealthContainer) bossHealthContainer.style.display = 'block';
-}
-
-function actualizarJefe(dt) {
-  if (!estadoJuego.jefe) return;
-  const jefe = estadoJuego.jefe;
-  jefe.timerGolpe = Math.max(0, jefe.timerGolpe - dt);
-  jefe.y = H / 2 + Math.sin(estadoJuego.tiempoTranscurrido * 0.5) * 50;
-  jefe.timerAtaque -= dt;
-  if (jefe.timerAtaque <= 0) {
-    const tipoAtaque = Math.random();
-    jefe.estado = 'idle';
-    if (tipoAtaque < 0.45) {
-      jefe.estado = 'attacking_smash';
-      const carrilObjetivo = Math.floor(Math.random() * NUM_CARRILES);
-      jefe.datosAtaque = { carril: carrilObjetivo, carga: 1.2, y: carriles[carrilObjetivo], progreso: 0 };
-      jefe.timerAtaque = 3;
-    } else if (tipoAtaque < 0.75) {
-      jefe.estado = 'attacking_ink';
-      estadoJuego.proyectilesTinta.push({ x: jefe.x, y: jefe.y, vx: -400, r: 20 });
-      jefe.timerAtaque = 3.5;
-    } else {
-      jefe.estado = 'attacking_minion';
-      for (let i = 0; i < 2; i++) {
-        setTimeout(() => generarAnimal(true), i * 300);
-      }
-      jefe.timerAtaque = 5;
-    }
-  }
-  if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
-    jefe.datosAtaque.carga -= dt;
-    if (jefe.datosAtaque.carga <= 0) {
-      jefe.datosAtaque.progreso += dt * 8;
-      const tentaculoX = W - jefe.datosAtaque.progreso * W;
-      if (Math.hypot(jugador.x * W - tentaculoX, jugador.y * H - jefe.datosAtaque.y) < jugador.r + 30) {
-        if (estadoJuego.vidas > 0) {
-          estadoJuego.vidas--;
-          S.reproducir('lose');
-          estadoJuego.animVida = 0.6;
-        }
-        if (estadoJuego.vidas <= 0) perderJuego();
-      }
-      if (jefe.datosAtaque.progreso >= 1.2) {
-        jefe.estado = 'idle';
-        jefe.datosAtaque = null;
-        jefe.timerAtaque = 2 + Math.random() * 2;
-      }
-    }
-  }
-}
-
-function dibujarJefe() {
-  if (!estadoJuego.jefe) return;
-  const jefe = estadoJuego.jefe;
-  ctx.save();
-  if (jefe.timerGolpe > 0) ctx.filter = 'brightness(2.5)';
-  ctx.strokeStyle = '#6a0dad'; ctx.lineWidth = 18; ctx.lineCap = 'round';
-  jefe.tentaculos.forEach(t => { 
-    ctx.beginPath(); 
-    ctx.moveTo(jefe.x, jefe.y); 
-    const a = t.angulo + Math.sin(estadoJuego.tiempoTranscurrido * 2 + t.fase) * 0.3; 
-    const midX = jefe.x + Math.cos(a) * t.largo * 0.5; 
-    const midY = jefe.y + Math.sin(a) * t.largo * 0.5; 
-    const endX = jefe.x + Math.cos(a + Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + t.fase) * 0.5) * t.largo; 
-    const endY = jefe.y + Math.sin(a + Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + t.fase) * 0.5) * t.largo; 
-    ctx.quadraticCurveTo(midX, midY, endX, endY); 
-    ctx.stroke(); 
-  });
-  ctx.fillStyle = '#8a2be2'; 
-  ctx.beginPath(); 
-  ctx.ellipse(jefe.x, jefe.y, jefe.w / 2, jefe.h / 2, 0, 0, Math.PI * 2); 
-  ctx.fill();
-  ctx.fillStyle = '#fff'; 
-  ctx.beginPath(); 
-  ctx.arc(jefe.x - 40, jefe.y - 50, 25, 0, Math.PI * 2); 
-  ctx.arc(jefe.x + 40, jefe.y - 50, 25, 0, Math.PI * 2); 
-  ctx.fill();
-  ctx.fillStyle = '#000'; 
-  ctx.beginPath(); 
-  let pupilaX = clamp(jugador.x * W, jefe.x - 50, jefe.x - 30); 
-  ctx.arc(pupilaX, jefe.y - 50, 10, 0, Math.PI * 2); 
-  pupilaX = clamp(jugador.x * W, jefe.x + 30, jefe.x + 50); 
-  ctx.arc(pupilaX, jefe.y - 50, 10, 0, Math.PI * 2); 
-  ctx.fill();
-  if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
-    if (jefe.datosAtaque.carga > 0) {
-      ctx.fillStyle = 'rgba(255, 50, 50, 0.4)'; 
-      ctx.fillRect(0, jefe.datosAtaque.y - 20, W, 40); 
-      ctx.strokeStyle = '#e04040'; 
-      ctx.lineWidth = 40; 
-      ctx.beginPath(); 
-      ctx.moveTo(W, jefe.datosAtaque.y); 
-      ctx.lineTo(W - 100, jefe.datosAtaque.y + (Math.random() - 0.5) * 20); 
-      ctx.stroke();
-    } else {
-      const tentaculoX = W - jefe.datosAtaque.progreso * (W + 200); 
-      ctx.strokeStyle = '#e04040'; 
-      ctx.lineWidth = 40; 
-      ctx.beginPath(); 
-      ctx.moveTo(tentaculoX + 200, jefe.datosAtaque.y - 20); 
-      ctx.lineTo(tentaculoX, jefe.datosAtaque.y); 
-      ctx.lineTo(tentaculoX + 200, jefe.datosAtaque.y + 20); 
-      ctx.stroke();
-    }
-  }
-  ctx.restore();
 }
 
 // --- ROUTER DEL GESTOR DE NIVELES (AÑADIMOS EL CASO PARA EL NIVEL 6)---
 export function initLevel(nivel) {
     switch(nivel) {
+        case 1:
+            Level1.init();
+            break;
+        case 2:
+            Level2.init();
+            break;
         case 3:
-            generarJefe();
+            Level3.init();
             break;
         case 4:
             Level4.init();
@@ -182,8 +72,14 @@ export function initLevel(nivel) {
 export function updateLevel(dt) {
     if (!estadoJuego) return;
     switch(estadoJuego.nivel) {
+        case 1:
+            Level1.update(dt);
+            break;
+        case 2:
+            Level2.update(dt);
+            break;
         case 3:
-            actualizarJefe(dt);
+            Level3.update(dt);
             break;
         case 4:
             Level4.update(dt);
@@ -203,8 +99,14 @@ export function updateLevel(dt) {
 export function drawLevel() {
     if (!estadoJuego) return;
     switch(estadoJuego.nivel) {
+        case 1:
+            Level1.draw();
+            break;
+        case 2:
+            Level2.draw();
+            break;
         case 3:
-            dibujarJefe();
+            Level3.draw();
             break;
         case 4:
             Level4.draw();

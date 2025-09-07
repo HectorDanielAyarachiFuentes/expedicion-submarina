@@ -6,6 +6,10 @@ import * as Levels from './levels.js';
 // ========= Funciones Auxiliares (las que son de uso general) =========
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
+export function dificultadBase() {
+    if (!estadoJuego) return 0;
+    return estadoJuego.tiempoTranscurrido / 180;
+}
 function cargarImagen(url, cb) { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => cb(im); im.onerror = () => cb(null); im.src = url; }
 
 // ========= Lienzos (Canvas) - Exportamos los que se necesitan en otros módulos (ctx) =========
@@ -168,7 +172,7 @@ const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "AP
 
 function reiniciar(nivelDeInicio = 1) {
     estadoJuego = {
-        faseJuego: 'menu', enEjecucion: false, rescatados: 0, puntuacion: 0, profundidad_m: 0, vidas: 3, animVida: 0, aparicion: 0, velocidad: 260, tiempoTranscurrido: 0, bloqueoEntrada: 0.2,
+        faseJuego: 'menu', enEjecucion: false, rescatados: 0, puntuacion: 0, profundidad_m: 0, vidas: 3, animVida: 0, velocidad: 260, tiempoTranscurrido: 0, bloqueoEntrada: 0.2,
         faseLuz: 'off', luzVisible: false, timerLuz: 0, cambiosLuz: 0, ultimaMusicaT: 0,
         enfriamientoTorpedo: 0,
         nivel: nivelDeInicio,
@@ -195,7 +199,6 @@ function reiniciar(nivelDeInicio = 1) {
     mostrarVistaMenuPrincipal(false);
 }
 
-function periodoAparicionActual() { return Levels.getLevelSpawnPeriod(); }
 function velocidadActual() { return Levels.getLevelSpeed(); }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
@@ -498,7 +501,6 @@ function actualizar(dt) {
     
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dt; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dt);
-    estadoJuego.aparicion -= dt; if (estadoJuego.aparicion <= 0) { generarAnimal(); estadoJuego.aparicion = periodoAparicionActual(); }
     
     actualizarParticulas(dt);
     comprobarCompletadoNivel();
@@ -604,7 +606,6 @@ function iniciarJuego(nivel = 1) {
     estadoJuego.bloqueoEntrada = 0.2;
     estadoJuego.faseJuego = 'playing';
     estadoJuego.enEjecucion = true;
-    estadoJuego.aparicion = 1.0;
     estadoJuego.luzVisible = true;
     S.init();
     S.playRandomMusic();
