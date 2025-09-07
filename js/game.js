@@ -157,25 +157,7 @@ function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
 export function generarExplosion(x, y, color = '#ff8833') { for (let i = 0; i < 20; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * 100; generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * 2 + 1, vida: 0.4 + Math.random() * 0.4, color }); } }
 export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i = 0; i < 50; i++) { const ang = Math.random() * Math.PI * 2, spd = 20 + Math.random() * size; generarParticula(particulasTinta, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 15 + Math.random() * size * 0.8, vida: 2.5 + Math.random() * 2, color: '#101010' }); } }
-
-
-// =================================================================================
-// ========= NUEVO: SISTEMA DE MISIONES Y LÓGICA DE NIVEL 1 MEJORADA =========
-// =================================================================================
-
-// --- Constantes de Configuración del Nivel 1 ---
-const PERIODO_SPAWN_INICIAL = 2.5;
-const PERIODO_SPAWN_MINIMO = 0.35;
-const FACTOR_ACELERACION = 0.05;
-const PROBABILIDAD_OLEADA_PEQUENA = 0.15;
-const TIEMPO_ENTRE_MEGA_OLEADAS = 35;
-const ANIMALES_EN_MEGA_OLEADA = 12;
-const RETRASO_ENTRE_ANIMALES_OLEADA = 0.1;
-
-// --- Constantes del Sistema de Misiones ---
-const TIEMPO_ENTRE_MISIONES = 15;
-
-// --- Funciones de Recompensa ---
+// Funciones de utilidad para que los niveles las usen
 export function limpiarTodosLosAnimales() {
     animales.forEach(a => generarExplosion(a.x, a.y, '#aaffff'));
     animales = [];
@@ -183,148 +165,12 @@ export function limpiarTodosLosAnimales() {
 export function agregarPuntos(cantidad) {
     if (estadoJuego) estadoJuego.puntuacion += cantidad;
 }
-function activarSlowMotion(duracion) {
+export function activarSlowMotion(duracion) {
     if (estadoJuego) {
-        estadoJuego.velocidadJuego = 0.5; // El juego irá a la mitad de la velocidad
+        estadoJuego.velocidadJuego = 0.5;
         estadoJuego.slowMoTimer = duracion;
     }
 }
-
-// --- Pool de Misiones Posibles ---
-const poolDeMisiones = [
-    {
-        id: 1, texto: "MISIÓN: ¡Caza 5 animales rojos!", tipo: 'CONTAR_TIPO',
-        objetivo: { tipo: 'rojo', cantidad: 5 },
-        recompensa: () => { activarSlowMotion(3); agregarPuntos(200); }
-    },
-    {
-        id: 2, texto: "MISIÓN: ¡Elimina 10 animales en 20 segundos!", tipo: 'CONTAR_TOTAL',
-        objetivo: { cantidad: 10 }, tiempoLimite: 20,
-        recompensa: () => { limpiarTodosLosAnimales(); agregarPuntos(500); }
-    },
-    {
-        id: 3, texto: "MISIÓN: ¡Logra una racha de 7 capturas/eliminaciones!", tipo: 'RACHA',
-        objetivo: { cantidad: 7 },
-        recompensa: () => { if(estadoJuego) estadoJuego.spawnTimer += 5; agregarPuntos(750); } // Da 5s de respiro
-    },
-    {
-        id: 4, texto: "¡ESPECIAL! ¡Atrapa al animal DORADO!", tipo: 'CAZAR_ESPECIAL',
-        objetivo: { tipo: 'dorado' },
-        alIniciar: () => { setTimeout(() => generarAnimal(false, 'dorado'), 1000); },
-        recompensa: () => { agregarPuntos(2000); }
-    }
-];
-
-function iniciarNuevaMision() {
-    if (estadoJuego.misionActual) return;
-    const misionElegida = poolDeMisiones[Math.floor(Math.random() * poolDeMisiones.length)];
-    estadoJuego.misionActual = {
-        ...misionElegida,
-        progreso: 0,
-        tiempoRestante: misionElegida.tiempoLimite || 0,
-    };
-    if (estadoJuego.misionActual.alIniciar) {
-        estadoJuego.misionActual.alIniciar();
-    }
-}
-
-function completarMision() {
-    if (!estadoJuego.misionActual) return;
-    estadoJuego.misionActual.recompensa();
-    estadoJuego.misionActual = null;
-    // ===== LA LÍNEA CORREGIDA ESTÁ AQUÍ =====
-    estadoJuego.tiempoParaProximaMision = TIEMPO_ENTRE_MISIONES + 5; // Da un respiro extra
-}
-
-function fallarMision() {
-    if (!estadoJuego) return;
-    estadoJuego.misionActual = null;
-    estadoJuego.tiempoParaProximaMision = TIEMPO_ENTRE_MISIONES;
-}
-
-function actualizarMisiones(dt) {
-    if (!estadoJuego) return;
-    if (!estadoJuego.misionActual) {
-        estadoJuego.tiempoParaProximaMision -= dt;
-        if (estadoJuego.tiempoParaProximaMision <= 0) {
-            iniciarNuevaMision();
-        }
-        return;
-    }
-    const mision = estadoJuego.misionActual;
-    if (mision.tiempoLimite) {
-        mision.tiempoRestante -= dt;
-        if (mision.tiempoRestante <= 0) {
-            fallarMision(); return;
-        }
-    }
-    if ((mision.tipo.startsWith('CONTAR') && mision.progreso >= mision.objetivo.cantidad) ||
-        (mision.tipo === 'RACHA' && estadoJuego.rachaAciertos >= mision.objetivo.cantidad)) {
-        completarMision();
-    }
-}
-
-function onAnimalCazado(tipoAnimal) {
-    if (!estadoJuego) return;
-    estadoJuego.rachaAciertos++;
-    const mision = estadoJuego.misionActual;
-    if (!mision) return;
-
-    if (mision.tipo === 'CONTAR_TIPO' && tipoAnimal === mision.objetivo.tipo) mision.progreso++;
-    if (mision.tipo === 'CONTAR_TOTAL') mision.progreso++;
-    if (mision.tipo === 'CAZAR_ESPECIAL' && tipoAnimal === mision.objetivo.tipo) completarMision();
-}
-
-function onFallo() {
-    if (!estadoJuego) return;
-    estadoJuego.rachaAciertos = 0;
-    if (estadoJuego.misionActual && estadoJuego.misionActual.tipo === 'RACHA') {
-        fallarMision();
-    }
-}
-
-function getEstadoMision() {
-    if (!estadoJuego || !estadoJuego.misionActual) return null;
-    const mision = estadoJuego.misionActual;
-    let objetivoStr = '';
-    if (mision.objetivo.cantidad) {
-        const progreso = mision.tipo === 'RACHA' ? estadoJuego.rachaAciertos : mision.progreso;
-        objetivoStr = `${progreso} / ${mision.objetivo.cantidad}`;
-    }
-    if (mision.tiempoLimite) {
-        objetivoStr += ` | TIEMPO: ${Math.ceil(mision.tiempoRestante)}`;
-    }
-    return { texto: mision.texto, progreso: objetivoStr };
-}
-
-// --- Lógica de Spawning para el Nivel 1 ---
-function getSpawnPeriod() {
-    const base = PERIODO_SPAWN_INICIAL + (0.8 - PERIODO_SPAWN_INICIAL) * dificultadBase();
-    const spawnPeriod = base * Math.exp(-estadoJuego.tiempoTranscurrido * FACTOR_ACELERACION);
-    const variacion = spawnPeriod * 0.1 * (Math.random() - 0.5);
-    return Math.max(PERIODO_SPAWN_MINIMO, spawnPeriod + variacion);
-}
-
-function iniciarMegaOleada() {
-    for (let i = 0; i < ANIMALES_EN_MEGA_OLEADA; i++) {
-        setTimeout(() => generarAnimal(), i * RETRASO_ENTRE_ANIMALES_OLEADA * 1000);
-    }
-}
-
-function manejarSpawnNormal() {
-    if (Math.random() < PROBABILIDAD_OLEADA_PEQUENA) {
-        const cantidad = Math.random() < 0.7 ? 2 : 3;
-        for (let i = 0; i < cantidad; i++) {
-            // Genera animales normales o rojos para la misión
-            setTimeout(() => generarAnimal(false, Math.random() < 0.2 ? 'rojo' : 'normal'), i * 200);
-        }
-    } else {
-        generarAnimal(false, Math.random() < 0.2 ? 'rojo' : 'normal');
-    }
-    estadoJuego.spawnTimer = getSpawnPeriod();
-}
-
-
 // ========= Lógica del Juego (Estado y Entidades - Exportamos los necesarios) =========
 export let estadoJuego = null, jugador, animales;
 let teclas = {};
@@ -349,22 +195,12 @@ function reiniciar(nivelDeInicio = 1) {
         enfriamientoArma: 0,
         asesinatos: 0,
         teclasActivas: {},
-        // --- Variables de estado para Nivel 1 y Misiones ---
-        spawnTimer: 0,
-        megaOleadaTimer: TIEMPO_ENTRE_MEGA_OLEADAS,
-        tiempoParaProximaMision: 8, // Primera misión a los 8 segundos
-        misionActual: null,
-        rachaAciertos: 0,
-        velocidadJuego: 1.0, // 1.0 = normal, < 1.0 = lento
+        velocidadJuego: 1.0,
         slowMoTimer: 0,
     };
     jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0 };
-    
-    if (nivelDeInicio === 1) {
-        estadoJuego.spawnTimer = PERIODO_SPAWN_INICIAL;
-    } else {
-        Levels.initLevel(nivelDeInicio);
-    }
+
+    Levels.initLevel(nivelDeInicio);
     
     animales = [];
     torpedos = [];
@@ -381,17 +217,11 @@ function velocidadActual() { return Levels.getLevelSpeed(); }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
 export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
-    // Si no estamos en Nivel 1 y no es un animal especial, usamos la lógica de Levels.js
-    if (estadoJuego.nivel !== 1 && !esEsbirroJefe && !tipoForzado) {
-        if (estadoJuego.nivel >= 3 && estadoJuego.nivel <= 7) return; // Lógica original para esos niveles
-    }
-
     const minY = H * 0.15;
     const maxY = H * 0.85;
     const y = minY + Math.random() * (maxY - minY);
     let velocidad = velocidadActual() + 60;
 
-    // Determina el tipo de animal
     let tipo = tipoForzado || 'normal';
     if (tipoForzado === null && mierdeiListo && Math.random() < 0.15) {
         tipo = 'mierdei';
@@ -483,7 +313,7 @@ function disparar() {
             if (!jugador.garra) dispararGarfio();
             else if (jugador.garra.fase === 'ida') {
                 jugador.garra.fase = 'retorno';
-                onFallo(); // Un retorno manual se considera un fallo para la racha
+                Levels.onFallo(); 
             }
             break;
         case 'shotgun': dispararShotgun(); break;
@@ -508,7 +338,6 @@ function lanzarTorpedo() {
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
 
-    // Manejo de Slow Motion (Tiempo Bala) por recompensa de misión
     if (estadoJuego.slowMoTimer > 0) {
         estadoJuego.slowMoTimer -= dt;
         if (estadoJuego.slowMoTimer <= 0) {
@@ -539,27 +368,9 @@ function actualizar(dt) {
     }
     jugador.x += vx * dtAjustado;
     jugador.y += vy * dtAjustado;
-    
-    // --- LÓGICA DE ACTUALIZACIÓN ESPECÍFICA POR NIVEL ---
-    if (estadoJuego.nivel === 1) {
-        // Lógica de spawn, oleadas y misiones para el Nivel 1
-        actualizarMisiones(dt); // Las misiones usan tiempo real (dt) para no ralentizarse
-        estadoJuego.spawnTimer -= dtAjustado;
-        estadoJuego.megaOleadaTimer -= dtAjustado;
 
-        if (estadoJuego.megaOleadaTimer <= 0) {
-            iniciarMegaOleada();
-            estadoJuego.megaOleadaTimer = TIEMPO_ENTRE_MEGA_OLEADAS;
-            estadoJuego.spawnTimer = getSpawnPeriod() * 2.5; // Respiro tras la oleada
-        }
-        if (estadoJuego.spawnTimer <= 0) {
-            manejarSpawnNormal();
-        }
-    } else {
-        // Lógica para otros niveles (la que ya tenías)
-        Levels.updateLevel(dtAjustado);
-    }
-    
+    Levels.updateLevel(dtAjustado);
+        
     jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
     jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
     if (vy < 0) inclinacionRobotObjetivo = -INCLINACION_MAX;
@@ -647,11 +458,11 @@ function actualizar(dt) {
                     estadoJuego.rescatados++;
                     const puntos = g.golpeado.tipo === 'mierdei' ? 1000 : puntosPorRescate();
                     estadoJuego.puntuacion += puntos;
-                    onAnimalCazado(g.golpeado.tipo); // Hook de Misión
+                    Levels.onAnimalCazado(g.golpeado.tipo);
                     const idx = animales.indexOf(g.golpeado);
                     if (idx !== -1) animales.splice(idx, 1);
                 } else {
-                    onFallo(); // Hook de Misión
+                    Levels.onFallo();
                 }
                 jugador.garra = null;
             }
@@ -663,7 +474,7 @@ function actualizar(dt) {
             const a = animales[j];
             if (!a.capturado && proyectil.x < a.x + a.w/2 && proyectil.x + (proyectil.w || 0) > a.x - a.w/2 && proyectil.y < a.y + a.h/2 && proyectil.y + (proyectil.h || 0) > a.y - a.h/2) {
                 generarExplosion(a.x, a.y, esTorpedo ? '#ff8833' : proyectil.color);
-                onAnimalCazado(a.tipo); // Hook de Misión
+                Levels.onAnimalCazado(a.tipo);
                 animales.splice(j, 1);
                 estadoJuego.asesinatos++;
                 return true;
@@ -731,7 +542,6 @@ function renderizar(dt) {
                 ctx.drawImage(mierdeiImg, -a.w / 2, -a.h / 2, a.w, a.h);
 
             } else {
-                // Filtros visuales para tipos de animales especiales/de misión
                 if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
                 if (a.tipo === 'rojo') ctx.filter = 'sepia(1) saturate(5) hue-rotate(-40deg)';
                 if (a.tipo === 'dorado') ctx.filter = 'brightness(1.5) saturate(3) hue-rotate(15deg)';
@@ -811,14 +621,11 @@ function dibujarHUD() {
     if (estadoJuego.enEjecucion) {
         hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`;
         
-        // --- Lógica del HUD para mostrar Misiones o el Objetivo del Nivel ---
-        const mision = getEstadoMision();
+        const mision = Levels.getEstadoMision();
         if (mision) {
-            // Usa innerHTML para permitir un estilo simple para el título de la misión
-            hudObjectiveText.innerHTML = `<span style="color: #ffdd77; font-weight: bold;">${mision.texto}</span><br>${mision.progreso}`;
+            hudObjectiveText.innerHTML = `<span class="mission-title">${mision.texto}</span>${mision.progreso}`;
         } else {
-            // Si no hay misión, muestra el objetivo normal del nivel
-            hudObjectiveText.innerHTML = ''; // Limpiar por si acaso
+            hudObjectiveText.innerHTML = ''; 
             const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
             let textoObjetivo = '';
             if (configNivel.tipo === 'capture') { textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; } 
@@ -885,9 +692,7 @@ function iniciarJuego(nivel = 1) {
     if (__iniciando) return; __iniciando = true;
     if (estadoJuego && estadoJuego.enEjecucion) { __iniciando = false; return; }
     reiniciar(nivel);
-    // Levels.initLevel se llama dentro de reiniciar para el Nivel 1,
-    // pero lo dejamos aquí por si se inicia directamente en otro nivel.
-    if (nivel !== 1) Levels.initLevel(nivel); 
+    Levels.initLevel(nivel); 
     estadoJuego.bloqueoEntrada = 0.2;
     estadoJuego.faseJuego = 'playing';
     estadoJuego.enEjecucion = true;
