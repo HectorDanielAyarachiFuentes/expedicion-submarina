@@ -5,6 +5,7 @@
 import * as Level4 from './level4.js';
 import * as Level5 from './level5.js';
 import * as Level6 from './level6.js'; // NUEVO NIVEL 6
+import * as Level7 from './level7.js';
 
 // Importamos dependencias de game.js
 import { estadoJuego, jugador, W, H, carriles, ctx, generarAnimal, S, clamp, perderJuego } from './game.js';
@@ -17,7 +18,8 @@ export const CONFIG_NIVELES = [
   { nombre: 'NIVEL 3: LA GUARIDA DEL KRAKEN', objetivo: 'Derrota al jefe', meta: 1, tipo: 'boss' },
   { nombre: 'NIVEL 4: CAMPO DE ESCOMBROS', objetivo: 'Sobrevive 90 segundos', meta: 90, tipo: 'survive' },
   { nombre: 'NIVEL 5: COLAPSO DE LA FOSA', objetivo: 'Escapa durante 60 segundos', meta: 60, tipo: 'survive' },
-  { nombre: 'NIVEL 6: EL VORTEX DE LAS PROFUNDIDADES', objetivo: 'Sobrevive 120 segundos', meta: 120, tipo: 'survive' } // NUEVO NIVEL 6
+  { nombre: 'NIVEL 6: EL VORTEX DE LAS PROFUNDIDADES', objetivo: 'Sobrevive 120 segundos', meta: 120, tipo: 'survive' }, // NUEVO NIVEL 6
+  { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Captura 15 caras.", meta: 15, tipo: 'capture' }
 ];
 
 // --- FUNCIONES DE CÁLCULO DE DIFICULTAD POR NIVEL ---
@@ -28,15 +30,15 @@ function dificultadBase() {
 
 export function getLevelSpawnPeriod() {
     // MODIFICADO: Incluir niveles 3-6 para desactivar spawn de animales
-    if ([3, 4, 5, 6].includes(estadoJuego.nivel)) return Infinity;
-    const multiNivel = [1.0, 0.6, 0, 0, 0, 0][estadoJuego.nivel - 1];
+    if ([3, 4, 5, 6, 7].includes(estadoJuego.nivel)) return Infinity;
+    const multiNivel = [1.0, 0.6, 0, 0, 0, 0, 0][estadoJuego.nivel - 1];
     let base = 2.5 + (0.6 - 2.5) * dificultadBase();
     return Math.max(0.4, base * multiNivel);
 }
 
 export function getLevelSpeed() {
     // MODIFICADO: Incluir nivel 5 y 6
-    const multiNivel = [1.0, 1.4, 1.0, 1.0, 0, 0][estadoJuego.nivel - 1]; // La velocidad no aplica en niveles 5 y 6
+    const multiNivel = [1.0, 1.4, 1.0, 1.0, 0, 0, 1.2][estadoJuego.nivel - 1]; // La velocidad no aplica en niveles 5 y 6
     let spd = 260 + (520 - 260) * dificultadBase();
     return spd * multiNivel;
 }
@@ -171,6 +173,9 @@ export function initLevel(nivel) {
         case 6: // NUEVO NIVEL 6
             Level6.init();
             break;
+        case 7:
+            Level7.init();
+            break;
     }
 }
 
@@ -189,6 +194,9 @@ export function updateLevel(dt) {
         case 6: // NUEVO NIVEL 6
             Level6.update(dt);
             break;
+        case 7:
+            Level7.update(dt);
+            break;
     }
 }
 
@@ -206,6 +214,9 @@ export function drawLevel() {
             break;
         case 6: // NUEVO NIVEL 6
             Level6.draw();
+            break;
+        case 7:
+            Level7.draw();
             break;
     }
 }

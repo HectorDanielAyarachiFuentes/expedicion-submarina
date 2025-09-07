@@ -121,7 +121,7 @@ let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0, FG_VEL
 cargarImagen('img/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
 
 // MODIFICADO: Solo cargamos la imagen.
-let mierdeiImg = null, mierdeiListo = false;
+export let mierdeiImg = null, mierdeiListo = false;
 cargarImagen('img/mierdei.png', function(img) {
     if (img) {
         mierdeiImg = img;
@@ -200,13 +200,13 @@ function velocidadActual() { return Levels.getLevelSpeed(); }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
 export function generarAnimal(esEsbirroJefe = false) {
-    if ((estadoJuego.nivel === 3 || estadoJuego.nivel === 4 || estadoJuego.nivel === 5) && !esEsbirroJefe) return;
+    if (estadoJuego.nivel >= 3 && estadoJuego.nivel <= 7 && !esEsbirroJefe) return;
 
     const minY = H * 0.15;
     const maxY = H * 0.85;
     const y = minY + Math.random() * (maxY - minY);
     let velocidad = velocidadActual() + 60;
-    
+
     // Con 15% de probabilidad, aparecerá tu imagen en lugar de un pez.
     if (mierdeiListo && Math.random() < 0.15) { 
         const anchoDeseado = 350;
