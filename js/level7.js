@@ -1,11 +1,35 @@
 // js/level7.js
 'use strict';
 
-import { animales, W, H, mierdeiImg, mierdeiListo, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S } from './game.js';
+import { animales, W, H, mierdeiImg, mierdeiListo, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion } from './game.js';
 import { getLevelSpeed } from './levels.js';
 
 // --- ESTADO DEL NIVEL 7 ---
 let levelState = {};
+
+// --- RECURSOS DEL LÁSER SVG ---
+let laserPattern = null;
+let laserPatternReady = false;
+let patternOffsetY = 0; // Para animar el patrón
+
+const laserSvgString = `
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="256">
+  <defs>
+    <filter id="electric-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05 0.9" numOctaves="2" result="turbulence"/>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="20" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="1"/>
+      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 3 -1" />
+    </filter>
+    <linearGradient id="beamGradient" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="rgba(255, 180, 180, 0)" />
+      <stop offset="35%" stop-color="rgba(255, 220, 220, 1)" />
+      <stop offset="65%" stop-color="rgba(255, 220, 220, 1)" />
+      <stop offset="100%" stop-color="rgba(255, 180, 180, 0)" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="64" height="256" fill="url(#beamGradient)" filter="url(#electric-glow)"/>
+</svg>`;
 
 // --- SUBNIVELES ---
 const SUBNIVELES = [
@@ -69,18 +93,66 @@ function spawnMierdeiAgresivo() {
 }
 
 /**
+ * Genera una 'bomba' Mierdei que es lanzada por el jefe.
+ */
+function spawnMierdeiBombardero(jefe) {
+    if (!mierdeiListo) return;
+
+    const anchoDeseado = 80; // Bombas más pequeñas
+    let altoDeseado = anchoDeseado;
+    if (mierdeiImg.width > 0) {
+        altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
+    }
+
+    // Lanza la bomba hacia el jugador
+    const angulo = Math.atan2(jugador.y - jefe.y, jugador.x - jefe.x);
+    const velocidadLanzamiento = 400 + Math.random() * 200;
+
+    jefe.bombas.push({
+        x: jefe.x, 
+        y: jefe.y,
+        vx: Math.cos(angulo) * velocidadLanzamiento,
+        vy: Math.sin(angulo) * velocidadLanzamiento,
+        gravedad: 350, // Cae con el tiempo
+        r: anchoDeseado / 2,
+        w: anchoDeseado, h: altoDeseado,
+        tipo: 'mierdei_bomba',
+        rotacion: 0,
+        vRot: (Math.random() - 0.5) * 10
+    });
+}
+
+/**
  * Dispara un láser desde el jefe hacia una posición aleatoria
  */
-function dispararLaser(jefe) {
+function dispararLaser(jefe, tipo = 'snipe') {
     jefe.estado = 'laser';
+
+    if (tipo === 'sweep') {
+        // Un rayo de barrido más ancho y lento
+        const startAngle = Math.atan2(jugador.y - jefe.y, jugador.x - jefe.x) - Math.PI / 6;
+        jefe.lasers.push({
+            tipo: 'sweep', x: jefe.x, y: jefe.y,
+            startAngle: startAngle, endAngle: startAngle + Math.PI / 3, // Barre un arco de 60 grados
+            currentAngle: startAngle, sweepDuration: 2.0,
+            duration: 2.5, timer: 2.5, length: W * 1.2,
+            width: 80, // Un rayo más ancho y visible
+            active: true, damageCooldown: 0
+        });
+        return;
+    }
+
+    // tipo 'snipe' (el original, pero mejorado)
+    const offsetX = (Math.random() - 0.5) * 400;
+    const offsetY = (Math.random() - 0.5) * 400;
+    const targetX = clamp(jugador.x + offsetX, 0, W);
+    const targetY = clamp(jugador.y + offsetY, 0, H);
+
     jefe.lasers.push({
-        x: jefe.x,
-        y: jefe.y,
-        targetX: Math.random() * W,
-        targetY: Math.random() * H,
-        duration: 1.5,
-        timer: 1.5,
-        active: true
+        tipo: 'snipe', x: jefe.x, y: jefe.y,
+        targetX: targetX, targetY: targetY,
+        duration: 1.5, timer: 1.5,
+        active: true, damageCooldown: 0
     });
 }
 
@@ -98,16 +170,37 @@ export function init() {
             y: H / 2,
             w: 300,
             h: 300,
-            hp: 50,
-            maxHp: 50,
+            hp: 200,
+            maxHp: 200,
             timerAtaque: 2,
+            timerGolpe: 0,
             estado: 'idle',
             lasers: [],
+            bombas: [],
             vx: 0,
             vy: 0,
             direccion: -1 // Se mueve hacia la izquierda
         }
     };
+    
+    // Cargar el patrón SVG para el láser
+    laserPatternReady = false;
+    const laserPatternImage = new Image();
+    laserPatternImage.onload = () => {
+        const patternCanvas = document.createElement('canvas');
+        patternCanvas.width = laserPatternImage.width;
+        patternCanvas.height = laserPatternImage.height;
+        const patternCtx = patternCanvas.getContext('2d');
+        if (!patternCtx) return;
+        patternCtx.drawImage(laserPatternImage, 0, 0);
+        laserPattern = ctx.createPattern(patternCanvas, 'repeat-y');
+        laserPatternReady = true;
+        console.log("Patrón de láser SVG cargado y listo.");
+    };
+    laserPatternImage.onerror = () => {
+        console.error("No se pudo cargar el patrón de láser SVG.");
+    };
+    laserPatternImage.src = 'data:image/svg+xml;base64,' + btoa(laserSvgString);
     
     // Mostrar barra de vida del jefe solo en subnivel 3
     const bossHealthContainer = document.getElementById('bossHealthContainer');
@@ -119,6 +212,9 @@ export function init() {
 
 export function update(dt) {
     if (levelState.subnivelActual >= SUBNIVELES.length) return; // Nivel completado
+
+    // Animación del patrón del láser
+    patternOffsetY = (patternOffsetY + dt * 400) % 256; // 256 es la altura del SVG
 
     levelState.tiempoDeJuego += dt;
     const sub = SUBNIVELES[levelState.subnivelActual];
@@ -152,43 +248,77 @@ export function update(dt) {
     if (sub.tipo === 'boss') {
         const jefe = levelState.jefe;
         
-        // Movimiento del jefe (patrón simple)
+        jefe.timerGolpe = Math.max(0, jefe.timerGolpe - dt);
+
+        // Movimiento del jefe (patrón mejorado)
         jefe.x += jefe.vx * dt;
-        jefe.y += jefe.vy * dt;
-        
-        // Cambiar dirección si llega a los bordes
-        if (jefe.x < W * 0.3 || jefe.x > W * 0.7) {
+        jefe.y = (H / 2) + Math.sin(levelState.tiempoDeJuego * 0.7) * (H * 0.35); // Movimiento sinusoidal vertical
+
+        // Cambiar dirección si llega a los bordes horizontales
+        if (jefe.x < W * 0.6 || jefe.x > W - jefe.w / 2) {
             jefe.vx = -jefe.vx;
             jefe.direccion = jefe.vx > 0 ? 1 : -1;
         }
         
-        if (jefe.y < H * 0.2 || jefe.y > H * 0.8) {
-            jefe.vy = -jefe.vy;
-        }
-        
         // Iniciar movimiento si está parado
-        if (jefe.vx === 0 && jefe.vy === 0) {
-            jefe.vx = -50; // Velocidad inicial
-            jefe.vy = 30;
+        if (jefe.vx === 0) {
+            jefe.vx = -70; // Velocidad inicial
         }
 
         jefe.timerAtaque -= dt;
         if (jefe.timerAtaque <= 0) {
             const r = Math.random();
-            if (r < 0.5) {
-                // Ataque: spawnear mierdei
-                spawnMierdei();
-                spawnMierdei();
-                jefe.timerAtaque = 2.0;
-            } else if (r < 0.8) {
+            if (r < 0.35) {
+                // Ataque: Bombardeo de Mierdei
+                jefe.estado = 'bombard';
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => spawnMierdeiBombardero(jefe), i * 250);
+                }
+                jefe.timerAtaque = 3.0;
+            } else if (r < 0.65) {
+                // Ataque: Rayo de barrido
+                dispararLaser(jefe, 'sweep');
+                jefe.timerAtaque = 4.0;
+            } else if (r < 0.9) {
                 // Ataque: rayos láser múltiples
-                dispararLaser(jefe);
-                dispararLaser(jefe);
+                dispararLaser(jefe, 'snipe');
+                setTimeout(() => dispararLaser(jefe, 'snipe'), 300);
                 jefe.timerAtaque = 3.0;
             } else {
                 // Ataque: spawnear agresivos
                 spawnMierdeiAgresivo();
+                spawnMierdei();
                 jefe.timerAtaque = 2.5;
+            }
+        }
+
+        // Actualizar bombas
+        for (let i = jefe.bombas.length - 1; i >= 0; i--) {
+            const bomba = jefe.bombas[i];
+            bomba.vy += bomba.gravedad * dt;
+            bomba.x += bomba.vx * dt;
+            bomba.y += bomba.vy * dt;
+            bomba.rotacion += bomba.vRot * dt;
+
+            // Colisión con el jugador
+            if (Math.hypot(jugador.x - bomba.x, jugador.y - bomba.y) < jugador.r + bomba.r) {
+                if (estadoJuego.vidas > 0) {
+                    estadoJuego.vidas--;
+                    S.reproducir('choque');
+                    estadoJuego.animVida = 0.6;
+                    estadoJuego.animDaño = 0.3;
+                }
+                jefe.bombas.splice(i, 1);
+                if (estadoJuego.vidas <= 0) {
+                    perderJuego();
+                    return;
+                }
+                continue;
+            }
+
+            // Eliminar si sale de la pantalla
+            if (bomba.y > H + bomba.h || bomba.x < -bomba.w || bomba.x > W + bomba.w) {
+                jefe.bombas.splice(i, 1);
             }
         }
 
@@ -196,24 +326,49 @@ export function update(dt) {
         for (let i = jefe.lasers.length - 1; i >= 0; i--) {
             const laser = jefe.lasers[i];
             laser.timer -= dt;
+            if (laser.damageCooldown > 0) {
+                laser.damageCooldown -= dt;
+            }
             
             // Daño al jugador si está en el rayo
             if (laser.active) {
-                // Calcular distancia del jugador al rayo
-                const distToRay = distanciaPuntoARecta(
-                    jugador.x, jugador.y,
-                    laser.x, laser.y,
-                    laser.targetX, laser.targetY
-                );
-                
-                // Verificar si el jugador está dentro del rayo
-                if (distToRay < 30 && estaEntrePuntos(jugador.x, jugador.y, laser.x, laser.y, laser.targetX, laser.targetY)) {
-                    if (estadoJuego.vidas > 0) {
+                let jugadorEnRayo = false;
+                if (laser.tipo === 'sweep') {
+                    // Actualizar ángulo del barrido
+                    const progress = 1 - (laser.timer / laser.duration);
+                    const sweepProgress = Math.min(1, progress / (laser.sweepDuration / laser.duration));
+                    laser.currentAngle = laser.startAngle + (laser.endAngle - laser.startAngle) * sweepProgress;
+
+                    // Detección de colisión para el barrido
+                    const dx = jugador.x - laser.x;
+                    const dy = jugador.y - laser.y;
+                    const playerAngle = Math.atan2(dy, dx);
+                    const playerDist = Math.hypot(dx, dy);
+
+                    let angleDiff = playerAngle - laser.currentAngle;
+                    while (angleDiff <= -Math.PI) angleDiff += 2 * Math.PI;
+                    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+
+                    if (playerDist < laser.length && Math.abs(angleDiff) < (laser.width / playerDist)) {
+                        jugadorEnRayo = true;
+                    }
+                } else { // tipo 'snipe'
+                    const distToRay = distanciaPuntoARecta(
+                        jugador.x, jugador.y,
+                        laser.x, laser.y, laser.targetX, laser.targetY
+                    );
+                    if (distToRay < 30 && estaEntrePuntos(jugador.x, jugador.y, laser.x, laser.y, laser.targetX, laser.targetY)) {
+                        jugadorEnRayo = true;
+                    }
+                }
+
+                if (jugadorEnRayo) {
+                    if (estadoJuego.vidas > 0 && laser.damageCooldown <= 0) {
                         estadoJuego.vidas--;
                         S.reproducir('choque');
                         estadoJuego.animVida = 0.6;
-                        // Destello visual
                         estadoJuego.animDaño = 0.3;
+                        laser.damageCooldown = 0.5; 
                     }
                     if (estadoJuego.vidas <= 0) {
                         perderJuego();
@@ -227,6 +382,27 @@ export function update(dt) {
             }
         }
         
+        // --- LÓGICA DE COLISIONES: JUGADOR ATACANDO AL JEFE ---
+        const hitbox = { x: jefe.x - jefe.w / 2, y: jefe.y - jefe.h / 2, w: jefe.w, h: jefe.h };
+
+        // Colisión con torpedos
+        for (let i = torpedos.length - 1; i >= 0; i--) {
+            const t = torpedos[i];
+            if (t.x > hitbox.x && t.x < hitbox.x + hitbox.w && t.y > hitbox.y && t.y < hitbox.y + hitbox.h) {
+                recibirDanoJefe(t, 15); // Torpedos hacen más daño
+                torpedos.splice(i, 1);
+            }
+        }
+
+        // Colisión con proyectiles de armas
+        for (let i = proyectiles.length - 1; i >= 0; i--) {
+            const p = proyectiles[i];
+            if (p.x > hitbox.x && p.x < hitbox.x + hitbox.w && p.y > hitbox.y && p.y < hitbox.y + hitbox.h) {
+                recibirDanoJefe(p, 1); // Daño base
+                proyectiles.splice(i, 1);
+            }
+        }
+
         if (jefe.lasers.length === 0) {
             jefe.estado = 'idle';
         }
@@ -246,6 +422,20 @@ export function update(dt) {
         agregarPuntos(500);
         completarSubnivel();
     }
+}
+
+/**
+ * Aplica daño al jefe y activa los efectos visuales/sonoros.
+ * @param {object} proyectil - El objeto del proyectil que impactó.
+ * @param {number} cantidad - La cantidad de daño a infligir.
+ */
+function recibirDanoJefe(proyectil, cantidad) {
+    const jefe = levelState.jefe;
+    if (!jefe || jefe.hp <= 0) return;
+    generarExplosion(proyectil.x, proyectil.y, proyectil.color || '#ffdd77');
+    jefe.hp -= cantidad;
+    jefe.timerGolpe = 0.15; // Para el efecto de parpadeo
+    S.reproducir('boss_hit');
 }
 
 // Función auxiliar para calcular distancia de punto a recta
@@ -279,6 +469,9 @@ export function draw() {
 
     // Dibujar jefe
     ctx.save();
+    if (jefe.timerGolpe > 0) {
+        ctx.filter = 'brightness(3)'; // Efecto de flash al ser golpeado
+    }
     ctx.translate(jefe.x, jefe.y);
     
     // Voltear imagen según dirección
@@ -289,30 +482,89 @@ export function draw() {
     ctx.drawImage(mierdeiImg, -jefe.w / 2, -jefe.h / 2, jefe.w, jefe.h);
     ctx.restore();
 
+    // Dibujar bombas
+    jefe.bombas.forEach(bomba => {
+        ctx.save();
+        ctx.translate(bomba.x, bomba.y);
+        ctx.rotate(bomba.rotacion);
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(mierdeiImg, -bomba.w / 2 + 5, -bomba.h / 2 + 5, bomba.w, bomba.h);
+        ctx.globalAlpha = 1.0;
+        ctx.drawImage(mierdeiImg, -bomba.w / 2, -bomba.h / 2, bomba.w, bomba.h);
+        ctx.restore();
+    });
+
     // Dibujar láseres
     jefe.lasers.forEach(laser => {
-        // Interpolar color según tiempo restante
-        const intensity = Math.min(1, laser.timer / laser.duration);
-        ctx.strokeStyle = `rgba(255, ${50 + intensity * 205}, 50, ${intensity * 0.7})`;
-        ctx.lineWidth = 8 * intensity;
-        ctx.beginPath();
-        ctx.moveTo(laser.x, laser.y);
-        ctx.lineTo(laser.targetX, laser.targetY);
-        ctx.stroke();
+        let targetX, targetY, beamWidth;
+        if (laser.tipo === 'sweep') {
+            targetX = laser.x + Math.cos(laser.currentAngle) * laser.length;
+            targetY = laser.y + Math.sin(laser.currentAngle) * laser.length;
+            beamWidth = laser.width;
+        } else { // snipe
+            targetX = laser.targetX;
+            targetY = laser.targetY;
+            beamWidth = 60;
+        }
 
-        // Efecto de brillo
-        ctx.strokeStyle = `rgba(255, 255, 255, ${intensity * 0.3})`;
-        ctx.lineWidth = 15 * intensity;
-        ctx.stroke();
+        const intensity = Math.min(1, laser.timer / laser.duration);
+        beamWidth *= intensity;
+
+        // --- Dibuja el rayo con el nuevo patrón SVG ---
+        const dx = targetX - laser.x;
+        const dy = targetY - laser.y;
+        const angle = Math.atan2(dy, dx);
+        const length = Math.hypot(dx, dy);
+
+        ctx.save();
+        ctx.translate(laser.x, laser.y);
+        ctx.rotate(angle);
+
+        // Dibuja el núcleo brillante primero (detrás)
+        const coreWidth = 12 * intensity;
+        const coreGrad = ctx.createLinearGradient(0, -coreWidth, 0, coreWidth);
+        coreGrad.addColorStop(0, `rgba(255, 255, 255, 0)`);
+        coreGrad.addColorStop(0.5, `rgba(255, 255, 255, ${intensity * 0.9})`);
+        coreGrad.addColorStop(1, `rgba(255, 255, 255, 0)`);
+        ctx.fillStyle = coreGrad;
+        ctx.fillRect(0, -coreWidth, length, coreWidth * 2);
+
+        // Dibuja el patrón de energía SVG
+        if (laserPatternReady && laserPattern) {
+            ctx.save();
+            // La animación se consigue moviendo el canvas antes de rellenar
+            ctx.translate(0, -patternOffsetY); 
+            
+            ctx.fillStyle = laserPattern;
+            ctx.globalAlpha = 0.9 * intensity;
+            ctx.globalCompositeOperation = 'lighter';
+
+            // Dibuja el rectángulo que se rellenará con el patrón
+            ctx.fillRect(0, -beamWidth / 2 + patternOffsetY, length, beamWidth);
+            
+            ctx.restore();
+        } else {
+            // Fallback si el SVG no carga
+            ctx.fillStyle = `rgba(255, 50, 50, ${0.4 * intensity})`;
+            ctx.fillRect(0, -beamWidth / 2, length, beamWidth);
+        }
+        
+        ctx.restore(); // Restaura la rotación y traslación
 
         // Texto en el rayo (solo si es suficientemente visible)
         if (intensity > 0.5) {
             ctx.fillStyle = '#ffffff';
-            ctx.font = '16px Arial';
+            ctx.font = '16px "Press Start 2P", monospace';
             ctx.textAlign = 'center';
-            const midX = (laser.x + laser.targetX) / 2;
-            const midY = (laser.y + laser.targetY) / 2;
-            ctx.fillText('RAYO AJUSTADOR', midX, midY);
+            ctx.textBaseline = 'middle';
+            ctx.save();
+            const midX = (laser.x + targetX) / 2;
+            const midY = (laser.y + targetY) / 2;
+            ctx.translate(midX, midY);
+            // La rotación del texto debe considerar la dirección del rayo
+            ctx.rotate(dx < 0 ? angle + Math.PI : angle);
+            ctx.fillText('RAYO AJUSTADOR', 0, 0);
+            ctx.restore();
         }
     });
 }
@@ -334,16 +586,13 @@ export function onAnimalCazado(tipoAnimal) {
 export function onKill() {
     if (levelState.subnivelActual >= SUBNIVELES.length) return;
     const sub = SUBNIVELES[levelState.subnivelActual];
-    
+
+    // El daño al jefe ahora se maneja con colisiones directas en update().
+    // Esta función solo se usa para el subnivel de eliminación.
     if (sub.tipo === 'kill') {
         levelState.progresoSubnivel++;
         if (levelState.progresoSubnivel >= sub.meta) {
             completarSubnivel();
-        }
-    } else if (sub.tipo === 'boss') {
-        levelState.jefe.hp -= 10;
-        if (levelState.jefe.hp <= 0) {
-            // El jefe es derrotado, se maneja en update()
         }
     }
 }
@@ -370,10 +619,11 @@ function completarSubnivel() {
     if (nuevoSub.tipo === 'boss') {
         levelState.jefe.x = W - 200;
         levelState.jefe.y = H / 2;
-        levelState.jefe.hp = 50;
+        levelState.jefe.hp = 200;
         levelState.jefe.vx = 0;
         levelState.jefe.vy = 0;
         levelState.jefe.lasers = [];
+        levelState.jefe.bombas = [];
         levelState.jefe.estado = 'idle';
         
         estadoJuego.jefe = levelState.jefe;
