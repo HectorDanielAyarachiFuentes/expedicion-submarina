@@ -134,6 +134,128 @@ cargarImagen('img/mierdei.png', function(img) {
     }
 });
 
+const SHARK_SPRITE_DATA = {
+  "meta": {
+    "app": "Sprite Sheet Suite v4.3",
+    "image": "tiburon.png",
+    "size": {
+      "w": 2048,
+      "h": 2048
+    },
+    "clips": [
+      {
+        "name": "Default",
+        "frames": [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92
+        ]
+      }
+    ]
+  },
+  "frames": [
+    { "id": 0, "name": "sprite_0", "rect": { "x": 1056, "y": 43, "w": 209, "h": 110 }, "type": "simple" },
+    { "id": 1, "name": "sprite_1", "rect": { "x": 816, "y": 44, "w": 209, "h": 107 }, "type": "simple" },
+    { "id": 2, "name": "sprite_2", "rect": { "x": 578, "y": 47, "w": 205, "h": 105 }, "type": "simple" },
+    { "id": 3, "name": "sprite_3", "rect": { "x": 1290, "y": 47, "w": 199, "h": 104 }, "type": "simple" },
+    { "id": 4, "name": "sprite_4", "rect": { "x": 1521, "y": 47, "w": 192, "h": 102 }, "type": "simple" },
+    { "id": 5, "name": "sprite_5", "rect": { "x": 1754, "y": 48, "w": 190, "h": 101 }, "type": "simple" },
+    { "id": 6, "name": "sprite_6", "rect": { "x": 93, "y": 49, "w": 209, "h": 107 }, "type": "simple" },
+    { "id": 7, "name": "sprite_7", "rect": { "x": 342, "y": 50, "w": 203, "h": 103 }, "type": "simple" },
+    { "id": 8, "name": "sprite_8", "rect": { "x": 1295, "y": 201, "w": 211, "h": 109 }, "type": "simple" },
+    { "id": 9, "name": "sprite_9", "rect": { "x": 1526, "y": 201, "w": 211, "h": 109 }, "type": "simple" },
+    { "id": 10, "name": "sprite_10", "rect": { "x": 1059, "y": 202, "w": 208, "h": 109 }, "type": "simple" },
+    { "id": 11, "name": "sprite_11", "rect": { "x": 823, "y": 203, "w": 209, "h": 108 }, "type": "simple" },
+    { "id": 12, "name": "sprite_12", "rect": { "x": 589, "y": 204, "w": 212, "h": 109 }, "type": "simple" },
+    { "id": 13, "name": "sprite_13", "rect": { "x": 359, "y": 206, "w": 211, "h": 107 }, "type": "simple" },
+    { "id": 14, "name": "sprite_14", "rect": { "x": 1762, "y": 207, "w": 205, "h": 98 }, "type": "simple" },
+    { "id": 15, "name": "sprite_15", "rect": { "x": 106, "y": 208, "w": 211, "h": 108 }, "type": "simple" },
+    { "id": 16, "name": "sprite_16", "rect": { "x": 1295, "y": 379, "w": 210, "h": 109 }, "type": "simple" },
+    { "id": 17, "name": "sprite_17", "rect": { "x": 1530, "y": 380, "w": 210, "h": 117 }, "type": "simple" },
+    { "id": 18, "name": "sprite_18", "rect": { "x": 826, "y": 381, "w": 210, "h": 110 }, "type": "simple" },
+    { "id": 19, "name": "sprite_19", "rect": { "x": 1058, "y": 382, "w": 207, "h": 107 }, "type": "simple" },
+    { "id": 20, "name": "sprite_20", "rect": { "x": 358, "y": 383, "w": 209, "h": 109 }, "type": "simple" },
+    { "id": 21, "name": "sprite_21", "rect": { "x": 593, "y": 383, "w": 208, "h": 108 }, "type": "simple" },
+    { "id": 22, "name": "sprite_22", "rect": { "x": 100, "y": 387, "w": 208, "h": 115 }, "type": "simple" },
+    { "id": 23, "name": "sprite_23", "rect": { "x": 1527, "y": 545, "w": 209, "h": 115 }, "type": "simple" },
+    { "id": 24, "name": "sprite_24", "rect": { "x": 1292, "y": 546, "w": 210, "h": 116 }, "type": "simple" },
+    { "id": 25, "name": "sprite_25", "rect": { "x": 1055, "y": 547, "w": 208, "h": 117 }, "type": "simple" },
+    { "id": 26, "name": "sprite_26", "rect": { "x": 828, "y": 548, "w": 208, "h": 118 }, "type": "simple" },
+    { "id": 27, "name": "sprite_27", "rect": { "x": 590, "y": 550, "w": 210, "h": 117 }, "type": "simple" },
+    { "id": 28, "name": "sprite_28", "rect": { "x": 354, "y": 551, "w": 208, "h": 118 }, "type": "simple" },
+    { "id": 29, "name": "sprite_29", "rect": { "x": 1767, "y": 554, "w": 184, "h": 96 }, "type": "simple" },
+    { "id": 30, "name": "sprite_30", "rect": { "x": 99, "y": 556, "w": 208, "h": 114 }, "type": "simple" },
+    { "id": 31, "name": "sprite_31", "rect": { "x": 1301, "y": 701, "w": 195, "h": 107 }, "type": "simple" },
+    { "id": 32, "name": "sprite_32", "rect": { "x": 1538, "y": 701, "w": 190, "h": 108 }, "type": "simple" },
+    { "id": 33, "name": "sprite_33", "rect": { "x": 1064, "y": 704, "w": 195, "h": 102 }, "type": "simple" },
+    { "id": 34, "name": "sprite_34", "rect": { "x": 839, "y": 706, "w": 198, "h": 102 }, "type": "simple" },
+    { "id": 35, "name": "sprite_35", "rect": { "x": 1770, "y": 706, "w": 192, "h": 97 }, "type": "simple" },
+    { "id": 36, "name": "sprite_36", "rect": { "x": 592, "y": 709, "w": 199, "h": 107 }, "type": "simple" },
+    { "id": 37, "name": "sprite_37", "rect": { "x": 355, "y": 711, "w": 206, "h": 109 }, "type": "simple" },
+    { "id": 38, "name": "sprite_38", "rect": { "x": 104, "y": 714, "w": 205, "h": 106 }, "type": "simple" },
+    { "id": 39, "name": "sprite_39", "rect": { "x": 1766, "y": 872, "w": 188, "h": 100 }, "type": "simple" },
+    { "id": 40, "name": "sprite_40", "rect": { "x": 1295, "y": 873, "w": 196, "h": 100 }, "type": "simple" },
+    { "id": 41, "name": "sprite_41", "rect": { "x": 1057, "y": 875, "w": 195, "h": 102 }, "type": "simple" },
+    { "id": 42, "name": "sprite_42", "rect": { "x": 826, "y": 876, "w": 194, "h": 102 }, "type": "simple" },
+    { "id": 43, "name": "sprite_43", "rect": { "x": 1530, "y": 876, "w": 191, "h": 98 }, "type": "simple" },
+    { "id": 44, "name": "sprite_44", "rect": { "x": 588, "y": 877, "w": 198, "h": 103 }, "type": "simple" },
+    { "id": 45, "name": "sprite_45", "rect": { "x": 108, "y": 879, "w": 196, "h": 100 }, "type": "simple" },
+    { "id": 46, "name": "sprite_46", "rect": { "x": 353, "y": 879, "w": 200, "h": 101 }, "type": "simple" },
+    { "id": 47, "name": "sprite_47", "rect": { "x": 1526, "y": 1032, "w": 198, "h": 98 }, "type": "simple" },
+    { "id": 48, "name": "sprite_49", "rect": { "x": 1302, "y": 1036, "w": 205, "h": 103 }, "type": "simple" },
+    { "id": 49, "name": "sprite_50", "rect": { "x": 834, "y": 1038, "w": 198, "h": 101 }, "type": "simple" },
+    { "id": 50, "name": "sprite_51", "rect": { "x": 1068, "y": 1038, "w": 197, "h": 100 }, "type": "simple" },
+    { "id": 51, "name": "sprite_52", "rect": { "x": 598, "y": 1040, "w": 199, "h": 101 }, "type": "simple" },
+    { "id": 52, "name": "sprite_53", "rect": { "x": 354, "y": 1041, "w": 207, "h": 101 }, "type": "simple" },
+    { "id": 53, "name": "sprite_54", "rect": { "x": 108, "y": 1043, "w": 203, "h": 100 }, "type": "simple" },
+    { "id": 54, "name": "sprite_55", "rect": { "x": 1308, "y": 1184, "w": 195, "h": 116 }, "type": "simple" },
+    { "id": 55, "name": "sprite_56", "rect": { "x": 1541, "y": 1186, "w": 190, "h": 105 }, "type": "simple" },
+    { "id": 56, "name": "sprite_58", "rect": { "x": 1074, "y": 1193, "w": 197, "h": 110 }, "type": "simple" },
+    { "id": 57, "name": "sprite_59", "rect": { "x": 836, "y": 1197, "w": 198, "h": 108 }, "type": "simple" },
+    { "id": 58, "name": "sprite_60", "rect": { "x": 602, "y": 1198, "w": 198, "h": 108 }, "type": "simple" },
+    { "id": 59, "name": "sprite_61", "rect": { "x": 356, "y": 1200, "w": 203, "h": 104 }, "type": "simple" },
+    { "id": 60, "name": "sprite_62", "rect": { "x": 107, "y": 1201, "w": 202, "h": 103 }, "type": "simple" },
+    { "id": 61, "name": "sprite_63", "rect": { "x": 1551, "y": 1364, "w": 190, "h": 105 }, "type": "simple" },
+    { "id": 62, "name": "sprite_64", "rect": { "x": 1783, "y": 1365, "w": 175, "h": 107 }, "type": "simple" },
+    { "id": 63, "name": "sprite_65", "rect": { "x": 1311, "y": 1366, "w": 197, "h": 113 }, "type": "simple" },
+    { "id": 64, "name": "sprite_66", "rect": { "x": 1078, "y": 1372, "w": 197, "h": 105 }, "type": "simple" },
+    { "id": 65, "name": "sprite_67", "rect": { "x": 838, "y": 1376, "w": 199, "h": 108 }, "type": "simple" },
+    { "id": 66, "name": "sprite_68", "rect": { "x": 601, "y": 1377, "w": 198, "h": 108 }, "type": "simple" },
+    { "id": 67, "name": "sprite_69", "rect": { "x": 360, "y": 1379, "w": 200, "h": 108 }, "type": "simple" },
+    { "id": 68, "name": "sprite_70", "rect": { "x": 111, "y": 1382, "w": 200, "h": 99 }, "type": "simple" },
+    { "id": 69, "name": "sprite_71", "rect": { "x": 1556, "y": 1530, "w": 190, "h": 124 }, "type": "simple" },
+    { "id": 70, "name": "sprite_72", "rect": { "x": 1314, "y": 1534, "w": 199, "h": 119 }, "type": "simple" },
+    { "id": 71, "name": "sprite_73", "rect": { "x": 1784, "y": 1538, "w": 181, "h": 105 }, "type": "simple" },
+    { "id": 72, "name": "sprite_74", "rect": { "x": 1073, "y": 1546, "w": 204, "h": 109 }, "type": "simple" },
+    { "id": 73, "name": "sprite_75", "rect": { "x": 111, "y": 1555, "w": 208, "h": 109 }, "type": "simple" },
+    { "id": 74, "name": "sprite_76", "rect": { "x": 363, "y": 1555, "w": 208, "h": 109 }, "type": "simple" },
+    { "id": 75, "name": "sprite_77", "rect": { "x": 605, "y": 1555, "w": 204, "h": 109 }, "type": "simple" },
+    { "id": 76, "name": "sprite_78", "rect": { "x": 842, "y": 1555, "w": 199, "h": 107 }, "type": "simple" },
+    { "id": 77, "name": "sprite_79", "rect": { "x": 1558, "y": 1717, "w": 199, "h": 104 }, "type": "simple" },
+    { "id": 78, "name": "sprite_80", "rect": { "x": 1781, "y": 1721, "w": 176, "h": 108 }, "type": "simple" },
+    { "id": 79, "name": "sprite_81", "rect": { "x": 1083, "y": 1728, "w": 200, "h": 107 }, "type": "simple" },
+    { "id": 80, "name": "sprite_82", "rect": { "x": 1317, "y": 1731, "w": 186, "h": 101 }, "type": "simple" },
+    { "id": 81, "name": "sprite_83", "rect": { "x": 112, "y": 1732, "w": 206, "h": 109 }, "type": "simple" },
+    { "id": 82, "name": "sprite_84", "rect": { "x": 364, "y": 1732, "w": 209, "h": 110 }, "type": "simple" },
+    { "id": 83, "name": "sprite_85", "rect": { "x": 608, "y": 1732, "w": 205, "h": 109 }, "type": "simple" },
+    { "id": 84, "name": "sprite_86", "rect": { "x": 844, "y": 1732, "w": 200, "h": 108 }, "type": "simple" },
+    { "id": 85, "name": "sprite_87", "rect": { "x": 1562, "y": 1893, "w": 193, "h": 96 }, "type": "simple" },
+    { "id": 86, "name": "sprite_88", "rect": { "x": 1082, "y": 1896, "w": 198, "h": 103 }, "type": "simple" },
+    { "id": 87, "name": "sprite_89", "rect": { "x": 1314, "y": 1897, "w": 192, "h": 97 }, "type": "simple" },
+    { "id": 88, "name": "sprite_90", "rect": { "x": 117, "y": 1898, "w": 204, "h": 104 }, "type": "simple" },
+    { "id": 89, "name": "sprite_91", "rect": { "x": 370, "y": 1898, "w": 199, "h": 105 }, "type": "simple" },
+    { "id": 90, "name": "sprite_92", "rect": { "x": 612, "y": 1898, "w": 196, "h": 104 }, "type": "simple" },
+    { "id": 91, "name": "sprite_93", "rect": { "x": 845, "y": 1898, "w": 197, "h": 103 }, "type": "simple" },
+    { "id": 92, "name": "sprite_94", "rect": { "x": 1780, "y": 1898, "w": 174, "h": 104 }, "type": "simple" }
+  ]
+};
+
+let sharkImg = null, sharkListo = false;
+cargarImagen('img/tiburon.png', function (img) { 
+    if (img) { 
+        sharkImg = img; 
+        sharkListo = true; 
+    } 
+});
+
 // --- RECURSOS DEL PROPULSOR (SVG) ---
 let thrusterPattern = null;
 let thrusterPatternReady = false;
@@ -203,6 +325,7 @@ const BOOST_FORCE = 400;
 export let torpedos = [];
 const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta'];
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
+const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 
 function reiniciar(nivelDeInicio = 1) {
     estadoJuego = {
@@ -252,8 +375,15 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
     let velocidad = velocidadActual() + 60;
 
     let tipo = tipoForzado || 'normal';
-    if (tipoForzado === null && mierdeiListo && Math.random() < 0.05) { // Reducida la probabilidad
-        tipo = 'mierdei';
+    
+    // --- LÓGICA DE APARICIÓN MEJORADA ---
+    // Si el tipo forzado es genérico, hay una probabilidad de que aparezca un tiburón en su lugar.
+    // Esto permite que los tiburones aparezcan en niveles que generan enemigos 'normales' o 'agresivos'.
+    // Se excluyen los tipos muy específicos como 'dorado' o los que ya son especiales.
+    if (tipoForzado === 'normal' || tipoForzado === 'aggressive' || tipoForzado === 'rojo') {
+        if (sharkListo && Math.random() < 0.15) { // 15% de probabilidad de que sea un tiburón
+            tipo = 'shark';
+        }
     }
 
     if (tipo === 'mierdei') {
@@ -263,6 +393,17 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
             x: W + anchoDeseado, y, vx: -velocidad * 0.7, r: anchoDeseado / 2,
             w: anchoDeseado, h: altoDeseado, capturado: false, tipo: 'mierdei',
             semillaFase: Math.random() * Math.PI * 2,
+        });
+    } else if (tipo === 'shark') {
+        const tamano = 128; // Los tiburones son más grandes
+        velocidad *= 0.9; // Un poco más lentos al patrullar
+        animales.push({
+            x: W + tamano, y, vx: -velocidad, vy: 0, r: 50, w: tamano, h: tamano,
+            capturado: false, frame: 0, timerFrame: 0,
+            semillaFase: Math.random() * Math.PI * 2, 
+            tipo: 'shark',
+            huntCooldown: 2.0 + Math.random(), // Cooldown inicial antes de la primera caza
+            isHunting: false,
         });
     } else {
         if (esEsbirroJefe) {
@@ -459,10 +600,45 @@ function actualizar(dt) {
 
     for (let i = animales.length - 1; i >= 0; i--) { 
         const a = animales[i]; 
-        a.x += a.vx * dtAjustado; 
         
-        a.timerFrame += dtAjustado; 
-        if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
+        // IA específica para cada tipo de enemigo
+        if (a.tipo === 'shark') {
+            if (a.isHunting) {
+                // El tiburón está cazando, se mueve en su vector de ataque
+                a.x += a.vx * dtAjustado;
+                a.y += a.vy * dtAjustado;
+                // Si sale de la pantalla, deja de cazar
+                if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
+                    a.isHunting = false;
+                    a.vx = -(velocidadActual() + 60) * 0.9; // Resetea a velocidad de patrulla
+                    a.vy = 0;
+                }
+            } else {
+                // Modo patrulla: se mueve de derecha a izquierda
+                a.x += a.vx * dtAjustado;
+                a.huntCooldown -= dtAjustado;
+                // Si ve al jugador y no está en cooldown, inicia la caza
+                if (a.huntCooldown <= 0 && jugador.x < a.x && a.x < W) {
+                    a.isHunting = true;
+                    const angle = Math.atan2(jugador.y - a.y, jugador.x - a.x);
+                    a.vx = Math.cos(angle) * 600; // Velocidad de embestida
+                    a.vy = Math.sin(angle) * 600;
+                    a.huntCooldown = 4.0 + Math.random() * 2; // Cooldown para la próxima caza
+                }
+            }
+            // Animación específica para el tiburón
+            a.timerFrame += dtAjustado;
+            if (a.timerFrame >= SHARK_ANIMATION_SPEED) {
+                a.timerFrame -= SHARK_ANIMATION_SPEED; // Más preciso que resetear a 0
+                a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length;
+            }
+        } else {
+            // Movimiento normal para el resto de criaturas
+            a.x += a.vx * dtAjustado; 
+            // Animación para otras criaturas
+            a.timerFrame += dtAjustado; 
+            if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
+        }
         
         if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) { 
             animales.splice(i, 1); 
@@ -491,7 +667,7 @@ function actualizar(dt) {
             if (estadoJuego.nivel !== 5) {
                 for (let j = 0; j < animales.length; j++) {
                     const aa = animales[j];
-                    const esCapturable = (aa.tipo !== 'aggressive');
+                    const esCapturable = (aa.tipo !== 'aggressive' && aa.tipo !== 'shark');
                     if (!g.golpeado && !aa.capturado && esCapturable && Math.hypot(aa.x - g.x, aa.y - g.y) < aa.r) {
                         g.golpeado = aa;
                         aa.capturado = true;
@@ -597,6 +773,27 @@ function renderizar(dt) {
                 ctx.translate(a.x, a.y + offsetFlotante);
                 ctx.rotate(angulo);
                 ctx.drawImage(mierdeiImg, -a.w / 2, -a.h / 2, a.w, a.h);
+
+            } else if (a.tipo === 'shark') {
+                ctx.translate(a.x, a.y);
+                if (sharkListo && SHARK_SPRITE_DATA) {
+                    const frameData = SHARK_SPRITE_DATA.frames[a.frame];
+                    if (frameData) {
+                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
+                        
+                        const aspectRatio = sWidth / sHeight;
+                        const dHeight = a.w / aspectRatio;
+
+                        ctx.imageSmoothingEnabled = false;
+                        if (a.vx > 0) {
+                            ctx.scale(-1, 1);
+                        }
+                        ctx.drawImage(sharkImg, 
+                            sx, sy, sWidth, sHeight, 
+                            Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight
+                        );
+                    }
+                }
 
             } else {
                 if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
