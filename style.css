@@ -470,3 +470,11 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     margin-top: 0.5rem;
     opacity: 0.8;
 }
+
+/* ===== NUEVO: Estilo para el título de la misión ===== */
+#hud-objective-text .mission-title {
+    color: var(--accent-yellow);
+    font-weight: bold;
+    display: block; /* Asegura que esté en su propia línea */
+    margin-bottom: 4px;
+}
