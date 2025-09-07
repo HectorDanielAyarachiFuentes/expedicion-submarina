@@ -71,8 +71,8 @@ function actualizarIconos() {
 
 // ========= Audio (S) =========
 const PLAYLIST = [
-    '../canciones/Abismo_de_Acero.mp3',
-    '../canciones/Batalla_de_las_Profundidades.mp3'
+    'canciones/Abismo_de_Acero.mp3',
+    'canciones/Batalla_de_las_Profundidades.mp3'
 ];
 export const S = (function () {
     let creado = false;
@@ -81,16 +81,16 @@ export const S = (function () {
     let musicaActual = null;
 
     const mapaFuentes = {
-        arpon: '../sonidos/arpon.wav',
-        choque: '../sonidos/choque.wav',
-        gameover: '../sonidos/gameover.wav',
-        torpedo: '../sonidos/torpedo.wav',
-        boss_hit: '../sonidos/boss_hit.mp3',
-        victory: '../sonidos/victoria.mp3',
-        ink: '../sonidos/ink.wav',
-        shotgun: '../sonidos/shotgun.wav',
-        machinegun: '../sonidos/machinegun.wav',
-        reload: '../sonidos/reload.wav'
+        arpon: 'sonidos/arpon.wav',
+        choque: 'sonidos/choque.wav',
+        gameover: 'sonidos/gameover.wav',
+        torpedo: 'sonidos/torpedo.wav',
+        boss_hit: 'sonidos/boss_hit.mp3',
+        victory: 'sonidos/victoria.mp3',
+        ink: 'sonidos/ink.wav',
+        shotgun: 'sonidos/shotgun.wav',
+        machinegun: 'sonidos/machinegun.wav',
+        reload: 'sonidos/reload.wav'
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
@@ -134,6 +134,25 @@ cargarImagen('img/mierdei.png', function(img) {
     }
 });
 
+// --- RECURSOS DEL PROPULSOR (SVG) ---
+let thrusterPattern = null;
+let thrusterPatternReady = false;
+let thrusterPatternOffsetX = 0;
+
+const thrusterSvgString = `
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="64">
+  <defs>
+    <filter id="thruster-distortion" x="-20%" y="-50%" width="140%" height="200%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.2" numOctaves="3" result="turbulence"/>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="15" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="1.5"/>
+      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 2.5 -0.5" />
+    </filter>
+    <linearGradient id="thrusterGradient" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="rgba(220, 240, 255, 1)" /><stop offset="100%" stop-color="rgba(150, 200, 255, 0)" /></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="512" height="64" fill="url(#thrusterGradient)" filter="url(#thruster-distortion)"/>
+</svg>`;
+
 // ========= Geometría y Utilidades (Exportamos las que se necesitan fuera) =========
 export let W = innerWidth, H = innerHeight;
 export const NUM_CARRILES = 5;
@@ -176,9 +195,11 @@ export function activarSlowMotion(duracion) {
 export let estadoJuego = null, jugador, animales;
 let teclas = {};
 let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
+let __iniciando = false;
 let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = Math.PI / 24;
 const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
+const BOOST_FORCE = 400;
 export let torpedos = [];
 const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta'];
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
@@ -186,18 +207,22 @@ const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "AP
 function reiniciar(nivelDeInicio = 1) {
     estadoJuego = {
         faseJuego: 'menu', enEjecucion: false, rescatados: 0, puntuacion: 0, profundidad_m: 0, vidas: 3, animVida: 0, velocidad: 260, tiempoTranscurrido: 0, bloqueoEntrada: 0.2,
-        faseLuz: 'off', luzVisible: false, timerLuz: 0, cambiosLuz: 0, ultimaMusicaT: 0,
+        faseLuz: 'off', luzVisible: false, timerLuz: 0, cambiosLuz: 0,
         enfriamientoTorpedo: 0,
         nivel: nivelDeInicio,
         valorObjetivoNivel: 0,
         jefe: null,
         proyectilesTinta: [],
-        armaActual: 'garra',
+        armaActual: estadoJuego ? estadoJuego.armaActual : 'garra', // Preservar arma
         enfriamientoArma: 0,
         asesinatos: 0,
         teclasActivas: {},
+        boostActivo: false,
+        boostEnergia: 100,
+        boostMaxEnergia: 100,
+        boostEnfriamiento: 0,
         velocidadJuego: 1.0,
-        slowMoTimer: 0,
+        slowMoTimer: 0, 
         levelFlags: {}, // >>> CAMBIO CLAVE <<< Objeto para que los niveles comuniquen flags al motor (ej: no mover el fondo)
     };
     
@@ -215,7 +240,6 @@ function reiniciar(nivelDeInicio = 1) {
     autoSize();
     iniciarParticulas();
     if (gameplayHints) gameplayHints.style.display = 'none';
-    mostrarVistaMenuPrincipal(false);
 }
 
 function velocidadActual() { return Levels.getLevelSpeed(); }
@@ -228,12 +252,12 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
     let velocidad = velocidadActual() + 60;
 
     let tipo = tipoForzado || 'normal';
-    if (tipoForzado === null && mierdeiListo && Math.random() < 0.15) {
+    if (tipoForzado === null && mierdeiListo && Math.random() < 0.05) { // Reducida la probabilidad
         tipo = 'mierdei';
     }
 
     if (tipo === 'mierdei') {
-        const anchoDeseado = 350;
+        const anchoDeseado = 100; // Tamaño reducido a algo razonable
         let altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
         animales.push({
             x: W + anchoDeseado, y, vx: -velocidad * 0.7, r: anchoDeseado / 2,
@@ -262,14 +286,14 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
 function dispararGarfio() {
     if (!jugador || jugador.garra || !estadoJuego || estadoJuego.bloqueoEntrada > 0) return;
     const isLevel5 = estadoJuego.nivel === 5;
-    const baseX = isLevel5 ? jugador.x : jugador.x;
+    const baseX = jugador.x;
     const baseY = isLevel5 ? jugador.y : jugador.y;
     const cannonX = isLevel5 ? baseX : baseX + 45;
     const cannonY = isLevel5 ? baseY - 45 : baseY;
     generarRafagaBurbujasDisparo(cannonX, cannonY, isLevel5);
     const dx = isLevel5 ? 0 : 1;
     const dy = isLevel5 ? -1 : 0;
-    jugador.garra = { x: baseX, y: baseY, dx, dy, velocidad: 1400, fase: 'ida', golpeado: null, alcance: H * 0.7, recorrido: 0 };
+    jugador.garra = { x: baseX, y: baseY, dx, dy, velocidad: 1400, fase: 'ida', golpeado: null, alcance: W * 0.7, recorrido: 0 };
     S.reproducir('arpon');
 }
 
@@ -369,13 +393,12 @@ function actualizar(dt) {
     if (teclas['ArrowLeft']) vx -= 1;
     if (teclas['ArrowRight']) vx += 1;
     const len = Math.hypot(vx, vy);
+    
     if (len > 0) {
         vx = (vx / len) * JUGADOR_VELOCIDAD;
         vy = (vy / len) * JUGADOR_VELOCIDAD;
         generarBurbujaPropulsion(jugador.x - 30, jugador.y, false);
     }
-    jugador.x += vx * dtAjustado;
-    jugador.y += vy * dtAjustado;
     
     Levels.updateLevel(dtAjustado);
     
@@ -403,16 +426,43 @@ function actualizar(dt) {
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dtAjustado, configNivel.meta);
     
+    // Movimiento del jugador
+    jugador.x += vx * dtAjustado;
+    jugador.y += vy * dtAjustado;
+
+    // Lógica del Impulso (Boost)
+    estadoJuego.boostActivo = teclas['b'] && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
+
+    if (estadoJuego.boostActivo) {
+        estadoJuego.boostEnergia -= 35 * dtAjustado; // Consumo de energía
+        jugador.x += BOOST_FORCE * dtAjustado; // Añadir empuje hacia adelante
+        for(let i = 0; i < 5; i++) { // Generar burbujas intensas
+            generarBurbujaPropulsion(jugador.x - 40, jugador.y + (Math.random() - 0.5) * 30, false);
+        }
+    } else {
+        if (estadoJuego.boostEnfriamiento <= 0) {
+            estadoJuego.boostEnergia += 15 * dtAjustado; // Regeneración de energía
+            estadoJuego.boostEnergia = Math.min(estadoJuego.boostEnergia, estadoJuego.boostMaxEnergia);
+        }
+    }
+    
+    if (estadoJuego.boostEnergia <= 0) {
+        estadoJuego.boostEnergia = 0;
+        if (estadoJuego.boostEnfriamiento <= 0) { // Iniciar enfriamiento solo una vez
+             estadoJuego.boostEnfriamiento = 2.0; // 2 segundos de enfriamiento
+        }
+    }
+
+    if (estadoJuego.boostEnfriamiento > 0) {
+        estadoJuego.boostEnfriamiento -= dtAjustado;
+    }
+
     for (let i = animales.length - 1; i >= 0; i--) { 
         const a = animales[i]; 
         a.x += a.vx * dtAjustado; 
         
-        if (a.tipo !== 'mierdei') {
-            a.timerFrame += dtAjustado; 
-            if (a.timerFrame >= 0.2) { 
-                a.timerFrame -= 0.2; a.frame ^= 1; 
-            }
-        }
+        a.timerFrame += dtAjustado; 
+        if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
         
         if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) { 
             animales.splice(i, 1); 
@@ -484,8 +534,7 @@ function actualizar(dt) {
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
             if (!a.capturado && proyectil.x < a.x + a.w/2 && proyectil.x + (proyectil.w || 0) > a.x - a.w/2 && proyectil.y < a.y + a.h/2 && proyectil.y + (proyectil.h || 0) > a.y - a.h/2) {
-            generarExplosion(a.x, a.y, proyectil.color);
-            Levels.onAnimalCazado(a.tipo);
+            generarExplosion(a.x, a.y, proyectil.color || '#ff8833');
             Levels.onKill(a.tipo);
             animales.splice(j, 1);
             estadoJuego.asesinatos++;
@@ -524,6 +573,9 @@ function actualizar(dt) {
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dtAjustado);
     
     actualizarParticulas(dtAjustado);
+    // Animar el patrón del propulsor
+    thrusterPatternOffsetX = (thrusterPatternOffsetX - dtAjustado * 800) % 512;
+
     comprobarCompletadoNivel();
 }
 
@@ -584,9 +636,39 @@ function renderizar(dt) {
                 ctx.fill();
             }
             ctx.restore();
+
+            // DIBUJAR PROPULSOR
+            if (estadoJuego.boostActivo && thrusterPatternReady && thrusterPattern) {
+                const boostLength = 150 + Math.random() * 20;
+                const boostWidth = 50 + Math.random() * 10;
+                const intensity = estadoJuego.boostEnergia / estadoJuego.boostMaxEnergia;
+
+                ctx.save();
+                ctx.translate(jugador.x, jugador.y);
+                ctx.rotate(anguloFinal);
+
+                // Posicionar detrás del submarino
+                ctx.translate(-35, 0);
+
+                // Animar el patrón
+                ctx.translate(thrusterPatternOffsetX, 0);
+
+                ctx.globalAlpha = 0.6 + intensity * 0.4;
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = thrusterPattern;
+                
+                // Dibujar la forma del propulsor
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-boostLength, -boostWidth / 2);
+                ctx.lineTo(-boostLength, boostWidth / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
         }
         if (jugador && jugador.garra) {
-            const isLevel5 = estadoJuego.nivel === 5;
+            const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
             const hx0 = jugador.x;
             const hy0 = jugador.y;
             ctx.save();
@@ -685,7 +767,7 @@ function dibujarHUD() {
             let textoObjetivo = '';
             if (configNivel.tipo === 'capture') { textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; } 
             else if (configNivel.tipo === 'survive') { textoObjetivo = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - estadoJuego.valorObjetivoNivel)}s`; } 
-            else if (configNivel.tipo === 'boss') { textoObjetivo = `JEFE: Derrota al Kraken`; }
+            else if (configNivel.tipo === 'boss') { textoObjetivo = configNivel.objetivo.toUpperCase(); }
             hudObjectiveText.textContent = textoObjetivo;
         }
     }
@@ -704,10 +786,10 @@ function dibujarHUD() {
     hud.shadowColor = 'rgba(0,0,0,0.7)';
     hud.shadowBlur = 4;
     const filas = [{ label: 'SCORE', value: String(valorPuntuacion) }, { label: 'DEPTH', value: valorProfundidad + ' m' }, { label: 'RECORD', value: String(puntuacionMaxima) }];
-    const totalFilas = filas.length + 4;
+    const totalFilas = filas.length + 5;
     const y0 = H - padY - lh * totalFilas;
     let maxAnchoEtiqueta = 0;
-    const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO'];
+    const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO', 'IMPULSO'];
     for (const label of todasLasEtiquetas) { maxAnchoEtiqueta = Math.max(maxAnchoEtiqueta, hud.measureText(label).width); }
     const gap = 16;
     const valueX = padX + maxAnchoEtiqueta + gap;
@@ -737,6 +819,22 @@ function dibujarHUD() {
     const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0];
     hud.fillStyle = '#ff5e5e';
     hud.fillText(rango.titulo, valueX, currentY);
+    currentY += lh;
+    hud.fillStyle = '#ffffff';
+    hud.fillText('IMPULSO', padX, currentY);
+    const barX = valueX;
+    const barW = 150;
+    const barH = 10;
+    const barY = currentY - barH;
+    hud.fillStyle = '#333';
+    hud.fillRect(barX, barY, barW, barH);
+    const boostRatio = s.boostEnergia / s.boostMaxEnergia;
+    const boostColor = s.boostEnfriamiento > 0 ? '#ff6666' : '#7ecbff';
+    hud.fillStyle = boostColor;
+    hud.fillRect(barX, barY, barW * boostRatio, barH);
+    hud.strokeStyle = '#fff';
+    hud.lineWidth = 2;
+    hud.strokeRect(barX, barY, barW, barH);
     hud.restore();
     
     // >>> CAMBIO CLAVE <<<
@@ -752,7 +850,6 @@ function dibujarHUD() {
     }
 }
 
-let __iniciando = false;
 function iniciarJuego(nivel = 1) {
     if (__iniciando) return; __iniciando = true;
     if (estadoJuego && estadoJuego.enEjecucion) { __iniciando = false; return; }
@@ -1032,4 +1129,20 @@ export function init() {
     S.init();
     actualizarIconos();
     reiniciar();
+    mostrarVistaMenuPrincipal(false);
+
+    // Cargar el patrón SVG para el propulsor
+    thrusterPatternReady = false;
+    const thrusterPatternImage = new Image();
+    thrusterPatternImage.onload = () => {
+        const patternCanvas = document.createElement('canvas');
+        patternCanvas.width = thrusterPatternImage.width;
+        patternCanvas.height = thrusterPatternImage.height;
+        const patternCtx = patternCanvas.getContext('2d');
+        if (!patternCtx) return;
+        patternCtx.drawImage(thrusterPatternImage, 0, 0);
+        thrusterPattern = ctx.createPattern(patternCanvas, 'repeat-x');
+        thrusterPatternReady = true;
+    };
+    thrusterPatternImage.src = 'data:image/svg+xml;base64,' + btoa(thrusterSvgString);
 }
