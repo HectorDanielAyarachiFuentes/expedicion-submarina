@@ -953,7 +953,7 @@ export function init() {
         };
     }
     if (restartBtn) {
-        restartBtn.onclick = () => iniciarJuego(1);
+        restartBtn.onclick = () => iniciarJuego(estadoJuego.nivel || 1);
     }
     if (levelSelectBtn) {
         levelSelectBtn.onclick = () => {

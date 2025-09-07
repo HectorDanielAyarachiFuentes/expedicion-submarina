@@ -33,9 +33,9 @@ const laserSvgString = `
 
 // --- SUBNIVELES ---
 const SUBNIVELES = [
-    { nombre: 'SUBNIVEL 1: ELIMINACIÓN', objetivo: 'Elimina 5 mierdei', meta: 5, tipo: 'kill', spawnInterval: 2.0 },
-    { nombre: 'SUBNIVEL 2: OLEADAS', objetivo: 'Sobrevive 15 segundos a las oleadas', meta: 15, tipo: 'survive', tiempoLimite: 15, spawnInterval: 1.0 },
-    { nombre: 'SUBNIVEL 3: JEFE FINAL', objetivo: 'Derrota al jefe Mierdei', meta: 0, tipo: 'boss', spawnInterval: 1.5 }
+    { nombre: 'SUBNIVEL 1: HORDA INICIAL', objetivo: 'Elimina 30 mierdei', meta: 30, tipo: 'kill', spawnInterval: 0.5 },
+    { nombre: 'SUBNIVEL 2: OLEADA MASIVA', objetivo: 'Sobrevive 15 segundos a la horda', meta: 15, tipo: 'survive', tiempoLimite: 15, spawnInterval: 0.3 },
+    { nombre: 'SUBNIVEL 3: JEFE FINAL', objetivo: 'Derrota al jefe Mierdei', meta: 0, tipo: 'boss', spawnInterval: 1.2 }
 ];
 
 /**
@@ -271,8 +271,8 @@ export function update(dt) {
             if (r < 0.35) {
                 // Ataque: Bombardeo de Mierdei
                 jefe.estado = 'bombard';
-                for (let i = 0; i < 3; i++) {
-                    setTimeout(() => spawnMierdeiBombardero(jefe), i * 250);
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => spawnMierdeiBombardero(jefe), i * 200);
                 }
                 jefe.timerAtaque = 3.0;
             } else if (r < 0.65) {
@@ -282,11 +282,13 @@ export function update(dt) {
             } else if (r < 0.9) {
                 // Ataque: rayos láser múltiples
                 dispararLaser(jefe, 'snipe');
-                setTimeout(() => dispararLaser(jefe, 'snipe'), 300);
+                setTimeout(() => dispararLaser(jefe, 'snipe'), 200);
+                setTimeout(() => dispararLaser(jefe, 'snipe'), 400);
                 jefe.timerAtaque = 3.0;
             } else {
                 // Ataque: spawnear agresivos
                 spawnMierdeiAgresivo();
+                spawnMierdei();
                 spawnMierdei();
                 jefe.timerAtaque = 2.5;
             }
