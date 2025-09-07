@@ -26,6 +26,11 @@ export function init() {
         tiempoLimite: SUBNIVELES[0].tiempoLimite,
         tiempoRestante: SUBNIVELES[0].tiempoLimite
     };
+
+    // Limpiar el estado del jefe del nivel anterior (Nivel 7)
+    estadoJuego.jefe = null;
+    const bossHealthContainer = document.getElementById('bossHealthContainer');
+    if (bossHealthContainer) bossHealthContainer.style.display = 'none';
 }
 
 export function update(dt) {

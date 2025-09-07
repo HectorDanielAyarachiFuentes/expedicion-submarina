@@ -22,7 +22,7 @@ export const CONFIG_NIVELES = [
   { nombre: 'NIVEL 4: CAMPO DE ESCOMBROS', objetivo: 'Sobrevive 90 segundos', meta: 90, tipo: 'survive', speedMultiplier: 1.0 },
   { nombre: 'NIVEL 5: COLAPSO DE LA FOSA', objetivo: 'Escapa durante 60 segundos', meta: 60, tipo: 'survive', speedMultiplier: 0 }, // Velocidad controlada por el nivel
   { nombre: 'NIVEL 6: EL VORTEX DE LAS PROFUNDIDADES', objetivo: 'Sobrevive 120 segundos', meta: 120, tipo: 'survive', speedMultiplier: 0 }, // Velocidad controlada por el nivel
-  { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Captura 15 caras.", meta: 15, tipo: 'capture', speedMultiplier: 1.2 },
+  { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Supera el desafío.", meta: 1, tipo: 'boss', speedMultiplier: 1.2 },
   { nombre: "NIVEL 8: ABISMO PROFUNDO", objetivo: "Captura 25 especímenes dorados", meta: 25, tipo: 'capture', speedMultiplier: 1.5 }
 ];
 
