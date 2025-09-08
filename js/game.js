@@ -256,6 +256,71 @@ cargarImagen('img/tiburon.png', function (img) {
     } 
 });
 
+const WHALE_SPRITE_DATA = {
+  "meta": {
+    "app": "Sprite Sheet Suite v4.3",
+    "image": "ballena.png",
+    "size": {
+      "w": 1024,
+      "h": 1024
+    },
+    "clips": [
+      {
+        "name": "Default",
+        "frames": [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35
+        ]
+      }
+    ]
+  },
+  "frames": [
+    { "id": 0, "name": "frame_0_0_0", "rect": { "x": 19, "y": 3, "w": 249, "h": 112 } },
+    { "id": 1, "name": "frame_0_0_1", "rect": { "x": 268, "y": 3, "w": 244, "h": 112 } },
+    { "id": 2, "name": "frame_0_0_2", "rect": { "x": 512, "y": 3, "w": 246, "h": 112 } },
+    { "id": 3, "name": "frame_0_0_3", "rect": { "x": 758, "y": 3, "w": 246, "h": 112 } },
+    { "id": 4, "name": "frame_0_1_0", "rect": { "x": 19, "y": 115, "w": 252, "h": 109 } },
+    { "id": 5, "name": "frame_0_1_1", "rect": { "x": 270, "y": 115, "w": 242, "h": 109 } },
+    { "id": 6, "name": "frame_0_1_2", "rect": { "x": 513, "y": 115, "w": 242, "h": 109 } },
+    { "id": 7, "name": "frame_0_1_3", "rect": { "x": 754, "y": 115, "w": 249, "h": 109 } },
+    { "id": 8, "name": "frame_0_2_0", "rect": { "x": 19, "y": 224, "w": 253, "h": 106 } },
+    { "id": 9, "name": "frame_0_2_1", "rect": { "x": 272, "y": 224, "w": 241, "h": 106 } },
+    { "id": 10, "name": "frame_0_2_2", "rect": { "x": 513, "y": 224, "w": 240, "h": 106 } },
+    { "id": 11, "name": "frame_0_2_3", "rect": { "x": 753, "y": 224, "w": 250, "h": 106 } },
+    { "id": 12, "name": "frame_0_3_0", "rect": { "x": 19, "y": 330, "w": 252, "h": 107 } },
+    { "id": 13, "name": "frame_0_3_1", "rect": { "x": 270, "y": 330, "w": 241, "h": 107 } },
+    { "id": 14, "name": "frame_0_3_2", "rect": { "x": 511, "y": 330, "w": 242, "h": 107 } },
+    { "id": 15, "name": "frame_0_3_3", "rect": { "x": 753, "y": 330, "w": 250, "h": 107 } },
+    { "id": 16, "name": "frame_0_4_0", "rect": { "x": 19, "y": 437, "w": 252, "h": 111 } },
+    { "id": 17, "name": "frame_0_4_1", "rect": { "x": 271, "y": 437, "w": 236, "h": 111 } },
+    { "id": 18, "name": "frame_0_4_2", "rect": { "x": 507, "y": 437, "w": 246, "h": 111 } },
+    { "id": 19, "name": "frame_0_4_3", "rect": { "x": 753, "y": 437, "w": 250, "h": 111 } },
+    { "id": 20, "name": "frame_0_5_0", "rect": { "x": 19, "y": 548, "w": 252, "h": 116 } },
+    { "id": 21, "name": "frame_0_5_1", "rect": { "x": 270, "y": 548, "w": 242, "h": 116 } },
+    { "id": 22, "name": "frame_0_5_2", "rect": { "x": 513, "y": 548, "w": 240, "h": 116 } },
+    { "id": 23, "name": "frame_0_5_3", "rect": { "x": 753, "y": 548, "w": 250, "h": 116 } },
+    { "id": 24, "name": "frame_0_6_0", "rect": { "x": 19, "y": 664, "w": 253, "h": 119 } },
+    { "id": 25, "name": "frame_0_6_1", "rect": { "x": 272, "y": 664, "w": 246, "h": 119 } },
+    { "id": 26, "name": "frame_0_6_2", "rect": { "x": 518, "y": 664, "w": 240, "h": 119 } },
+    { "id": 27, "name": "frame_0_6_3", "rect": { "x": 758, "y": 664, "w": 246, "h": 119 } },
+    { "id": 28, "name": "frame_0_7_0", "rect": { "x": 19, "y": 783, "w": 254, "h": 110 } },
+    { "id": 29, "name": "frame_0_7_1", "rect": { "x": 273, "y": 783, "w": 243, "h": 110 } },
+    { "id": 30, "name": "frame_0_7_2", "rect": { "x": 516, "y": 783, "w": 243, "h": 110 } },
+    { "id": 31, "name": "frame_0_7_3", "rect": { "x": 759, "y": 783, "w": 244, "h": 110 } },
+    { "id": 32, "name": "frame_0_8_0", "rect": { "x": 19, "y": 893, "w": 255, "h": 114 } },
+    { "id": 33, "name": "frame_0_8_1", "rect": { "x": 273, "y": 893, "w": 242, "h": 114 } },
+    { "id": 34, "name": "frame_0_8_2", "rect": { "x": 516, "y": 893, "w": 240, "h": 114 } },
+    { "id": 35, "name": "frame_0_8_3", "rect": { "x": 756, "y": 893, "w": 247, "h": 114 } }
+  ]
+};
+
+let whaleImg = null, whaleListo = false;
+cargarImagen('img/ballena.png', function (img) { 
+    if (img) { 
+        whaleImg = img; 
+        whaleListo = true; 
+    } 
+});
+
 // --- RECURSOS DEL PROPULSOR (SVG) ---
 let thrusterPattern = null;
 let thrusterPatternReady = false;
@@ -282,7 +347,7 @@ export let carriles = [];
 function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY = H * 0.82; for (let i = 0; i < NUM_CARRILES; i++) { const t = i / (NUM_CARRILES - 1); carriles.push(minY + t * (maxY - minY)); } }
 
 // ========= Partículas y Efectos =========
-let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [];
+let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [];
 export let proyectiles = [];
 function generarParticula(arr, opts) { arr.push({ x: opts.x, y: opts.y, vx: opts.vx, vy: opts.vy, r: opts.r, vida: opts.vida, vidaMax: opts.vida, color: opts.color, tw: Math.random() * Math.PI * 2, baseA: opts.baseA || 1 }); }
 function iniciarParticulas() {
@@ -297,6 +362,26 @@ function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
 export function generarExplosion(x, y, color = '#ff8833') { for (let i = 0; i < 20; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * 100; generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * 2 + 1, vida: 0.4 + Math.random() * 0.4, color }); } }
 export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i = 0; i < 50; i++) { const ang = Math.random() * Math.PI * 2, spd = 20 + Math.random() * size; generarParticula(particulasTinta, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 15 + Math.random() * size * 0.8, vida: 2.5 + Math.random() * 2, color: '#101010' }); } }
+
+const WHALE_DEBRIS_PATHS = [
+    new Path2D('M0,0 C10,-15 30,-15 40,0 C35,18 15,20 0,0 Z'),
+    new Path2D('M0,0 L25,-10 L45,5 L20,25 Z'),
+    new Path2D('M0,0 Q20,-20 35,-5 Q45,10 25,25 Q5,30 0,15 Z'),
+    new Path2D('M0,-5 L15,-15 L30,-10 L40,5 L25,15 L10,20 Z')
+];
+function generarTrozoBallena(x, y) {
+    for (let i = 0; i < 2 + Math.random() * 3; i++) {
+        const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
+        const spd = 50 + Math.random() * 150;
+        const vida = 1.5 + Math.random() * 1.5;
+        whaleDebris.push({
+            x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+            vRot: (Math.random() - 0.5) * 5, rotacion: Math.random() * Math.PI * 2,
+            vida: vida, vidaMax: vida, color: '#8fb5c2',
+            path: WHALE_DEBRIS_PATHS[Math.floor(Math.random() * WHALE_DEBRIS_PATHS.length)]
+        });
+    }
+}
 
 // ========= Funciones de Recompensa (disponibles para los niveles) =========
 export function limpiarTodosLosAnimales() {
@@ -323,9 +408,10 @@ const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
 const BOOST_FORCE = 400;
 export let torpedos = [];
-const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta'];
+const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta']; // prettier-ignore
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
 const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
+const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
 
 function reiniciar(nivelDeInicio = 1) {
     estadoJuego = {
@@ -358,6 +444,7 @@ function reiniciar(nivelDeInicio = 1) {
     animales = [];
     torpedos = [];
     proyectiles = [];
+    whaleDebris = [];
     particulasTinta = [];
 
     autoSize();
@@ -381,7 +468,10 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
     // Esto permite que los tiburones aparezcan en niveles que generan enemigos 'normales' o 'agresivos'.
     // Se excluyen los tipos muy específicos como 'dorado' o los que ya son especiales.
     if (tipoForzado === 'normal' || tipoForzado === 'aggressive' || tipoForzado === 'rojo') {
-        if (sharkListo && Math.random() < 0.15) { // 15% de probabilidad de que sea un tiburón
+        const r = Math.random();
+        if (whaleListo && r < 0.08) { // 8% de probabilidad de que sea una ballena
+            tipo = 'whale';
+        } else if (sharkListo && r < 0.23) { // 15% de probabilidad de que sea un tiburón (0.08 + 0.15)
             tipo = 'shark';
         }
     }
@@ -404,6 +494,16 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
             tipo: 'shark',
             huntCooldown: 2.0 + Math.random(), // Cooldown inicial antes de la primera caza
             isHunting: false,
+        });
+    } else if (tipo === 'whale') {
+        const tamano = 250; // Las ballenas son grandes
+        velocidad *= 0.5; // Muy lentas
+        animales.push({
+            x: W + tamano, y, vx: -velocidad, vy: 0, r: 100, w: tamano, h: tamano,
+            capturado: false, frame: 0, timerFrame: 0,
+            semillaFase: Math.random() * Math.PI * 2, 
+            tipo: 'whale',
+            hp: 30, maxHp: 30, // Es más resistente
         });
     } else {
         if (esEsbirroJefe) {
@@ -632,6 +732,14 @@ function actualizar(dt) {
                 a.timerFrame -= SHARK_ANIMATION_SPEED; // Más preciso que resetear a 0
                 a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length;
             }
+        } else if (a.tipo === 'whale') {
+            a.x += a.vx * dtAjustado;
+            // Animación
+            a.timerFrame += dtAjustado;
+            if (a.timerFrame >= WHALE_ANIMATION_SPEED) {
+                a.timerFrame -= WHALE_ANIMATION_SPEED;
+                a.frame = (a.frame + 1) % WHALE_SPRITE_DATA.frames.length;
+            }
         } else {
             // Movimiento normal para el resto de criaturas
             a.x += a.vx * dtAjustado; 
@@ -667,7 +775,7 @@ function actualizar(dt) {
             if (estadoJuego.nivel !== 5) {
                 for (let j = 0; j < animales.length; j++) {
                     const aa = animales[j];
-                    const esCapturable = (aa.tipo !== 'aggressive' && aa.tipo !== 'shark');
+                    const esCapturable = (aa.tipo !== 'aggressive' && aa.tipo !== 'shark' && aa.tipo !== 'whale');
                     if (!g.golpeado && !aa.capturado && esCapturable && Math.hypot(aa.x - g.x, aa.y - g.y) < aa.r) {
                         g.golpeado = aa;
                         aa.capturado = true;
@@ -709,12 +817,30 @@ function actualizar(dt) {
     function chequearColisionProyectil(proyectil) {
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
-            if (!a.capturado && proyectil.x < a.x + a.w/2 && proyectil.x + (proyectil.w || 0) > a.x - a.w/2 && proyectil.y < a.y + a.h/2 && proyectil.y + (proyectil.h || 0) > a.y - a.h/2) {
-            generarExplosion(a.x, a.y, proyectil.color || '#ff8833');
-            Levels.onKill(a.tipo);
-            animales.splice(j, 1);
-            estadoJuego.asesinatos++;
-            return true;
+            if (!a.capturado && proyectil.x < a.x + a.w / 2 && proyectil.x + (proyectil.w || 0) > a.x - a.w / 2 && proyectil.y < a.y + a.h / 2 && proyectil.y + (proyectil.h || 0) > a.y - a.h / 2) {
+                // Enemigos con HP (como la ballena)
+                if (a.hp !== undefined) {
+                    const damage = proyectil.isVertical !== undefined ? 5 : 1; // Torpedos hacen más daño
+                    a.hp -= damage;
+                    if (a.tipo === 'whale') {
+                        generarTrozoBallena(proyectil.x, proyectil.y);
+                    }
+                    generarExplosion(proyectil.x, proyectil.y, '#dddddd'); // Efecto de impacto
+                    if (a.hp <= 0) {
+                        generarExplosion(a.x, a.y, '#aaffff', a.w); // Gran explosión al morir
+                        Levels.onKill(a.tipo);
+                        animales.splice(j, 1);
+                        estadoJuego.asesinatos++;
+                        estadoJuego.puntuacion += 500; // Bonus por matar a la ballena
+                    }
+                    return true; // El proyectil se consume
+                }
+                // Enemigos normales
+                generarExplosion(a.x, a.y, proyectil.color || '#ff8833');
+                Levels.onKill(a.tipo);
+                animales.splice(j, 1);
+                estadoJuego.asesinatos++;
+                return true;
             }
         }
         return false;
@@ -749,6 +875,19 @@ function actualizar(dt) {
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dtAjustado);
     
     actualizarParticulas(dtAjustado);
+    // Actualizar trozos de ballena
+    for (let i = whaleDebris.length - 1; i >= 0; i--) {
+        const d = whaleDebris[i];
+        d.vy += 250 * dtAjustado; // Gravedad
+        d.x += d.vx * dtAjustado;
+        d.y += d.vy * dtAjustado;
+        d.rotacion += d.vRot * dtAjustado;
+        d.vida -= dtAjustado;
+        if (d.vida <= 0 || d.y > H + 50) {
+            whaleDebris.splice(i, 1);
+        }
+    }
+
     // Animar el patrón del propulsor
     thrusterPatternOffsetX = (thrusterPatternOffsetX - dtAjustado * 800) % 512;
 
@@ -793,6 +932,34 @@ function renderizar(dt) {
                             Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight
                         );
                     }
+                }
+            } else if (a.tipo === 'whale') {
+                ctx.translate(a.x, a.y + offsetFlotante);
+                if (whaleListo && WHALE_SPRITE_DATA) {
+                    const frameData = WHALE_SPRITE_DATA.frames[a.frame];
+                    if (frameData) {
+                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
+                        const aspectRatio = sWidth / sHeight;
+                        const dHeight = a.w / aspectRatio;
+                        ctx.imageSmoothingEnabled = false;
+                        if (a.vx > 0) { ctx.scale(-1, 1); }
+                        ctx.drawImage(whaleImg, sx, sy, sWidth, sHeight, Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
+                    }
+                }
+                // Barra de vida para la ballena
+                if (a.hp > 0 && a.maxHp) {
+                    const barW = 100;
+                    const barH = 8;
+                    const barX = -barW / 2;
+                    const barY = -a.h / 2 - 20;
+                    const hpRatio = a.hp / a.maxHp;
+                    ctx.fillStyle = '#555';
+                    ctx.fillRect(barX, barY, barW, barH);
+                    ctx.fillStyle = hpRatio > 0.5 ? '#5cff5c' : (hpRatio > 0.2 ? '#ffc95c' : '#ff5c5c');
+                    ctx.fillRect(barX, barY, barW * hpRatio, barH);
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(barX, barY, barW, barH);
                 }
 
             } else {
@@ -893,6 +1060,22 @@ function renderizar(dt) {
         ctx.imageSmoothingEnabled = true;
     }
     dibujarParticulas();
+    // Dibujar trozos de ballena
+    ctx.save();
+    for (const d of whaleDebris) {
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rotacion);
+        ctx.scale(0.8, 0.8); // Hacerlos un poco más pequeños
+        ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
+        ctx.fillStyle = d.color;
+        ctx.strokeStyle = '#1a2a3a';
+        ctx.lineWidth = 3;
+        ctx.fill(d.path);
+        ctx.stroke(d.path);
+        ctx.restore();
+    }
+    ctx.restore();
     dibujarMascaraLuz();
     dibujarHUD();
 }
