@@ -383,6 +383,21 @@ function generarTrozoBallena(x, y) {
     }
 }
 
+function generarGotasSangre(x, y) {
+    for (let i = 0; i < 10 + Math.random() * 10; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 20 + Math.random() * 100;
+        const r = 1.5 + Math.random() * 2.5;
+        generarParticula(particulasExplosion, { 
+            x, y, 
+            vx: Math.cos(ang) * spd, 
+            vy: Math.sin(ang) * spd, 
+            r: r, 
+            vida: 0.8 + Math.random() * 0.6, 
+            color: '#b22222' // Color sangre
+        });
+    }
+}
 // ========= Funciones de Recompensa (disponibles para los niveles) =========
 export function limpiarTodosLosAnimales() {
     animales.forEach(a => generarExplosion(a.x, a.y, '#aaffff'));
@@ -503,7 +518,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
             capturado: false, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'whale',
-            hp: 30, maxHp: 30, // Es más resistente
+            hp: 50, maxHp: 50, // Mucho más resistente
         });
     } else {
         if (esEsbirroJefe) {
@@ -824,6 +839,7 @@ function actualizar(dt) {
                     a.hp -= damage;
                     if (a.tipo === 'whale') {
                         generarTrozoBallena(proyectil.x, proyectil.y);
+                        generarGotasSangre(proyectil.x, proyectil.y);
                     }
                     generarExplosion(proyectil.x, proyectil.y, '#dddddd'); // Efecto de impacto
                     if (a.hp <= 0) {
@@ -1069,7 +1085,7 @@ function renderizar(dt) {
         ctx.scale(0.8, 0.8); // Hacerlos un poco más pequeños
         ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
         ctx.fillStyle = d.color;
-        ctx.strokeStyle = '#1a2a3a';
+        ctx.strokeStyle = '#9a2a2a'; // Borde rojo sangre
         ctx.lineWidth = 3;
         ctx.fill(d.path);
         ctx.stroke(d.path);
