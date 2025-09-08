@@ -1,7 +1,7 @@
 // js/level7.js
 'use strict';
 
-import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo } from './game.js';
+import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo, generarTrozoBallena } from './game.js';
 import { getLevelSpeed } from './levels.js';
 
 // --- ESTADO DEL NIVEL 7 ---
@@ -140,7 +140,9 @@ export function init() {
             vy: 0,
             direccion: -1, // Se mueve hacia la izquierda
             frame: 0,
-            timerFrame: 0
+            timerFrame: 0,
+            shake: 0,
+            timerMuerte: 0
         }
     };
     
@@ -206,10 +208,48 @@ export function update(dt) {
     }
 
     // Actualizar jefe solo en boss
-    if (sub.tipo === 'boss') {
+    if (sub.tipo === 'boss' && levelState.jefe) {
         const jefe = levelState.jefe;
         
-        // Animar al jefe
+        if (jefe.estado === 'muriendo') {
+            // --- LÓGICA DE MUERTE ESPECTACULAR ---
+            jefe.timerMuerte -= dt;
+
+            // Efecto de temblor
+            jefe.shake = 15 + (4.0 - jefe.timerMuerte) * 8;
+
+            // Generar explosiones y trozos sangrientos
+            if (Math.random() < 0.9) {
+                const explosionX = jefe.x + (Math.random() - 0.5) * jefe.w;
+                const explosionY = jefe.y + (Math.random() - 0.5) * jefe.h;
+                const colores = ['#ff8833', '#dd4444', '#FFFFFF'];
+                generarExplosion(explosionX, explosionY, colores[Math.floor(Math.random() * colores.length)]);
+            }
+            if (Math.random() < 0.25) {
+                const chunkX = jefe.x + (Math.random() - 0.5) * jefe.w;
+                const chunkY = jefe.y + (Math.random() - 0.5) * jefe.h;
+                generarTrozoBallena(chunkX, chunkY); 
+            }
+
+            if (jefe.timerMuerte <= 0) {
+                // Explosión final masiva
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        const explosionX = jefe.x + (Math.random() - 0.5) * jefe.w * 1.8;
+                        const explosionY = jefe.y + (Math.random() - 0.5) * jefe.h * 1.8;
+                        generarExplosion(explosionX, explosionY, '#FFFFFF', 150);
+                    }, i * 100);
+                }
+                S.reproducir('choque'); // Sonido final
+                agregarPuntos(5000); // Recompensa grande
+                completarSubnivel();
+                levelState.jefe = null; // El jefe desaparece
+            }
+            return; // No hacer nada más si está muriendo
+        }
+
+        // --- LÓGICA NORMAL DEL JEFE (SI NO ESTÁ MURIENDO) ---
+        jefe.shake = 0;
         jefe.timerFrame += dt;
         const MIERDEI_ANIMATION_SPEED = 0.06;
         if (jefe.timerFrame >= MIERDEI_ANIMATION_SPEED) {
@@ -447,11 +487,19 @@ export function draw() {
 
     // Dibujar jefe
     ctx.save();
-    if (jefe.timerGolpe > 0) {
+    if (jefe.estado === 'muriendo') {
+        const dyingProgress = 1 - (jefe.timerMuerte / 4.0);
+        ctx.filter = `brightness(${1 + dyingProgress * 4}) saturate(${1 - dyingProgress})`;
+        ctx.globalAlpha = Math.max(0, 1 - dyingProgress);
+    } else if (jefe.timerGolpe > 0) {
         ctx.filter = 'brightness(3)'; // Efecto de flash al ser golpeado
     }
-    ctx.translate(jefe.x, jefe.y);
     
+    // Efecto de temblor
+    const shakeX = jefe.shake ? (Math.random() - 0.5) * jefe.shake : 0;
+    const shakeY = jefe.shake ? (Math.random() - 0.5) * jefe.shake : 0;
+    ctx.translate(jefe.x + shakeX, jefe.y + shakeY);
+
     // Voltear imagen según dirección
     if (jefe.direccion > 0) {
         ctx.scale(-1, 1);

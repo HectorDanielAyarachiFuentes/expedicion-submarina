@@ -497,7 +497,7 @@ const WHALE_DEBRIS_PATHS = [
     new Path2D('M0,0 Q20,-20 35,-5 Q45,10 25,25 Q5,30 0,15 Z'),
     new Path2D('M0,-5 L15,-15 L30,-10 L40,5 L25,15 L10,20 Z')
 ];
-function generarTrozoBallena(x, y) {
+export function generarTrozoBallena(x, y) {
     for (let i = 0; i < 2 + Math.random() * 3; i++) {
         const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
         const spd = 50 + Math.random() * 150;
