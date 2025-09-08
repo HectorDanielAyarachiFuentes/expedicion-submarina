@@ -1004,16 +1004,19 @@ function actualizar(dt) {
             if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
         }
         
-        if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) { 
-            animales.splice(i, 1); 
-            const antes = estadoJuego.vidas; 
-            if (estadoJuego.vidas > 0) estadoJuego.vidas--; 
-            if (estadoJuego.vidas < antes) { 
-                estadoJuego.animVida = 0.6; 
-                S.reproducir('choque'); 
-            } 
-            if (estadoJuego.vidas <= 0) perderJuego(); 
-            continue; 
+        if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) {
+            const damage = a.tipo === 'whale' ? 7 : 1;
+            animales.splice(i, 1);
+            const antes = estadoJuego.vidas;
+            if (estadoJuego.vidas > 0) {
+                estadoJuego.vidas = Math.max(0, estadoJuego.vidas - damage);
+            }
+            if (estadoJuego.vidas < antes) {
+                estadoJuego.animVida = 0.6;
+                S.reproducir('choque');
+            }
+            if (estadoJuego.vidas <= 0) perderJuego();
+            continue;
         } 
         
         if (a.x < -a.w) { 
