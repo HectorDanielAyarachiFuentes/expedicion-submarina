@@ -456,17 +456,21 @@ let thrusterPatternReady = false;
 let thrusterPatternOffsetX = 0;
 
 const thrusterSvgString = `
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="64">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="128">
   <defs>
-    <filter id="thruster-distortion" x="-20%" y="-50%" width="140%" height="200%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.2" numOctaves="3" result="turbulence"/>
-      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="15" xChannelSelector="R" yChannelSelector="G"/>
-      <feGaussianBlur stdDeviation="1.5"/>
-      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 2.5 -0.5" />
+    <filter id="thruster-distortion" x="-50%" y="-50%" width="200%" height="200%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.015 0.2" numOctaves="3" seed="0" result="turbulence"/>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="25" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="2"/>
+      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 3 -0.7" />
     </filter>
-    <linearGradient id="thrusterGradient" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="rgba(220, 240, 255, 1)" /><stop offset="100%" stop-color="rgba(150, 200, 255, 0)" /></linearGradient>
+    <linearGradient id="thrusterGradient" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0%" stop-color="rgba(255, 255, 255, 1)" />
+        <stop offset="60%" stop-color="rgba(180, 220, 255, 1)" />
+        <stop offset="100%" stop-color="rgba(100, 180, 255, 0)" />
+    </linearGradient>
   </defs>
-  <rect x="0" y="0" width="512" height="64" fill="url(#thrusterGradient)" filter="url(#thruster-distortion)"/>
+  <rect x="0" y="0" width="512" height="128" fill="url(#thrusterGradient)" filter="url(#thruster-distortion)"/>
 </svg>`;
 
 const propellerSvgString = `
@@ -908,8 +912,17 @@ function actualizar(dt) {
     estadoJuego.boostActivo = teclas['b'] && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
 
     if (estadoJuego.boostActivo) {
-        estadoJuego.boostEnergia -= 35 * dtAjustado; // Consumo de energía
-        jugador.x += BOOST_FORCE * dtAjustado; // Añadir empuje hacia adelante
+        estadoJuego.boostEnergia -= 35 * dtAjustado;
+
+        // El impulso ahora empuja en la dirección del movimiento, o hacia adelante si está quieto.
+        let boostVx = 1, boostVy = 0;
+        if (len > 0) {
+            boostVx = vx / JUGADOR_VELOCIDAD; // Normalizar el vector de velocidad
+            boostVy = vy / JUGADOR_VELOCIDAD;
+        }
+        jugador.x += boostVx * BOOST_FORCE * dtAjustado;
+        jugador.y += boostVy * BOOST_FORCE * dtAjustado;
+
         for(let i = 0; i < 5; i++) { // Generar burbujas intensas
             generarBurbujaPropulsion(jugador.x - 40, jugador.y + (Math.random() - 0.5) * 30, false);
         }
@@ -1384,33 +1397,56 @@ function renderizar(dt) {
             }
             ctx.restore();
 
-            // DIBUJAR PROPULSOR
-            if (estadoJuego.boostActivo && thrusterPatternReady && thrusterPattern) {
-                const boostLength = 150 + Math.random() * 20;
-                const boostWidth = 50 + Math.random() * 10;
-                const intensity = estadoJuego.boostEnergia / estadoJuego.boostMaxEnergia;
+            // DIBUJAR PROPULSOR (MEJORADO Y DINÁMICO)
+            if (thrusterPatternReady && thrusterPattern && propellerCurrentSpeed > 6) { // Se dibuja si se mueve, no solo en ralentí
+                const isBoosting = estadoJuego.boostActivo;
+                const moveIntensity = clamp((propellerCurrentSpeed - 5) / 20, 0, 1); // 0 en ralentí, 1 a velocidad normal
 
+                // El largo y ancho base dependen del movimiento normal
+                let baseLength = 60 * moveIntensity;
+                let baseWidth = 40 * moveIntensity;
+
+                // Cuando se usa el impulso, se vuelve mucho más grande e intenso
+                if (isBoosting) {
+                    const boostIntensity = estadoJuego.boostEnergia / estadoJuego.boostMaxEnergia;
+                    baseLength = 120 + 80 * boostIntensity + Math.random() * 20;
+                    baseWidth = 45 + 20 * boostIntensity + Math.random() * 10;
+                }
+                
                 ctx.save();
-                ctx.translate(jugador.x, jugador.y);
+                ctx.translate(px, py);
                 ctx.rotate(anguloFinal);
+                ctx.translate(-35, 0); // Posicionar detrás del submarino
 
-                // Posicionar detrás del submarino
-                ctx.translate(-35, 0);
+                // --- DIBUJAR EL PROPULSOR EN CAPAS ---
 
-                // Animar el patrón
-                ctx.translate(thrusterPatternOffsetX, 0);
+                // 1. Resplandor exterior azul (más grande y suave)
+                const glowWidth = baseWidth * 1.5;
+                const glowGrad = ctx.createLinearGradient(0, 0, -baseLength, 0);
+                glowGrad.addColorStop(0, 'rgba(0, 150, 255, 0.5)');
+                glowGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
+                ctx.fillStyle = glowGrad;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength * 1.1, -glowWidth / 2); ctx.lineTo(-baseLength * 1.1, glowWidth / 2); ctx.closePath(); ctx.fill();
 
-                ctx.globalAlpha = 0.6 + intensity * 0.4;
+                // 2. Llama principal con el patrón SVG
+                ctx.save();
+                ctx.translate(thrusterPatternOffsetX, 0); // Animar el patrón
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = thrusterPattern;
-                
-                // Dibujar la forma del propulsor
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(-boostLength, -boostWidth / 2);
-                ctx.lineTo(-boostLength, boostWidth / 2);
-                ctx.closePath();
-                ctx.fill();
+                const mainFlameAlpha = isBoosting ? 0.9 : 0.7;
+                ctx.globalAlpha = mainFlameAlpha * moveIntensity;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength, -baseWidth / 2); ctx.lineTo(-baseLength, baseWidth / 2); ctx.closePath(); ctx.fill();
+                ctx.restore(); // Restaurar desde la animación del patrón
+
+                // 3. Núcleo blanco y caliente (más pequeño y brillante)
+                const coreLength = baseLength * (isBoosting ? 0.8 : 0.6);
+                const coreWidth = baseWidth * 0.4;
+                const coreGrad = ctx.createLinearGradient(0, 0, -coreLength, 0);
+                coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = coreGrad;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-coreLength, -coreWidth / 2); ctx.lineTo(-coreLength, coreWidth / 2); ctx.closePath(); ctx.fill();
+
                 ctx.restore();
             }
 
