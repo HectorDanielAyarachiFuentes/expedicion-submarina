@@ -583,6 +583,7 @@ function reiniciar(nivelDeInicio = 1) {
         enfriamientoTorpedo: 0,
         nivel: nivelDeInicio,
         valorObjetivoNivel: 0,
+        armaCambiandoTimer: 0,
         jefe: null,
         proyectilesTinta: [],
         armaActual: estadoJuego ? estadoJuego.armaActual : 'garra', // Preservar arma
@@ -794,6 +795,9 @@ function actualizar(dt) {
     estadoJuego.tiempoTranscurrido += dtAjustado;
     estadoJuego.bloqueoEntrada = Math.max(0, estadoJuego.bloqueoEntrada - dtAjustado);
     if (estadoJuego.enfriamientoTorpedo > 0) estadoJuego.enfriamientoTorpedo -= dtAjustado;
+    if (estadoJuego.armaCambiandoTimer > 0) {
+        estadoJuego.armaCambiandoTimer -= dtAjustado;
+    }
     if (estadoJuego.enfriamientoArma > 0) estadoJuego.enfriamientoArma -= dtAjustado;
     estadoJuego.teclasActivas = teclas;
     
@@ -833,7 +837,14 @@ function actualizar(dt) {
     if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
     if (teclas['2']) { estadoJuego.armaActual = 'shotgun'; }
     if (teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
-    if (teclas['c'] || teclas['C']) { const currentIndex = WEAPON_ORDER.indexOf(estadoJuego.armaActual); const nextIndex = (currentIndex + 1) % WEAPON_ORDER.length; estadoJuego.armaActual = WEAPON_ORDER[nextIndex]; teclas['c'] = teclas['C'] = false; }
+    if ((teclas['c'] || teclas['C']) && estadoJuego.bloqueoEntrada === 0) {
+        const currentIndex = WEAPON_ORDER.indexOf(estadoJuego.armaActual);
+        const nextIndex = (currentIndex + 1) % WEAPON_ORDER.length;
+        estadoJuego.armaActual = WEAPON_ORDER[nextIndex];
+        teclas['c'] = teclas['C'] = false;
+        S.reproducir('reload');
+        estadoJuego.armaCambiandoTimer = 0.3;
+    }
     
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
@@ -1406,12 +1417,24 @@ function dibujarHUD() {
     currentY += lh;
     hud.fillStyle = '#ffffff';
     hud.fillText('ARMA', padX, currentY);
-    let armaTexto = s.armaActual.toUpperCase();
-    if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta') {
-        if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; hud.fillStyle = '#ff6666'; } 
-        else { armaTexto += " (LISTA)"; hud.fillStyle = '#ffdd77'; }
-    } else { hud.fillStyle = '#aaddff'; }
-    hud.fillText(armaTexto, valueX, currentY);
+    let armaTexto = s.armaActual.toUpperCase(), armaColor = '#aaddff';
+    if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; armaColor = '#ff6666'; } else { armaTexto += " (LISTA)"; armaColor = '#ffdd77'; } }
+    
+    if (s.armaCambiandoTimer > 0) {
+        const scale = 1 + Math.sin((1 - (s.armaCambiandoTimer / 0.3)) * Math.PI) * 0.5;
+        const alpha = s.armaCambiandoTimer / 0.3;
+        hud.save();
+        const textWidth = hud.measureText(armaTexto).width;
+        hud.translate(valueX + textWidth / 2, currentY - 5);
+        hud.scale(scale, scale);
+        hud.globalAlpha = alpha;
+        hud.fillStyle = '#FFFFFF';
+        hud.fillText(armaTexto, -textWidth / 2, 0);
+        hud.restore();
+    } else {
+        hud.fillStyle = armaColor;
+        hud.fillText(armaTexto, valueX, currentY);
+    }
     currentY += lh;
     hud.fillStyle = '#ffffff';
     hud.fillText('ASESINO', padX, currentY);

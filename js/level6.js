@@ -118,12 +118,71 @@ const PHASE_BEHAVIORS = [
     { name: "Vortex del Juicio", start: () => { S.reproducir('music_1'); blackHoleMode = true; VORTEX_RADIUS = 350; VORTEX_FORCE = 450; for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; createBlackHole(W/2 + Math.cos(a) * 300, H/2 + Math.sin(a) * 300, 1.2); } }, update: (dt) => { if (Math.random() < 0.05) createShockwave(W/2, H/2, 2.5, '#00FFFF'); }, end: () => { blackHoleMode = false; VORTEX_RADIUS = 250; VORTEX_FORCE = 350; blackHoles = []; } }
 ];
 
+function applyVortexForce(entity, dt) {
+    const dx = entity.x - W / 2;
+    const dy = entity.y - H / 2;
+    let distance = Math.hypot(dx, dy);
+    if (distance > 10) {
+        // Fuerza tangencial (para girar)
+        const tangentAngle = Math.atan2(dy, dx) + Math.PI / 2;
+        let tangentForce = VORTEX_FORCE * (1 - distance / (VORTEX_RADIUS * 2.5));
+        entity.x += Math.cos(tangentAngle) * tangentForce * dt;
+        entity.y += Math.sin(tangentAngle) * tangentForce * dt;
+
+        // Fuerza radial (para atraer al centro)
+        let radialForce = VORTEX_FORCE * 0.6 * (1 - distance / (VORTEX_RADIUS * 2));
+        if (blackHoleMode) radialForce *= 3;
+        entity.x -= (dx / distance) * radialForce * dt;
+        entity.y -= (dy / distance) * radialForce * dt;
+    }
+}
+
+function applyShockwaveForce(entity, dt) {
+    for (const wave of shockwaves) {
+        const waveDx = entity.x - wave.x;
+        const waveDy = entity.y - wave.y;
+        const waveDist = Math.hypot(waveDx, waveDy);
+        if (waveDist < wave.radius && waveDist > 1) {
+            const force = wave.power * 800 * (1 - wave.life / wave.maxLife) * dt;
+            entity.x += (waveDx / waveDist) * force;
+            entity.y += (waveDy / waveDist) * force;
+        }
+    }
+}
+
+function applyBlackHoleForce(entity, dt) {
+    for (const bh of blackHoles) {
+        const bhDx = bh.x - entity.x;
+        const bhDy = bh.y - entity.y;
+        const bhDist = Math.max(20, Math.hypot(bhDx, bhDy));
+        if (bhDist < bh.radius * 8) {
+            const force = bh.power * 5000 * (bh.radius / bh.maxRadius) * dt / (bhDist * bhDist);
+            entity.x += bhDx * force;
+            entity.y += bhDy * force;
+        }
+    }
+}
+
+function applyGravityWellForce(entity, dt) {
+    for (const well of gravityWells) {
+        const wellDx = well.x - entity.x;
+        const wellDy = well.y - entity.y;
+        const wellDist = Math.hypot(wellDx, wellDy);
+        if (wellDist < well.radius) {
+            const pull = (well.direction === 'in' ? 1 : -1);
+            const force = pull * well.strength * (1 - wellDist / well.radius) * dt;
+            entity.x += (wellDx / wellDist) * force;
+            entity.y += (wellDy / wellDist) * force;
+        }
+    }
+}
+
 // --- APLICADOR DE FUERZAS UNIFICADO ---
 function applyAllForces(entity, dt) {
-    const dx = entity.x - W / 2; const dy = entity.y - H / 2; let distance = Math.sqrt(dx * dx + dy * dy); if (distance > 10) { const tangentAngle = Math.atan2(dy, dx) + Math.PI / 2; let tangentForce = VORTEX_FORCE * (1 - distance / (VORTEX_RADIUS * 2.5)); entity.x += Math.cos(tangentAngle) * tangentForce * dt; entity.y += Math.sin(tangentAngle) * tangentForce * dt; let radialForce = VORTEX_FORCE * 0.6 * (1 - distance / (VORTEX_RADIUS * 2)); if (blackHoleMode) radialForce *= 3; entity.x -= (dx / distance) * radialForce * dt; entity.y -= (dy / distance) * radialForce * dt; }
-    for (const wave of shockwaves) { const waveDx = entity.x - wave.x; const waveDy = entity.y - wave.y; const waveDist = Math.sqrt(waveDx * waveDx + waveDy * waveDy); if (waveDist < wave.radius && waveDist > 1) { const force = wave.power * 800 * (1 - wave.life / wave.maxLife) * dt; entity.x += (waveDx / waveDist) * force; entity.y += (waveDy / waveDist) * force; } }
-    for (const bh of blackHoles) { const bhDx = bh.x - entity.x; const bhDy = bh.y - entity.y; const bhDist = Math.max(20, Math.sqrt(bhDx * bhDx + bhDy * bhDy)); if (bhDist < bh.radius * 8) { const force = bh.power * 5000 * (bh.radius/bh.maxRadius) * dt / (bhDist * bhDist); entity.x += bhDx * force; entity.y += bhDy * force; } }
-    for (const well of gravityWells) { const wellDx = well.x - entity.x; const wellDy = well.y - entity.y; const wellDist = Math.sqrt(wellDx * wellDx + wellDy * wellDy); if (wellDist < well.radius) { const pull = (well.direction === 'in' ? 1 : -1); const force = pull * well.strength * (1 - wellDist / well.radius) * dt; entity.x += (wellDx / wellDist) * force; entity.y += (wellDy / wellDist) * force; } }
+    applyVortexForce(entity, dt);
+    applyShockwaveForce(entity, dt);
+    applyBlackHoleForce(entity, dt);
+    applyGravityWellForce(entity, dt);
 }
 
 // --- NÚCLEO DEL JUEGO MEJORADO ---
