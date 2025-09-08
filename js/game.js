@@ -95,11 +95,39 @@ export const S = (function () {
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
     function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k.startsWith('music_')) { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } a[k] = el; } catch (e) { console.warn(`No se pudo cargar el audio: ${mapaFuentes[k]}`); } } }
-    function reproducir(k) { const el = a[k]; if (!el) return; try { el.currentTime = 0; el.play(); } catch (e) { } }
+    function reproducir(k) {
+        const el = a[k];
+        if (!el) return;
+        try {
+            el.currentTime = 0;
+            const promise = el.play();
+            if (promise !== undefined) {
+                promise.catch(error => {
+                    // Silencia el error de interrupción de reproducción, que es común en los navegadores
+                    // y no afecta la funcionalidad del juego.
+                });
+            }
+        } catch (e) { }
+    }
     function detener(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; try { el.pause(); el.currentTime = 0; } catch (e) { } }
-    function playRandomMusic() { if (musicaActual) { detener(musicaActual); } let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual); musicaActual = nuevaCancionKey; const el = a[musicaActual]; if (el) { try { el.currentTime = 0; el.play(); } catch (e) { } } }
+    function playRandomMusic() {
+        if (musicaActual) { detener(musicaActual); }
+        let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual);
+        musicaActual = nuevaCancionKey;
+        reproducir(musicaActual); // Usar la función `reproducir` que ya maneja el error
+    }
     function pausar(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; try { el.pause(); } catch (e) { } }
-    function bucle(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; if (el.paused) try { el.play(); } catch (e) { } }
+    function bucle(k) {
+        if (k === 'music' && musicaActual) k = musicaActual;
+        const el = a[k];
+        if (!el || !el.paused) return;
+        try {
+            const promise = el.play();
+            if (promise !== undefined) {
+                promise.catch(error => {});
+            }
+        } catch (e) { }
+    }
     function setSilenciado(m) { for (const k in a) { try { a[k].muted = !!m; } catch (e) { } } _silenciado = !!m; }
     function estaSilenciado() { return _silenciado; }
     function alternarSilenciado() { setSilenciado(!estaSilenciado()); }
@@ -124,6 +152,106 @@ cargarImagen('img/bg_back.png', function (img) { if (img) { bgImg = img; bgListo
 let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0, FG_VELOCIDAD_BASE = 60;
 cargarImagen('img/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
 
+export const MIERDEI_SPRITE_DATA = {
+  "meta": {
+    "app": "Sprite Sheet Suite v4.3",
+    "image": "mierdei.png",
+    "size": { "w": 1344, "h": 768 },
+    "clips": [ { "name": "Default", "frames": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89 ] } ]
+  },
+  "frames": [
+    { "id": 0, "name": "frame_0_0_0", "rect": { "x": 9, "y": 4, "w": 122, "h": 78 } },
+    { "id": 1, "name": "frame_0_0_1", "rect": { "x": 130, "y": 4, "w": 137, "h": 78 } },
+    { "id": 2, "name": "frame_0_0_2", "rect": { "x": 267, "y": 4, "w": 145, "h": 78 } },
+    { "id": 3, "name": "frame_0_0_3", "rect": { "x": 412, "y": 4, "w": 140, "h": 78 } },
+    { "id": 4, "name": "frame_0_0_4", "rect": { "x": 552, "y": 4, "w": 129, "h": 78 } },
+    { "id": 5, "name": "frame_0_0_5", "rect": { "x": 681, "y": 4, "w": 144, "h": 78 } },
+    { "id": 6, "name": "frame_0_0_6", "rect": { "x": 825, "y": 4, "w": 117, "h": 78 } },
+    { "id": 7, "name": "frame_0_0_7", "rect": { "x": 941, "y": 4, "w": 149, "h": 78 } },
+    { "id": 8, "name": "frame_0_0_8", "rect": { "x": 1090, "y": 4, "w": 124, "h": 78 } },
+    { "id": 9, "name": "frame_0_0_9", "rect": { "x": 1214, "y": 4, "w": 129, "h": 78 } },
+    { "id": 10, "name": "frame_0_1_0", "rect": { "x": 9, "y": 82, "w": 130, "h": 82 } },
+    { "id": 11, "name": "frame_0_1_1", "rect": { "x": 138, "y": 82, "w": 122, "h": 82 } },
+    { "id": 12, "name": "frame_0_1_2", "rect": { "x": 261, "y": 82, "w": 150, "h": 82 } },
+    { "id": 13, "name": "frame_0_1_3", "rect": { "x": 410, "y": 82, "w": 133, "h": 82 } },
+    { "id": 14, "name": "frame_0_1_4", "rect": { "x": 543, "y": 82, "w": 124, "h": 82 } },
+    { "id": 15, "name": "frame_0_1_5", "rect": { "x": 667, "y": 82, "w": 153, "h": 82 } },
+    { "id": 16, "name": "frame_0_1_6", "rect": { "x": 820, "y": 82, "w": 134, "h": 82 } },
+    { "id": 17, "name": "frame_0_1_7", "rect": { "x": 954, "y": 82, "w": 128, "h": 82 } },
+    { "id": 18, "name": "frame_0_1_8", "rect": { "x": 1082, "y": 82, "w": 135, "h": 82 } },
+    { "id": 19, "name": "frame_0_1_9", "rect": { "x": 1217, "y": 82, "w": 126, "h": 82 } },
+    { "id": 20, "name": "frame_0_2_0", "rect": { "x": 9, "y": 164, "w": 124, "h": 78 } },
+    { "id": 21, "name": "frame_0_2_1", "rect": { "x": 133, "y": 164, "w": 151, "h": 78 } },
+    { "id": 22, "name": "frame_0_2_2", "rect": { "x": 284, "y": 164, "w": 137, "h": 78 } },
+    { "id": 23, "name": "frame_0_2_3", "rect": { "x": 421, "y": 164, "w": 122, "h": 78 } },
+    { "id": 24, "name": "frame_0_2_4", "rect": { "x": 543, "y": 164, "w": 150, "h": 78 } },
+    { "id": 25, "name": "frame_0_2_5", "rect": { "x": 693, "y": 164, "w": 121, "h": 78 } },
+    { "id": 26, "name": "frame_0_2_6", "rect": { "x": 814, "y": 164, "w": 141, "h": 78 } },
+    { "id": 27, "name": "frame_0_2_7", "rect": { "x": 955, "y": 164, "w": 127, "h": 78 } },
+    { "id": 28, "name": "frame_0_2_8", "rect": { "x": 1082, "y": 164, "w": 138, "h": 78 } },
+    { "id": 29, "name": "frame_0_2_9", "rect": { "x": 1220, "y": 164, "w": 123, "h": 78 } },
+    { "id": 30, "name": "frame_0_3_0", "rect": { "x": 9, "y": 241, "w": 134, "h": 93 } },
+    { "id": 31, "name": "frame_0_3_1", "rect": { "x": 142, "y": 241, "w": 121, "h": 93 } },
+    { "id": 32, "name": "frame_0_3_2", "rect": { "x": 263, "y": 241, "w": 145, "h": 93 } },
+    { "id": 33, "name": "frame_0_3_3", "rect": { "x": 408, "y": 241, "w": 131, "h": 93 } },
+    { "id": 34, "name": "frame_0_3_4", "rect": { "x": 539, "y": 241, "w": 143, "h": 93 } },
+    { "id": 35, "name": "frame_0_3_5", "rect": { "x": 682, "y": 241, "w": 132, "h": 93 } },
+    { "id": 36, "name": "frame_0_3_6", "rect": { "x": 814, "y": 241, "w": 134, "h": 93 } },
+    { "id": 37, "name": "frame_0_3_7", "rect": { "x": 949, "y": 241, "w": 137, "h": 93 } },
+    { "id": 38, "name": "frame_0_3_8", "rect": { "x": 1085, "y": 241, "w": 145, "h": 93 } },
+    { "id": 39, "name": "frame_0_3_9", "rect": { "x": 1230, "y": 241, "w": 113, "h": 93 } },
+    { "id": 40, "name": "frame_0_4_0", "rect": { "x": 9, "y": 334, "w": 131, "h": 89 } },
+    { "id": 41, "name": "frame_0_4_1", "rect": { "x": 140, "y": 334, "w": 130, "h": 89 } },
+    { "id": 42, "name": "frame_0_4_2", "rect": { "x": 270, "y": 334, "w": 158, "h": 89 } },
+    { "id": 43, "name": "frame_0_4_3", "rect": { "x": 428, "y": 334, "w": 102, "h": 89 } },
+    { "id": 44, "name": "frame_0_4_4", "rect": { "x": 529, "y": 334, "w": 156, "h": 89 } },
+    { "id": 45, "name": "frame_0_4_5", "rect": { "x": 685, "y": 334, "w": 122, "h": 89 } },
+    { "id": 46, "name": "frame_0_4_6", "rect": { "x": 808, "y": 334, "w": 144, "h": 89 } },
+    { "id": 47, "name": "frame_0_4_7", "rect": { "x": 952, "y": 334, "w": 118, "h": 89 } },
+    { "id": 48, "name": "frame_0_4_8", "rect": { "x": 1070, "y": 334, "w": 150, "h": 89 } },
+    { "id": 49, "name": "frame_0_4_9", "rect": { "x": 1221, "y": 334, "w": 122, "h": 89 } },
+    { "id": 50, "name": "frame_0_5_0", "rect": { "x": 9, "y": 423, "w": 126, "h": 96 } },
+    { "id": 51, "name": "frame_0_5_1", "rect": { "x": 135, "y": 423, "w": 129, "h": 96 } },
+    { "id": 52, "name": "frame_0_5_2", "rect": { "x": 264, "y": 423, "w": 148, "h": 96 } },
+    { "id": 53, "name": "frame_0_5_3", "rect": { "x": 412, "y": 423, "w": 130, "h": 96 } },
+    { "id": 54, "name": "frame_0_5_4", "rect": { "x": 542, "y": 423, "w": 132, "h": 96 } },
+    { "id": 55, "name": "frame_0_5_5", "rect": { "x": 674, "y": 423, "w": 139, "h": 96 } },
+    { "id": 56, "name": "frame_0_5_6", "rect": { "x": 813, "y": 423, "w": 135, "h": 96 } },
+    { "id": 57, "name": "frame_0_5_7", "rect": { "x": 949, "y": 423, "w": 127, "h": 96 } },
+    { "id": 58, "name": "frame_0_5_8", "rect": { "x": 1076, "y": 423, "w": 136, "h": 96 } },
+    { "id": 59, "name": "frame_0_5_9", "rect": { "x": 1212, "y": 423, "w": 131, "h": 96 } },
+    { "id": 60, "name": "frame_0_6_0", "rect": { "x": 9, "y": 519, "w": 139, "h": 80 } },
+    { "id": 61, "name": "frame_0_6_1", "rect": { "x": 148, "y": 519, "w": 115, "h": 80 } },
+    { "id": 62, "name": "frame_0_6_2", "rect": { "x": 263, "y": 519, "w": 151, "h": 80 } },
+    { "id": 63, "name": "frame_0_6_3", "rect": { "x": 414, "y": 519, "w": 118, "h": 80 } },
+    { "id": 64, "name": "frame_0_6_4", "rect": { "x": 533, "y": 519, "w": 140, "h": 80 } },
+    { "id": 65, "name": "frame_0_6_5", "rect": { "x": 673, "y": 519, "w": 142, "h": 80 } },
+    { "id": 66, "name": "frame_0_6_6", "rect": { "x": 814, "y": 519, "w": 141, "h": 80 } },
+    { "id": 67, "name": "frame_0_6_7", "rect": { "x": 955, "y": 519, "w": 115, "h": 80 } },
+    { "id": 68, "name": "frame_0_6_8", "rect": { "x": 1070, "y": 519, "w": 128, "h": 80 } },
+    { "id": 69, "name": "frame_0_6_9", "rect": { "x": 1198, "y": 519, "w": 145, "h": 80 } },
+    { "id": 70, "name": "frame_0_7_0", "rect": { "x": 9, "y": 599, "w": 133, "h": 90 } },
+    { "id": 71, "name": "frame_0_7_1", "rect": { "x": 141, "y": 599, "w": 132, "h": 90 } },
+    { "id": 72, "name": "frame_0_7_2", "rect": { "x": 273, "y": 599, "w": 132, "h": 90 } },
+    { "id": 73, "name": "frame_0_7_3", "rect": { "x": 405, "y": 599, "w": 131, "h": 90 } },
+    { "id": 74, "name": "frame_0_7_4", "rect": { "x": 537, "y": 599, "w": 140, "h": 90 } },
+    { "id": 75, "name": "frame_0_7_5", "rect": { "x": 677, "y": 599, "w": 134, "h": 90 } },
+    { "id": 76, "name": "frame_0_7_6", "rect": { "x": 811, "y": 599, "w": 146, "h": 90 } },
+    { "id": 77, "name": "frame_0_7_7", "rect": { "x": 957, "y": 599, "w": 130, "h": 90 } },
+    { "id": 78, "name": "frame_0_7_8", "rect": { "x": 1087, "y": 599, "w": 134, "h": 90 } },
+    { "id": 79, "name": "frame_0_7_9", "rect": { "x": 1221, "y": 599, "w": 122, "h": 90 } },
+    { "id": 80, "name": "frame_0_8_0", "rect": { "x": 9, "y": 689, "w": 121, "h": 71 } },
+    { "id": 81, "name": "frame_0_8_1", "rect": { "x": 129, "y": 689, "w": 154, "h": 71 } },
+    { "id": 82, "name": "frame_0_8_2", "rect": { "x": 283, "y": 689, "w": 125, "h": 71 } },
+    { "id": 83, "name": "frame_0_8_3", "rect": { "x": 408, "y": 689, "w": 138, "h": 71 } },
+    { "id": 84, "name": "frame_0_8_4", "rect": { "x": 545, "y": 689, "w": 146, "h": 71 } },
+    { "id": 85, "name": "frame_0_8_5", "rect": { "x": 692, "y": 689, "w": 114, "h": 71 } },
+    { "id": 86, "name": "frame_0_8_6", "rect": { "x": 805, "y": 689, "w": 140, "h": 71 } },
+    { "id": 87, "name": "frame_0_8_7", "rect": { "x": 945, "y": 689, "w": 150, "h": 71 } },
+    { "id": 88, "name": "frame_0_8_8", "rect": { "x": 1096, "y": 689, "w": 118, "h": 71 } },
+    { "id": 89, "name": "frame_0_8_9", "rect": { "x": 1214, "y": 689, "w": 129, "h": 71 } }
+  ]
+};
 export let mierdeiImg = null, mierdeiListo = false;
 cargarImagen('img/mierdei.png', function(img) {
     if (img) {
@@ -446,6 +574,7 @@ const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta']; // prettier-ignore
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
 const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
+const MIERDEi_ANIMATION_SPEED = 0.06;
 
 function reiniciar(nivelDeInicio = 1) {
     estadoJuego = {
@@ -489,11 +618,11 @@ function reiniciar(nivelDeInicio = 1) {
 function velocidadActual() { return Levels.getLevelSpeed(); }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
-export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
+export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrides = {}) {
     const minY = H * 0.15;
     const maxY = H * 0.85;
-    const y = minY + Math.random() * (maxY - minY);
-    let velocidad = velocidadActual() + 60;
+    const y = overrides.y !== undefined ? overrides.y : (minY + Math.random() * (maxY - minY));
+    let velocidad = overrides.velocidad || (velocidadActual() + 60);
 
     let tipo = tipoForzado || 'normal';
     
@@ -511,15 +640,21 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
     }
 
     if (tipo === 'mierdei') {
-        const anchoDeseado = 100; // Tamaño reducido a algo razonable
-        let altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
+        if (!mierdeiListo) return; // Evitar error si la imagen no ha cargado
+        const anchoDeseado = overrides.ancho || 100;
+        let altoDeseado = anchoDeseado; // Asumir cuadrado por defecto
+        if (mierdeiImg.width > 0) {
+            altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
+        }
         animales.push({
             x: W + anchoDeseado, y, vx: -velocidad * 0.7, r: anchoDeseado / 2,
             w: anchoDeseado, h: altoDeseado, capturado: false, tipo: 'mierdei',
-            semillaFase: Math.random() * Math.PI * 2,
+            semillaFase: Math.random() * Math.PI * 2, // Kept for floating, might remove later if not needed
+            frame: 0, 
+            timerFrame: 0,
         });
     } else if (tipo === 'shark') {
-        const tamano = 128; // Los tiburones son más grandes
+        const tamano = overrides.ancho || 128;
         velocidad *= 0.9; // Un poco más lentos al patrullar
         animales.push({
             x: W + tamano, y, vx: -velocidad, vy: 0, r: 50, w: tamano, h: tamano,
@@ -530,7 +665,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
             isHunting: false,
         });
     } else if (tipo === 'whale') {
-        const tamano = 250; // Las ballenas son grandes
+        const tamano = overrides.ancho || 250;
         velocidad *= 0.5; // Muy lentas
         animales.push({
             x: W + tamano, y, vx: -velocidad, vy: 0, r: 100, w: tamano, h: tamano,
@@ -548,7 +683,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
             velocidad *= 1.3;
         }
         
-        const tamano = 96;
+        const tamano = overrides.ancho || 96;
         const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
         animales.push({
             x: W + tamano, y, vx: -velocidad, r: 44, w: tamano, h: tamano,
@@ -775,6 +910,13 @@ function actualizar(dt) {
                 a.timerFrame -= WHALE_ANIMATION_SPEED;
                 a.frame = (a.frame + 1) % WHALE_SPRITE_DATA.frames.length;
             }
+        } else if (a.tipo === 'mierdei') {
+            a.x += a.vx * dtAjustado;
+            a.timerFrame += dtAjustado;
+            if (a.timerFrame >= MIERDEi_ANIMATION_SPEED) {
+                a.timerFrame -= MIERDEi_ANIMATION_SPEED;
+                a.frame = (a.frame + 1) % MIERDEI_SPRITE_DATA.frames.length;
+            }
         } else {
             // Movimiento normal para el resto de criaturas
             a.x += a.vx * dtAjustado; 
@@ -956,11 +1098,19 @@ function renderizar(dt) {
             ctx.save();
             
             if (a.tipo === 'mierdei') {
-                const angulo = estadoJuego.tiempoTranscurrido * 0.5 + a.semillaFase;
                 ctx.translate(a.x, a.y + offsetFlotante);
-                ctx.rotate(angulo);
-                ctx.drawImage(mierdeiImg, -a.w / 2, -a.h / 2, a.w, a.h);
-
+                if (mierdeiListo && MIERDEI_SPRITE_DATA) {
+                    const frameData = MIERDEI_SPRITE_DATA.frames[a.frame];
+                    if (frameData) {
+                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
+                        const aspectRatio = sWidth / sHeight;
+                        const dHeight = a.w / aspectRatio;
+                        ctx.imageSmoothingEnabled = false;
+                        if (a.vx > 0) { ctx.scale(-1, 1); }
+                        ctx.drawImage(mierdeiImg, sx, sy, sWidth, sHeight, 
+                            Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
+                    }
+                }
             } else if (a.tipo === 'shark') {
                 ctx.translate(a.x, a.y);
                 if (sharkListo && SHARK_SPRITE_DATA) {

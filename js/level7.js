@@ -1,7 +1,7 @@
 // js/level7.js
 'use strict';
 
-import { animales, W, H, mierdeiImg, mierdeiListo, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion } from './game.js';
+import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo } from './game.js';
 import { getLevelSpeed } from './levels.js';
 
 // --- ESTADO DEL NIVEL 7 ---
@@ -42,67 +42,24 @@ const SUBNIVELES = [
  * Genera una criatura 'mierdei' y la añade al array de animales.
  */
 function spawnMierdei() {
-    if (!mierdeiListo) return;
-
-    const minY = H * 0.15;
-    const maxY = H * 0.85;
-    const y = minY + Math.random() * (maxY - minY);
-    const velocidad = getLevelSpeed() + 60;
-
-    const anchoDeseado = 100;
-    let altoDeseado = anchoDeseado;
-    if (mierdeiImg.width > 0) {
-        altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
-    }
-
-    animales.push({
-        x: W + anchoDeseado, y,
-        vx: -velocidad * 0.7,
-        r: anchoDeseado / 2,
-        w: anchoDeseado, h: altoDeseado,
-        capturado: false, tipo: 'mierdei',
-        semillaFase: Math.random() * Math.PI * 2,
-    });
+    // Usa la función centralizada de game.js
+    generarAnimal(false, 'mierdei');
 }
 
 /**
  * Genera una criatura 'mierdei' agresiva (más rápida y grande).
  */
 function spawnMierdeiAgresivo() {
-    if (!mierdeiListo) return;
-
-    const minY = H * 0.15;
-    const maxY = H * 0.85;
-    const y = minY + Math.random() * (maxY - minY);
-    const velocidad = getLevelSpeed() + 120; // Más rápido
-
-    const anchoDeseado = 150; // Más grande
-    let altoDeseado = anchoDeseado;
-    if (mierdeiImg.width > 0) {
-        altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
-    }
-
-    animales.push({
-        x: W + anchoDeseado, y,
-        vx: -velocidad * 0.7,
-        r: anchoDeseado / 2,
-        w: anchoDeseado, h: altoDeseado,
-        capturado: false, tipo: 'mierdei',
-        semillaFase: Math.random() * Math.PI * 2,
-    });
+    // Usa la función centralizada con overrides para hacerlo más fuerte
+    const overrides = { velocidad: getLevelSpeed() + 120, ancho: 150 };
+    generarAnimal(false, 'mierdei', overrides);
 }
 
 /**
  * Genera una 'bomba' Mierdei que es lanzada por el jefe.
  */
 function spawnMierdeiBombardero(jefe) {
-    if (!mierdeiListo) return;
-
     const anchoDeseado = 80; // Bombas más pequeñas
-    let altoDeseado = anchoDeseado;
-    if (mierdeiImg.width > 0) {
-        altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
-    }
 
     // Lanza la bomba hacia el jugador
     const angulo = Math.atan2(jugador.y - jefe.y, jugador.x - jefe.x);
@@ -115,10 +72,12 @@ function spawnMierdeiBombardero(jefe) {
         vy: Math.sin(angulo) * velocidadLanzamiento,
         gravedad: 350, // Cae con el tiempo
         r: anchoDeseado / 2,
-        w: anchoDeseado, h: altoDeseado,
+        w: anchoDeseado, h: anchoDeseado, // Se dibujará con aspect ratio, esto es para la hitbox
         tipo: 'mierdei_bomba',
-        rotacion: 0,
-        vRot: (Math.random() - 0.5) * 10
+        rotacion: 0, // Kept for potential future use, but animation will handle it
+        vRot: (Math.random() - 0.5) * 10,
+        frame: 0,
+        timerFrame: 0,
     });
 }
 
@@ -179,7 +138,9 @@ export function init() {
             bombas: [],
             vx: 0,
             vy: 0,
-            direccion: -1 // Se mueve hacia la izquierda
+            direccion: -1, // Se mueve hacia la izquierda
+            frame: 0,
+            timerFrame: 0
         }
     };
     
@@ -248,6 +209,14 @@ export function update(dt) {
     if (sub.tipo === 'boss') {
         const jefe = levelState.jefe;
         
+        // Animar al jefe
+        jefe.timerFrame += dt;
+        const MIERDEI_ANIMATION_SPEED = 0.06;
+        if (jefe.timerFrame >= MIERDEI_ANIMATION_SPEED) {
+            jefe.timerFrame -= MIERDEI_ANIMATION_SPEED;
+            jefe.frame = (jefe.frame + 1) % MIERDEI_SPRITE_DATA.frames.length;
+        }
+
         jefe.timerGolpe = Math.max(0, jefe.timerGolpe - dt);
 
         // Movimiento del jefe (patrón mejorado)
@@ -301,6 +270,13 @@ export function update(dt) {
             bomba.x += bomba.vx * dt;
             bomba.y += bomba.vy * dt;
             bomba.rotacion += bomba.vRot * dt;
+
+            // Animar la bomba
+            bomba.timerFrame += dt;
+            if (bomba.timerFrame >= 0.06) { // Usamos una velocidad fija aquí
+                bomba.timerFrame -= 0.06;
+                bomba.frame = (bomba.frame + 1) % MIERDEI_SPRITE_DATA.frames.length;
+            }
 
             // Colisión con el jugador
             if (Math.hypot(jugador.x - bomba.x, jugador.y - bomba.y) < jugador.r + bomba.r) {
@@ -481,19 +457,33 @@ export function draw() {
         ctx.scale(-1, 1);
     }
     
-    ctx.drawImage(mierdeiImg, -jefe.w / 2, -jefe.h / 2, jefe.w, jefe.h);
+    // Dibujar el frame correcto del jefe, no toda la hoja de sprites
+    if (MIERDEI_SPRITE_DATA) {
+        const frameData = MIERDEI_SPRITE_DATA.frames[jefe.frame];
+        if (frameData) {
+            const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
+            const aspectRatio = sWidth / sHeight;
+            const dHeight = jefe.w / aspectRatio; // Calcular alto manteniendo el aspect ratio
+            ctx.drawImage(mierdeiImg, sx, sy, sWidth, sHeight, -jefe.w / 2, -dHeight / 2, jefe.w, dHeight);
+        }
+    }
     ctx.restore();
 
     // Dibujar bombas
     jefe.bombas.forEach(bomba => {
-        ctx.save();
-        ctx.translate(bomba.x, bomba.y);
-        ctx.rotate(bomba.rotacion);
-        ctx.globalAlpha = 0.5;
-        ctx.drawImage(mierdeiImg, -bomba.w / 2 + 5, -bomba.h / 2 + 5, bomba.w, bomba.h);
-        ctx.globalAlpha = 1.0;
-        ctx.drawImage(mierdeiImg, -bomba.w / 2, -bomba.h / 2, bomba.w, bomba.h);
-        ctx.restore();
+        if (MIERDEI_SPRITE_DATA) {
+            const frameData = MIERDEI_SPRITE_DATA.frames[bomba.frame];
+            if (frameData) {
+                ctx.save();
+                ctx.translate(bomba.x, bomba.y);
+                ctx.rotate(bomba.rotacion); // Mantener la rotación de caída
+                const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
+                const aspectRatio = sWidth / sHeight;
+                const dHeight = bomba.w / aspectRatio;
+                ctx.drawImage(mierdeiImg, sx, sy, sWidth, sHeight, -bomba.w / 2, -dHeight / 2, bomba.w, dHeight);
+                ctx.restore();
+            }
+        }
     });
 
     // Dibujar láseres
@@ -572,26 +562,18 @@ export function draw() {
 }
 
 export function onAnimalCazado(tipoAnimal) {
-    if (tipoAnimal === 'mierdei') {
-        if (levelState.subnivelActual >= SUBNIVELES.length) return;
-        const sub = SUBNIVELES[levelState.subnivelActual];
-        
-        if (sub.tipo === 'kill') {
-            levelState.progresoSubnivel++;
-            if (levelState.progresoSubnivel >= sub.meta) {
-                completarSubnivel();
-            }
-        }
-    }
+    // Capturar no cuenta para el objetivo de "Eliminar".
+    // Si quisiéramos que contara, podríamos llamar a onKill(tipoAnimal) aquí.
 }
 
-export function onKill() {
+export function onKill(tipoAnimal) {
     if (levelState.subnivelActual >= SUBNIVELES.length) return;
     const sub = SUBNIVELES[levelState.subnivelActual];
 
     // El daño al jefe ahora se maneja con colisiones directas en update().
     // Esta función solo se usa para el subnivel de eliminación.
-    if (sub.tipo === 'kill') {
+    // Solo contamos 'mierdei' para el objetivo de eliminación.
+    if (sub.tipo === 'kill' && tipoAnimal === 'mierdei') {
         levelState.progresoSubnivel++;
         if (levelState.progresoSubnivel >= sub.meta) {
             completarSubnivel();
