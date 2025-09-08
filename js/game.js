@@ -578,7 +578,7 @@ const MIERDEi_ANIMATION_SPEED = 0.06;
 
 function reiniciar(nivelDeInicio = 1) {
     estadoJuego = {
-        faseJuego: 'menu', enEjecucion: false, rescatados: 0, puntuacion: 0, profundidad_m: 0, vidas: 3, animVida: 0, velocidad: 260, tiempoTranscurrido: 0, bloqueoEntrada: 0.2,
+        faseJuego: 'menu', enEjecucion: false, rescatados: 0, puntuacion: 0, profundidad_m: 0, vidas: 30, animVida: 0, velocidad: 260, tiempoTranscurrido: 0, bloqueoEntrada: 0.2,
         faseLuz: 'off', luzVisible: false, timerLuz: 0, cambiosLuz: 0,
         enfriamientoTorpedo: 0,
         nivel: nivelDeInicio,
@@ -1382,7 +1382,7 @@ function dibujarHUD() {
     for (let i = 0; i < filas.length; i++) { hud.fillText(filas[i].label, padX, currentY); hud.fillText(filas[i].value, valueX, currentY); currentY += lh; }
     hud.fillText('VIDAS', padX, currentY);
     hud.fillStyle = '#ff4d4d';
-    hud.fillText('♥'.repeat(valorVidas) + '♡'.repeat(Math.max(0, 3 - valorVidas)), valueX, currentY);
+    hud.fillText(String(valorVidas), valueX, currentY); // Muestra el número de vidas, más escalable
     hud.fillStyle = '#ffffff';
     currentY += lh;
     hud.fillText('TORPEDO', padX, currentY);

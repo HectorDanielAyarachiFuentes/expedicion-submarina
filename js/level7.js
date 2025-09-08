@@ -210,7 +210,31 @@ export function update(dt) {
     // Actualizar jefe solo en boss
     if (sub.tipo === 'boss' && levelState.jefe) {
         const jefe = levelState.jefe;
-        
+
+        // --- PASO 1: PROCESAR DAÑO PRIMERO ---
+        // Esto asegura que si el jefe muere, su estado se actualiza a 'muriendo'
+        // antes de que se ejecute cualquier otra lógica que pueda cambiar el estado (como los ataques).
+        if (jefe.estado !== 'muriendo') {
+            const hitbox = { x: jefe.x - jefe.w / 2, y: jefe.y - jefe.h / 2, w: jefe.w, h: jefe.h };
+            // Colisión con torpedos
+            for (let i = torpedos.length - 1; i >= 0; i--) {
+                const t = torpedos[i];
+                if (t.x > hitbox.x && t.x < hitbox.x + hitbox.w && t.y > hitbox.y && t.y < hitbox.y + hitbox.h) {
+                    recibirDanoJefe(t, 15); // Torpedos hacen más daño
+                    torpedos.splice(i, 1);
+                }
+            }
+            // Colisión con proyectiles de armas
+            for (let i = proyectiles.length - 1; i >= 0; i--) {
+                const p = proyectiles[i];
+                if (p.x > hitbox.x && p.x < hitbox.x + hitbox.w && p.y > hitbox.y && p.y < hitbox.y + hitbox.h) {
+                    recibirDanoJefe(p, 1); // Daño base
+                    proyectiles.splice(i, 1);
+                }
+            }
+        }
+
+        // --- PASO 2: COMPROBAR ESTADO DE MUERTE ---
         if (jefe.estado === 'muriendo') {
             // --- LÓGICA DE MUERTE ESPECTACULAR ---
             jefe.timerMuerte -= dt;
@@ -248,7 +272,7 @@ export function update(dt) {
             return; // No hacer nada más si está muriendo
         }
 
-        // --- LÓGICA NORMAL DEL JEFE (SI NO ESTÁ MURIENDO) ---
+        // --- PASO 3: LÓGICA NORMAL DEL JEFE (SI ESTÁ VIVO) ---
         jefe.shake = 0;
         jefe.timerFrame += dt;
         const MIERDEI_ANIMATION_SPEED = 0.06;
@@ -400,27 +424,6 @@ export function update(dt) {
             }
         }
         
-        // --- LÓGICA DE COLISIONES: JUGADOR ATACANDO AL JEFE ---
-        const hitbox = { x: jefe.x - jefe.w / 2, y: jefe.y - jefe.h / 2, w: jefe.w, h: jefe.h };
-
-        // Colisión con torpedos
-        for (let i = torpedos.length - 1; i >= 0; i--) {
-            const t = torpedos[i];
-            if (t.x > hitbox.x && t.x < hitbox.x + hitbox.w && t.y > hitbox.y && t.y < hitbox.y + hitbox.h) {
-                recibirDanoJefe(t, 15); // Torpedos hacen más daño
-                torpedos.splice(i, 1);
-            }
-        }
-
-        // Colisión con proyectiles de armas
-        for (let i = proyectiles.length - 1; i >= 0; i--) {
-            const p = proyectiles[i];
-            if (p.x > hitbox.x && p.x < hitbox.x + hitbox.w && p.y > hitbox.y && p.y < hitbox.y + hitbox.h) {
-                recibirDanoJefe(p, 1); // Daño base
-                proyectiles.splice(i, 1);
-            }
-        }
-
         if (jefe.lasers.length === 0) {
             jefe.estado = 'idle';
         }
@@ -434,12 +437,6 @@ export function update(dt) {
         }
     }
 
-    // Completar boss si hp <=0
-    if (sub.tipo === 'boss' && levelState.jefe.hp <= 0) {
-        // Bonus de puntos por derrotar al jefe
-        agregarPuntos(500);
-        completarSubnivel();
-    }
 }
 
 /**
@@ -449,11 +446,18 @@ export function update(dt) {
  */
 function recibirDanoJefe(proyectil, cantidad) {
     const jefe = levelState.jefe;
-    if (!jefe || jefe.hp <= 0) return;
+    if (!jefe || jefe.estado === 'muriendo' || jefe.hp <= 0) return;
     generarExplosion(proyectil.x, proyectil.y, proyectil.color || '#ffdd77');
     jefe.hp -= cantidad;
     jefe.timerGolpe = 0.15; // Para el efecto de parpadeo
     S.reproducir('boss_hit');
+    if (jefe.hp <= 0) {
+        jefe.estado = 'muriendo';
+        jefe.timerMuerte = 4.0; // 4 segundos de animación de muerte
+        jefe.hp = 0; // Para que la barra de vida no se vaya a negativo
+        jefe.bombas = [];
+        jefe.lasers = [];
+    }
 }
 
 // Función auxiliar para calcular distancia de punto a recta
