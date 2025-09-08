@@ -257,6 +257,17 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     box-shadow: 0 5px 25px rgba(0,0,0,0.5);
 }
 
+/* Estilos para el logo del menú principal para centrarlo */
+#mainMenuHeader {
+    text-align: center; /* Asegura centrado para elementos inline */
+}
+#brandLogo {
+    display: block; /* Se comporta como un bloque para poder usar márgenes automáticos */
+    margin: 0 auto 12px auto; /* Centra horizontalmente y añade margen inferior */
+    width: min(350px, 80vw);
+    image-rendering: pixelated;
+}
+
 .menu-card h2 {
     color: var(--accent-yellow);
     font-size: clamp(1.5rem, 6vw, 2.2rem);
