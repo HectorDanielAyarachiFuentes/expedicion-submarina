@@ -127,27 +127,43 @@ export function update(dt) {
             continue;
         }
 
-        let destruido = false;
-        const proyectilesTotales = [...torpedos, ...proyectiles];
-        for (let j = proyectilesTotales.length - 1; j >= 0; j--) {
-            const p = proyectilesTotales[j];
-             if (p.x < escombro.x + escombro.tamano / 2 && p.x + (p.w || 0) > escombro.x - escombro.tamano / 2 &&
-                 p.y < escombro.y + escombro.tamano / 2 && p.y + (p.h || 0) > escombro.y - escombro.tamano / 2) {
-                escombro.hp -= (p.w > 15) ? 3 : 1;
-                
-                if (torpedos.includes(p)) torpedos.splice(torpedos.indexOf(p), 1);
-                if (proyectiles.includes(p)) proyectiles.splice(proyectiles.indexOf(p), 1);
+        let escombroDestruido = false;
 
+        // Colisión con torpedos (más eficiente y correcto)
+        for (let j = torpedos.length - 1; j >= 0; j--) {
+            const t = torpedos[j];
+            if (Math.abs(t.x - escombro.x) * 2 < (t.w + escombro.tamano) &&
+                Math.abs(t.y - escombro.y) * 2 < (t.h + escombro.tamano)) {
+                escombro.hp -= 3; // Los torpedos hacen más daño
+                torpedos.splice(j, 1);
                 if (escombro.hp <= 0) {
                     generarExplosion(escombro.x, escombro.y, '#cccccc');
                     escombrosCayendo.splice(i, 1);
                     estadoJuego.puntuacion += Math.floor(escombro.tamano);
-                    destruido = true;
+                    escombroDestruido = true;
                     break;
                 }
             }
         }
-        if (destruido) continue;
+        if (escombroDestruido) continue;
+
+        // Colisión con proyectiles (más eficiente y correcto)
+        for (let k = proyectiles.length - 1; k >= 0; k--) {
+            const p = proyectiles[k];
+            if (Math.abs(p.x - escombro.x) * 2 < (p.w + escombro.tamano) &&
+                Math.abs(p.y - escombro.y) * 2 < (p.h + escombro.tamano)) {
+                escombro.hp -= 1;
+                proyectiles.splice(k, 1);
+                if (escombro.hp <= 0) {
+                    generarExplosion(escombro.x, escombro.y, '#cccccc');
+                    escombrosCayendo.splice(i, 1);
+                    estadoJuego.puntuacion += Math.floor(escombro.tamano);
+                    escombroDestruido = true;
+                    break;
+                }
+            }
+        }
+        if (escombroDestruido) continue;
 
         if (escombrosCayendo[i] && escombrosCayendo[i].y > H + escombrosCayendo[i].tamano) {
             escombrosCayendo.splice(i, 1);

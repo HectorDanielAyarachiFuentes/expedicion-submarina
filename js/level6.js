@@ -210,7 +210,83 @@ export function update(dt) {
     for (let i = vortexParticles.length - 1; i >= 0; i--) { const p = vortexParticles[i]; p.angle += dt * p.speed * (1/Math.max(0.1, p.distance/VORTEX_RADIUS)); p.life += dt; p.distance *= 1 - dt * 0.08; p.x = W / 2 + Math.cos(p.angle) * p.distance; p.y = H / 2 + Math.sin(p.angle) * p.distance; p.trail.push({ x: p.x, y: p.y }); if (p.trail.length > 10) p.trail.shift(); if (p.life > p.maxLife || p.distance < 15) { vortexParticles.splice(i, 1); if (Math.random() < 0.5) spawnVortexParticle(); } } if (Math.random() < 0.3) spawnVortexParticle(blackHoleMode);
 
     // Criaturas
-    for (let i = creatures.length - 1; i >= 0; i--) { const c = creatures[i]; let entityDt = dt; for(const tw of timeWarps) { if(Math.hypot(c.x - tw.x, c.y - tw.y) < tw.radius) entityDt = dt * tw.timeFactor; } applyAllForces(c, entityDt); c.rotation += c.rotationSpeed * entityDt; c.attackCooldown -= entityDt; if(c.attackCooldown <= 0) { c.attackCooldown = 3 + Math.random() * 4; switch(c.type.attack) { case 'blackHole': createBlackHole(c.x, c.y, 0.8); break; case 'duplicate': if(creatures.length < 25) { const newC = { ...c, id: Math.random().toString(36).substr(2, 9), hp: 1, maxHp: 1, size: c.size * 0.8 }; newC.x += (Math.random() - 0.5) * 50; newC.y += (Math.random() - 0.5) * 50; creatures.push(newC); } break; case 'slowTime': createTimeWarp(c.x, c.y); break; case 'split': break; case 'quake': createShockwave(c.x, c.y, 2, c.color); if(Math.random() > 0.5) spawnFallingDebris(true); break; } } if (Math.hypot(jugador.x - c.x, jugador.y - c.y) < jugador.r + c.size / 2) { generarExplosion(c.x, c.y, c.color); if (estadoJuego.vidas > 0) estadoJuego.vidas--; estadoJuego.animVida = 0.6; S.reproducir('choque'); creatures.splice(i, 1); if (estadoJuego.vidas <= 0) perderJuego(); continue; } [...proyectiles, ...torpedos].forEach((p, pIndex, arr) => { if (Math.hypot(p.x - c.x, p.y - c.y) < c.size / 2 + (p.w || p.size)) { c.hp -= (p === torpedos.find(t => t === p)) ? 3 : 1; arr.splice(pIndex, 1); if (c.hp <= 0) { generarExplosion(c.x, c.y, c.color, c.size*2); estadoJuego.puntuacion += c.score; if(c.type.attack === 'split' && creatures.length < 25) { for(let k=0; k<2; k++) { const newC = spawnCreature(3); newC.x = c.x + (k - 0.5) * 40; newC.y = c.y; newC.size *= 0.7; newC.hp=1; } } creatures.splice(i, 1); } } }); if (c.x < -c.size || c.x > W + c.size || c.y < -c.size || c.y > H + c.size || Math.hypot(c.x-W/2, c.y-H/2) < 20) { creatures.splice(i, 1); } }
+    for (let i = creatures.length - 1; i >= 0; i--) {
+        const c = creatures[i];
+        let entityDt = dt;
+        for (const tw of timeWarps) {
+            if (Math.hypot(c.x - tw.x, c.y - tw.y) < tw.radius) entityDt = dt * tw.timeFactor;
+        }
+        applyAllForces(c, entityDt);
+        c.rotation += c.rotationSpeed * entityDt;
+        c.attackCooldown -= entityDt;
+        if (c.attackCooldown <= 0) {
+            c.attackCooldown = 3 + Math.random() * 4;
+            switch (c.type.attack) {
+                case 'blackHole': createBlackHole(c.x, c.y, 0.8); break;
+                case 'duplicate': if (creatures.length < 25) { const newC = { ...c, id: Math.random().toString(36).substr(2, 9), hp: 1, maxHp: 1, size: c.size * 0.8 }; newC.x += (Math.random() - 0.5) * 50; newC.y += (Math.random() - 0.5) * 50; creatures.push(newC); } break;
+                case 'slowTime': createTimeWarp(c.x, c.y); break;
+                case 'split': break;
+                case 'quake': createShockwave(c.x, c.y, 2, c.color); if (Math.random() > 0.5) spawnFallingDebris(true); break;
+            }
+        }
+        if (Math.hypot(jugador.x - c.x, jugador.y - c.y) < jugador.r + c.size / 2) {
+            generarExplosion(c.x, c.y, c.color);
+            if (estadoJuego.vidas > 0) estadoJuego.vidas--;
+            estadoJuego.animVida = 0.6;
+            S.reproducir('choque');
+            creatures.splice(i, 1);
+            if (estadoJuego.vidas <= 0) perderJuego();
+            continue;
+        }
+
+        let creatureDestroyed = false;
+        // Colisión con torpedos
+        for (let j = torpedos.length - 1; j >= 0; j--) {
+            const t = torpedos[j];
+            if (Math.hypot(t.x - c.x, t.y - c.y) < c.size / 2) {
+                c.hp -= 3;
+                torpedos.splice(j, 1);
+                if (c.hp <= 0) { creatureDestroyed = true; break; }
+            }
+        }
+
+        if (creatureDestroyed) {
+            generarExplosion(c.x, c.y, c.color, c.size * 2);
+            estadoJuego.puntuacion += c.score;
+            creatures.splice(i, 1);
+            continue;
+        }
+
+        // Colisión con proyectiles
+        for (let k = proyectiles.length - 1; k >= 0; k--) {
+            const p = proyectiles[k];
+            if (Math.hypot(p.x - c.x, p.y - c.y) < c.size / 2) {
+                c.hp -= 1;
+                proyectiles.splice(k, 1);
+                if (c.hp <= 0) { creatureDestroyed = true; break; }
+            }
+        }
+
+        if (creatureDestroyed) {
+            generarExplosion(c.x, c.y, c.color, c.size * 2);
+            estadoJuego.puntuacion += c.score;
+            if (c.type.attack === 'split' && creatures.length < 25) {
+                for (let k = 0; k < 2; k++) {
+                    const newC = spawnCreature(3);
+                    newC.x = c.x + (k - 0.5) * 40;
+                    newC.y = c.y;
+                    newC.size *= 0.7;
+                    newC.hp = 1;
+                }
+            }
+            creatures.splice(i, 1);
+            continue;
+        }
+
+        if (c.x < -c.size || c.x > W + c.size || c.y < -c.size || c.y > H + c.size || Math.hypot(c.x - W / 2, c.y - H / 2) < 20) {
+            creatures.splice(i, 1);
+        }
+    }
 
     // Escombros y Santuario
     for (let i = fallingDebris.length - 1; i >= 0; i--) {

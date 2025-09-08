@@ -26,6 +26,20 @@ function generarEscombro() {
     });
 }
 
+/**
+ * Comprueba si un proyectil (o torpedo) colisiona con un escombro.
+ * @param {object} proyectil - El objeto del proyectil o torpedo.
+ * @param {object} escombro - El objeto del escombro.
+ * @returns {boolean} - True si hay colisión, false si no.
+ */
+function proyectilColisionaConEscombro(proyectil, escombro) {
+    const proyectilHitbox = { x: proyectil.x, y: proyectil.y, w: proyectil.w || 1, h: proyectil.h || 1 };
+    const escombroHitbox = { x: escombro.x, y: escombro.y, w: escombro.tamano, h: escombro.tamano };
+
+    return Math.abs(proyectilHitbox.x - escombroHitbox.x) * 2 < (proyectilHitbox.w + escombroHitbox.w) &&
+           Math.abs(proyectilHitbox.y - escombroHitbox.y) * 2 < (proyectilHitbox.h + escombroHitbox.h);
+}
+
 // --- INTERFAZ PÚBLICA DEL MÓDULO ---
 
 export function init() {
@@ -78,24 +92,20 @@ export function update(dt) {
         // Colisión con torpedos
         for (let j = torpedos.length - 1; j >= 0; j--) {
             const t = torpedos[j];
-            if (t.x < escombro.x + escombro.tamano / 2 && t.x + t.w > escombro.x - escombro.tamano / 2 &&
-                t.y < escombro.y + escombro.tamano / 2 && t.y + t.h > escombro.y - escombro.tamano / 2)
-            {
+            if (proyectilColisionaConEscombro(t, escombro)) {
                 generarExplosion(escombro.x, escombro.y, '#cccccc');
                 escombros.splice(i, 1);
                 torpedos.splice(j, 1);
                 estadoJuego.puntuacion += 50;
-                break; 
+                break;
             }
         }
-        if (i >= escombros.length) continue;
+        if (i >= escombros.length) continue; // El escombro fue destruido por un torpedo
 
         // Colisión con proyectiles
         for (let k = proyectiles.length - 1; k >= 0; k--) {
             const p = proyectiles[k];
-            if (p.x < escombro.x + escombro.tamano / 2 && p.x + p.w > escombro.x - escombro.tamano / 2 &&
-                p.y < escombro.y + escombro.tamano / 2 && p.y + p.h > escombro.y - escombro.tamano / 2)
-            {
+            if (proyectilColisionaConEscombro(p, escombro)) {
                 generarExplosion(escombro.x, escombro.y, p.color);
                 escombros.splice(i, 1);
                 proyectiles.splice(k, 1);
@@ -103,7 +113,7 @@ export function update(dt) {
                 break;
             }
         }
-        
+
         // Eliminar si sale de la pantalla
         if (i < escombros.length && escombros[i].x < -escombros[i].tamano) {
             escombros.splice(i, 1);
