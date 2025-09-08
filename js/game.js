@@ -1407,7 +1407,15 @@ function dibujarHUD() {
     for (let i = 0; i < filas.length; i++) { hud.fillText(filas[i].label, padX, currentY); hud.fillText(filas[i].value, valueX, currentY); currentY += lh; }
     hud.fillText('VIDAS', padX, currentY);
     hud.fillStyle = '#ff4d4d';
-    hud.fillText(String(valorVidas), valueX, currentY); // Muestra el número de vidas, más escalable
+
+    // Dibuja el corazón más grande y luego el número
+    const originalFont = hud.font;
+    hud.font = '22px "Press Start 2P", monospace'; // Un poco más grande para el corazón
+    hud.fillText('♥', valueX, currentY);
+    const heartWidth = hud.measureText('♥ ').width; // Medir el ancho del corazón con un espacio
+    hud.font = originalFont; // Volver a la fuente original para el número
+    hud.fillText(String(valorVidas), valueX + heartWidth, currentY);
+
     hud.fillStyle = '#ffffff';
     currentY += lh;
     hud.fillText('TORPEDO', padX, currentY);
