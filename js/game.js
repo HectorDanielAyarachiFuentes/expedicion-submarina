@@ -627,14 +627,16 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
     let tipo = tipoForzado || 'normal';
     
     // --- LÓGICA DE APARICIÓN MEJORADA ---
-    // Si el tipo forzado es genérico, hay una probabilidad de que aparezca un tiburón en su lugar.
-    // Esto permite que los tiburones aparezcan en niveles que generan enemigos 'normales' o 'agresivos'.
-    // Se excluyen los tipos muy específicos como 'dorado' o los que ya son especiales.
-    if (tipoForzado === 'normal' || tipoForzado === 'aggressive' || tipoForzado === 'rojo') {
+    // Si no se fuerza un tipo muy específico (como 'dorado' o 'mierdei'),
+    // hay una probabilidad de que aparezca un enemigo especial en su lugar.
+    const puedeSerEspecial = !tipoForzado || tipoForzado === 'normal' || tipoForzado === 'aggressive' || tipoForzado === 'rojo';
+
+    if (puedeSerEspecial) {
         const r = Math.random();
-        if (whaleListo && r < 0.08) { // 8% de probabilidad de que sea una ballena
+        // La ballena y el tiburón ahora tienen probabilidades independientes y no se bloquean entre sí.
+        if (whaleListo && r < 0.12) { // 12% de probabilidad de que sea una ballena.
             tipo = 'whale';
-        } else if (sharkListo && r < 0.23) { // 15% de probabilidad de que sea un tiburón (0.08 + 0.15)
+        } else if (sharkListo && r > 0.85) { // 15% de probabilidad de que sea un tiburón.
             tipo = 'shark';
         }
     }
@@ -672,7 +674,8 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             capturado: false, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'whale',
-            hp: 120, maxHp: 120, // ¡Ahora es mucho más resistente!
+            hp: 60, maxHp: 60, // Vida ajustada a 60
+            isEnraged: false,
         });
     } else {
         if (esEsbirroJefe) {
@@ -903,6 +906,14 @@ function actualizar(dt) {
                 a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length;
             }
         } else if (a.tipo === 'whale') {
+            // Lógica de enfurecimiento
+            if (!a.isEnraged && a.hp > 0 && a.hp <= a.maxHp * 0.35) {
+                a.isEnraged = true;
+                a.vx *= 2.5; // Se vuelve mucho más rápida
+                S.reproducir('boss_hit'); // Sonido de furia
+                generarGotasSangre(a.x, a.y); // Salpica sangre
+            }
+
             a.x += a.vx * dtAjustado;
             // Animación
             a.timerFrame += dtAjustado;
@@ -1133,6 +1144,9 @@ function renderizar(dt) {
                 }
             } else if (a.tipo === 'whale') {
                 ctx.translate(a.x, a.y + offsetFlotante);
+                if (a.isEnraged) {
+                    ctx.filter = 'hue-rotate(-25deg) brightness(1.4) saturate(3)';
+                }
                 if (whaleListo && WHALE_SPRITE_DATA) {
                     const frameData = WHALE_SPRITE_DATA.frames[a.frame];
                     if (frameData) {
