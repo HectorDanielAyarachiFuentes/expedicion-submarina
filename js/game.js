@@ -547,6 +547,22 @@ function generarGotasSangre(x, y) {
     }
 }
 
+function generarBurbujasDeSangre(x, y) {
+    for (let i = 0; i < 15 + Math.random() * 10; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 10 + Math.random() * 50;
+        const r = 2 + Math.random() * 4;
+        generarParticula(particulasBurbujas, {
+            x: x, y: y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd - 30, // Tend to float up
+            r: r,
+            vida: 1.0 + Math.random() * 1.0,
+            color: '#b22222' // Store blood color
+        });
+    }
+}
+
 function generarBurbujasEmbestidaTiburom(x, y) {
     // Generar una estela de burbujas más intensa durante la embestida
     for (let i = 0; i < 2; i++) {
@@ -1006,6 +1022,14 @@ function actualizar(dt) {
         
         if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) {
             const damage = a.tipo === 'whale' ? 7 : 1;
+
+            // Efectos de sangre y trozos al chocar
+            const collisionX = (jugador.x + a.x) / 2;
+            const collisionY = (jugador.y + a.y) / 2;
+            generarBurbujasDeSangre(collisionX, collisionY);
+            generarTrozoBallena(collisionX, collisionY, 4, 120);
+            generarGotasSangre(collisionX, collisionY);
+
             animales.splice(i, 1);
             const antes = estadoJuego.vidas;
             if (estadoJuego.vidas > 0) {
