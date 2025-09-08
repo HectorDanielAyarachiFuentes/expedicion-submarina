@@ -1013,6 +1013,19 @@ function actualizar(dt) {
             }
 
             a.x += a.vx * dtAjustado;
+
+            // Efecto de burbujas de la cola
+            if (Math.random() < 0.25) { // Controlar la frecuencia para no sobrecargar
+                const tailX = a.x + a.w / 2.5; // Origen de las burbujas en la cola
+                const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.3); // Variación vertical
+                generarParticula(particulasBurbujas, {
+                    x: tailX, y: tailY,
+                    vx: 20 + Math.random() * 30, // Las burbujas se quedan un poco atrás
+                    vy: (Math.random() - 0.5) * 20 - 15, // Tienden a subir
+                    r: Math.random() * 2.5 + 1, vida: 1.2 + Math.random() * 1.0, color: ''
+                });
+            }
+
             // Animación
             a.timerFrame += dtAjustado;
             if (a.timerFrame >= WHALE_ANIMATION_SPEED) {
