@@ -469,6 +469,24 @@ const thrusterSvgString = `
   <rect x="0" y="0" width="512" height="64" fill="url(#thrusterGradient)" filter="url(#thruster-distortion)"/>
 </svg>`;
 
+const propellerSvgString = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <defs>
+        <linearGradient id="propBladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#fef08a" />
+            <stop offset="100%" style="stop-color:#ca8a04" />
+        </linearGradient>
+    </defs>
+    <g transform="rotate(0 50 50)"><path d="M 50,50 C 55,30 85,35 95,50 L 50,50 Z" fill="url(#propBladeGrad)" /></g>
+    <g transform="rotate(120 50 50)"><path d="M 50,50 C 55,30 85,35 95,50 L 50,50 Z" fill="url(#propBladeGrad)" /></g>
+    <g transform="rotate(240 50 50)"><path d="M 50,50 C 55,30 85,35 95,50 L 50,50 Z" fill="url(#propBladeGrad)" /></g>
+    <circle cx="50" cy="50" r="15" fill="#eab308" stroke="#a16207" stroke-width="4"/>
+</svg>`;
+let propellerImg = null;
+let propellerReady = false;
+let propellerRotation = 0;
+let propellerCurrentSpeed = 0;
+
 // ========= Geometría y Utilidades (Exportamos las que se necesitan fuera) =========
 export let W = innerWidth, H = innerHeight;
 export const NUM_CARRILES = 5;
@@ -819,6 +837,18 @@ function actualizar(dt) {
         generarBurbujaPropulsion(jugador.x - 30, jugador.y, false);
     }
     
+    // Animar la rotación de la hélice con aceleración suave
+    const isMoving = len > 0;
+    let targetSpeed = 5; // Velocidad de ralentí
+    if (estadoJuego.boostActivo) {
+        targetSpeed = 70; // Velocidad de impulso
+    } else if (isMoving) {
+        targetSpeed = 25; // Velocidad de movimiento normal
+    }
+    // Suavizar la transición de velocidad
+    propellerCurrentSpeed = lerp(propellerCurrentSpeed, targetSpeed, dtAjustado * 8);
+    propellerRotation += propellerCurrentSpeed * dtAjustado;
+
     Levels.updateLevel(dtAjustado);
     
     jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
@@ -1283,12 +1313,38 @@ function renderizar(dt) {
         
         if (jugador) {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
+            // Animación de flotación sutil
+            const bobbingY = Math.sin(estadoJuego.tiempoTranscurrido * 2.5) * 3;
             const px = jugador.x;
-            const py = jugador.y;
+            const py = jugador.y + bobbingY; // Aplicar flotación
+
             ctx.save();
             ctx.translate(px, py);
             const anguloFinal = isLevel5 ? -Math.PI / 2 + inclinacionRobot : inclinacionRobot;
             ctx.rotate(anguloFinal);
+
+            // DIBUJAR HÉLICE (detrás del submarino) con motion blur
+            if (propellerReady && propellerImg) {
+                ctx.save();
+                const propOffsetX = -spriteAncho * robotEscala / 2 - 10;
+                ctx.translate(propOffsetX, 0);
+                const propSize = 40;
+
+                // Efecto de desenfoque de movimiento (motion blur) a alta velocidad
+                if (propellerCurrentSpeed > 35) {
+                    ctx.globalAlpha = 0.35;
+                    // Dibuja 2 estelas en ángulos ligeramente desfasados
+                    ctx.save(); ctx.rotate(propellerRotation - 0.2); ctx.drawImage(propellerImg, -propSize / 2, -propSize / 2, propSize, propSize); ctx.restore();
+                    ctx.save(); ctx.rotate(propellerRotation + 0.2); ctx.drawImage(propellerImg, -propSize / 2, -propSize / 2, propSize, propSize); ctx.restore();
+                }
+
+                // Hélice principal (siempre visible y nítida)
+                ctx.globalAlpha = 1.0;
+                ctx.rotate(propellerRotation);
+                ctx.drawImage(propellerImg, -propSize / 2, -propSize / 2, propSize, propSize);
+                ctx.restore();
+            }
+
             if (robotListo) {
                 ctx.imageSmoothingEnabled = false;
                 const dw = spriteAncho * robotEscala, dh = spriteAlto * robotEscala;
@@ -1911,4 +1967,13 @@ export function init() {
         thrusterPatternReady = true;
     };
     thrusterPatternImage.src = 'data:image/svg+xml;base64,' + btoa(thrusterSvgString);
+
+    // Cargar el SVG de la hélice
+    propellerReady = false;
+    const propellerImage = new Image();
+    propellerImage.onload = () => {
+        propellerImg = propellerImage;
+        propellerReady = true;
+    };
+    propellerImage.src = 'data:image/svg+xml;base64,' + btoa(propellerSvgString);
 }
