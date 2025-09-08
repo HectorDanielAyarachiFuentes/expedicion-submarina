@@ -90,7 +90,8 @@ export const S = (function () {
         ink: 'sonidos/ink.wav',
         shotgun: 'sonidos/shotgun.wav',
         machinegun: 'sonidos/machinegun.wav',
-        reload: 'sonidos/reload.wav'
+        reload: 'sonidos/reload.wav',
+        laser_beam: 'sonidos/laser.wav', // TODO: Añadir un sonido de rayo láser
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
@@ -569,8 +570,8 @@ let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = 
 const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
 const BOOST_FORCE = 400;
-export let torpedos = [];
-const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta']; // prettier-ignore
+export let torpedos = []; // prettier-ignore
+const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta', 'laser'];
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
 const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
@@ -594,6 +595,9 @@ function reiniciar(nivelDeInicio = 1) {
         boostEnergia: 100,
         boostMaxEnergia: 100,
         boostEnfriamiento: 0,
+        laserEnergia: 100,
+        laserMaxEnergia: 100,
+        laserActivo: false,
         velocidadJuego: 1.0,
         slowMoTimer: 0, 
         levelFlags: {}, // >>> CAMBIO CLAVE <<< Objeto para que los niveles comuniquen flags al motor (ej: no mover el fondo)
@@ -755,15 +759,12 @@ function dispararMetralleta() {
 function disparar() {
     if (!estadoJuego) return;
     switch (estadoJuego.armaActual) {
-        case 'garra':
-            if (!jugador.garra) dispararGarfio();
-            else if (jugador.garra.fase === 'ida') {
-                jugador.garra.fase = 'retorno';
-                Levels.onFallo();
-            }
-            break;
+        case 'garra': if (!jugador.garra) dispararGarfio(); else if (jugador.garra.fase === 'ida') { jugador.garra.fase = 'retorno'; Levels.onFallo(); } break;
         case 'shotgun': dispararShotgun(); break;
         case 'metralleta': dispararMetralleta(); break;
+        // El láser se maneja de forma continua en el bucle de actualización,
+        // no como un evento de un solo disparo.
+        case 'laser': break; 
     }
 }
 
@@ -832,11 +833,13 @@ function actualizar(dt) {
     }
     inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dtAjustado);
 
-    if (teclas[' '] && estadoJuego.bloqueoEntrada === 0) { disparar(); teclas[' '] = false; }
+    // Lógica de disparo para armas de un solo tiro
+    if (teclas[' '] && estadoJuego.bloqueoEntrada === 0 && estadoJuego.armaActual !== 'laser') { disparar(); teclas[' '] = false; }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
     if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
     if (teclas['2']) { estadoJuego.armaActual = 'shotgun'; }
     if (teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
+    if (teclas['4']) { estadoJuego.armaActual = 'laser'; }
     if ((teclas['c'] || teclas['C']) && estadoJuego.bloqueoEntrada === 0) {
         const currentIndex = WEAPON_ORDER.indexOf(estadoJuego.armaActual);
         const nextIndex = (currentIndex + 1) % WEAPON_ORDER.length;
@@ -881,8 +884,31 @@ function actualizar(dt) {
         estadoJuego.boostEnfriamiento -= dtAjustado;
     }
 
+    // Lógica del Arma Láser
+    if (estadoJuego.armaActual === 'laser') {
+        if (teclas[' '] && estadoJuego.laserEnergia > 0) {
+            estadoJuego.laserActivo = true;
+            estadoJuego.laserEnergia = Math.max(0, estadoJuego.laserEnergia - 30 * dtAjustado);
+            S.bucle('laser_beam');
+        } else {
+            estadoJuego.laserActivo = false;
+            S.detener('laser_beam');
+        }
+    } else {
+        if (estadoJuego.laserActivo) {
+            estadoJuego.laserActivo = false;
+            S.detener('laser_beam');
+        }
+    }
+    // Regeneración de energía del láser
+    if (!estadoJuego.laserActivo && estadoJuego.laserEnergia < estadoJuego.laserMaxEnergia) {
+        estadoJuego.laserEnergia += 20 * dtAjustado;
+        estadoJuego.laserEnergia = Math.min(estadoJuego.laserEnergia, estadoJuego.laserMaxEnergia);
+    }
+
     for (let i = animales.length - 1; i >= 0; i--) { 
         const a = animales[i]; 
+        if (a.laserHitTimer > 0) a.laserHitTimer -= dtAjustado;
         
         // IA específica para cada tipo de enemigo
         if (a.tipo === 'shark') {
@@ -1010,6 +1036,41 @@ function actualizar(dt) {
         }
     }
     
+    // Daño del láser
+    if (estadoJuego.laserActivo) {
+        const laserStartX = jugador.x + 40;
+        const laserStartY = jugador.y;
+        const laserLength = W;
+        const laserWidth = 10;
+        const laserHitbox = { x: laserStartX, y: laserStartY - laserWidth / 2, w: laserLength, h: laserWidth };
+
+        for (let j = animales.length - 1; j >= 0; j--) {
+            const a = animales[j];
+            if (!a.capturado && laserHitbox.x < a.x + a.w / 2 && laserHitbox.x + laserHitbox.w > a.x - a.w / 2 && laserHitbox.y < a.y + a.h / 2 && laserHitbox.y + laserHitbox.h > a.y - a.h / 2) {
+                if (a.hp !== undefined) {
+                    if (!a.laserHitTimer || a.laserHitTimer <= 0) {
+                        a.hp -= 2; // Daño por tick
+                        a.laserHitTimer = 0.1; // Cooldown entre ticks de daño
+                        if (a.tipo === 'whale') generarGotasSangre(a.x, a.y);
+                        generarExplosion(a.x, a.y, '#ff5555', 5);
+                    }
+                    if (a.hp <= 0) {
+                        generarExplosion(a.x, a.y, '#aaffff', a.w);
+                        Levels.onKill(a.tipo);
+                        animales.splice(j, 1);
+                        estadoJuego.asesinatos++;
+                        estadoJuego.puntuacion += 500;
+                    }
+                } else {
+                    generarExplosion(a.x, a.y, '#ff5555');
+                    Levels.onKill(a.tipo);
+                    animales.splice(j, 1);
+                    estadoJuego.asesinatos++;
+                }
+            }
+        }
+    }
+
     // >>> CAMBIO CLAVE <<<
     // Esta función ahora SÓLO se encarga de las colisiones con animales normales.
     // La colisión con el jefe es responsabilidad del módulo level3.js.
@@ -1253,6 +1314,31 @@ function renderizar(dt) {
                 ctx.fill();
                 ctx.restore();
             }
+
+            // DIBUJAR LÁSER
+            if (estadoJuego.laserActivo) {
+                const laserStartX = px + 40;
+                const laserStartY = py;
+                const laserLength = W;
+                const laserWidth = 8 + Math.sin(estadoJuego.tiempoTranscurrido * 50) * 4; // Ancho pulsante
+                const energyRatio = estadoJuego.laserEnergia / estadoJuego.laserMaxEnergia;
+
+                ctx.save();
+                // Núcleo brillante
+                const coreGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX + laserLength, laserStartY);
+                coreGrad.addColorStop(0, `rgba(255, 255, 255, ${energyRatio})`);
+                coreGrad.addColorStop(0.1, `rgba(255, 255, 255, ${energyRatio * 0.8})`);
+                coreGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
+                ctx.fillStyle = coreGrad;
+                ctx.fillRect(laserStartX, laserStartY - laserWidth / 4, laserLength, laserWidth / 2);
+                // Resplandor exterior
+                const glowGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX + laserLength, laserStartY);
+                glowGrad.addColorStop(0, `rgba(255, 100, 100, ${energyRatio * 0.6})`);
+                glowGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
+                ctx.fillStyle = glowGrad;
+                ctx.fillRect(laserStartX, laserStartY - laserWidth / 2, laserLength, laserWidth);
+                ctx.restore();
+            }
         }
         if (jugador && jugador.garra) {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
@@ -1396,7 +1482,7 @@ function dibujarHUD() {
     hud.shadowColor = 'rgba(0,0,0,0.7)';
     hud.shadowBlur = 4;
     const filas = [{ label: 'SCORE', value: String(valorPuntuacion) }, { label: 'DEPTH', value: valorProfundidad + ' m' }, { label: 'RECORD', value: String(puntuacionMaxima) }];
-    const totalFilas = filas.length + 5;
+    const totalFilas = filas.length + 6;
     const y0 = H - padY - lh * totalFilas;
     let maxAnchoEtiqueta = 0;
     const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO', 'IMPULSO'];
@@ -1424,7 +1510,7 @@ function dibujarHUD() {
     hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO...', valueX, currentY);
     currentY += lh;
     hud.fillStyle = '#ffffff';
-    hud.fillText('ARMA', padX, currentY);
+    hud.fillText('ARMA', padX, currentY); // prettier-ignore
     let armaTexto = s.armaActual.toUpperCase(), armaColor = '#aaddff';
     if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; armaColor = '#ff6666'; } else { armaTexto += " (LISTA)"; armaColor = '#ffdd77'; } }
     
@@ -1465,6 +1551,19 @@ function dibujarHUD() {
     hud.strokeStyle = '#fff';
     hud.lineWidth = 2;
     hud.strokeRect(barX, barY, barW, barH);
+    currentY += lh;
+    hud.fillStyle = '#ffffff';
+    hud.fillText('LASER', padX, currentY);
+    const laserBarX = valueX;
+    const laserBarW = 150;
+    const laserBarH = 10;
+    const laserBarY = currentY - laserBarH;
+    hud.fillStyle = '#333';
+    hud.fillRect(laserBarX, laserBarY, laserBarW, laserBarH);
+    const laserRatio = s.laserEnergia / s.laserMaxEnergia;
+    hud.fillStyle = '#ff4d4d';
+    hud.fillRect(laserBarX, laserBarY, laserBarW * laserRatio, laserBarH);
+    hud.strokeStyle = '#fff'; hud.lineWidth = 2; hud.strokeRect(laserBarX, laserBarY, laserBarW, laserBarH);
     hud.restore();
     
     // >>> CAMBIO CLAVE <<<
