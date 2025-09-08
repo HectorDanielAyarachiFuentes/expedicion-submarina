@@ -91,7 +91,7 @@ export const S = (function () {
         shotgun: 'sonidos/shotgun.wav',
         machinegun: 'sonidos/machinegun.wav',
         reload: 'sonidos/reload.wav',
-        laser_beam: 'sonidos/laser.wav', // TODO: Añadir un sonido de rayo láser
+        laser_beam: 'sonidos/laser.wav'
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
@@ -498,15 +498,16 @@ const WHALE_DEBRIS_PATHS = [
     new Path2D('M0,0 Q20,-20 35,-5 Q45,10 25,25 Q5,30 0,15 Z'),
     new Path2D('M0,-5 L15,-15 L30,-10 L40,5 L25,15 L10,20 Z')
 ];
-export function generarTrozoBallena(x, y) {
-    for (let i = 0; i < 2 + Math.random() * 3; i++) {
-        const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
-        const spd = 50 + Math.random() * 150;
+export function generarTrozoBallena(x, y, numTrozos = 3, fuerza = 150) {
+    for (let i = 0; i < numTrozos + Math.random() * numTrozos; i++) {
+        const ang = Math.random() * Math.PI * 2; // Salen en todas direcciones
+        const spd = 50 + Math.random() * fuerza;
         const vida = 1.5 + Math.random() * 1.5;
+        const coloresCarne = ['#ab4e52', '#8e3a46', '#6d2e37']; // Tonos de carne/sangre
         whaleDebris.push({
             x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
             vRot: (Math.random() - 0.5) * 5, rotacion: Math.random() * Math.PI * 2,
-            vida: vida, vidaMax: vida, color: '#8fb5c2',
+            vida: vida, vidaMax: vida, color: coloresCarne[Math.floor(Math.random() * coloresCarne.length)],
             path: WHALE_DEBRIS_PATHS[Math.floor(Math.random() * WHALE_DEBRIS_PATHS.length)]
         });
     }
@@ -679,7 +680,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             capturado: false, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'whale',
-            hp: 60, maxHp: 60, // Vida ajustada a 60
+            hp: 130, maxHp: 130, // Vida aumentada a 130
             isEnraged: false,
         });
     } else {
@@ -999,36 +1000,51 @@ function actualizar(dt) {
             g.recorrido += spd;
             if (estadoJuego.nivel !== 5) {
                 for (let j = 0; j < animales.length; j++) {
-                    const aa = animales[j];
-                    const esCapturable = (aa.tipo !== 'aggressive' && aa.tipo !== 'shark' && aa.tipo !== 'whale');
-                    if (!g.golpeado && !aa.capturado && esCapturable && Math.hypot(aa.x - g.x, aa.y - g.y) < aa.r) {
-                        g.golpeado = aa;
-                        aa.capturado = true;
-                        g.fase = 'retorno';
-                        break;
+                    const a = animales[j];
+                    if (!g.golpeado && !a.capturado && Math.hypot(a.x - g.x, a.y - g.y) < a.r) {
+                        // Si el enemigo tiene vida (es grande), arranca un trozo.
+                        if (a.hp !== undefined) {
+                            a.hp -= 15; // La garra hace mucho daño
+                            generarTrozoBallena(g.x, g.y, 5, 200); // Genera un efecto sangriento
+                            S.reproducir('boss_hit');
+                            if (a.hp <= 0) {
+                                generarExplosion(a.x, a.y, '#aaffff', a.w);
+                                Levels.onKill(a.tipo);
+                                animales.splice(j, 1);
+                                estadoJuego.asesinatos++;
+                                estadoJuego.puntuacion += 500;
+                            }
+                            g.golpeado = 'chunk'; // Marca que golpeó algo, pero no lo lleva
+                            g.fase = 'retorno';
+                            break;
+                        } else { // Si no tiene vida, lo captura.
+                            g.golpeado = a;
+                            a.capturado = true;
+                            g.fase = 'retorno';
+                            break;
+                        }
                     }
                 }
             }
             if (g.recorrido >= g.alcance) g.fase = 'retorno';
         } else {
             g.recorrido -= spd;
-            const targetX = jugador.x;
-            const targetY = jugador.y;
+            const targetX = jugador.x, targetY = jugador.y;
             g.x += (targetX - g.x) * 0.1;
             g.y += (targetY - g.y) * 0.1;
-            if (g.golpeado) {
+            if (g.golpeado && g.golpeado !== 'chunk') {
                 g.golpeado.x = g.x;
                 g.golpeado.y = g.y;
             }
             if (g.recorrido <= 0) {
-                if (g.golpeado) {
+                if (g.golpeado && g.golpeado !== 'chunk') {
                     estadoJuego.rescatados++;
                     const puntos = g.golpeado.tipo === 'mierdei' ? 1000 : puntosPorRescate();
                     estadoJuego.puntuacion += puntos;
                     Levels.onAnimalCazado(g.golpeado.tipo);
                     const idx = animales.indexOf(g.golpeado);
                     if (idx !== -1) animales.splice(idx, 1);
-                } else {
+                } else if (!g.golpeado) {
                     Levels.onFallo();
                 }
                 jugador.garra = null;
@@ -1082,7 +1098,7 @@ function actualizar(dt) {
                 if (a.hp !== undefined) {
                     const damage = proyectil.isVertical !== undefined ? 5 : 1; // Torpedos hacen más daño
                     a.hp -= damage;
-                    if (a.tipo === 'whale') {
+                    if (a.tipo === 'whale' || a.tipo === 'shark') {
                         generarTrozoBallena(proyectil.x, proyectil.y);
                         generarGotasSangre(proyectil.x, proyectil.y);
                     }
@@ -1381,7 +1397,7 @@ function renderizar(dt) {
         // Gradiente para un aspecto más orgánico y sangriento
         const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40);
         grad.addColorStop(0, '#fee'); // Centro más claro (hueso/grasa)
-        grad.addColorStop(0.4, d.color); // Color principal de la carne
+        grad.addColorStop(0.4, '#ab4e52'); // Color principal de la carne
         grad.addColorStop(1, '#6d2e37'); // Borde más oscuro
 
         ctx.fillStyle = grad;
