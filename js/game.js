@@ -551,7 +551,7 @@ export function generarGotasSangre(x, y) {
     }
 }
 
-function generarBurbujasDeSangre(x, y) {
+export function generarBurbujasDeSangre(x, y) {
     for (let i = 0; i < 15 + Math.random() * 10; i++) {
         const ang = Math.random() * Math.PI * 2;
         const spd = 10 + Math.random() * 50;

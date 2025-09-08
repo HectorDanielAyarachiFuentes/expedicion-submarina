@@ -1,10 +1,26 @@
 // js/level9.js
 'use strict';
 
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles, generarAnimal, limpiarTodosLosAnimales, agregarPuntos, whaleImg, whaleListo, WHALE_SPRITE_DATA, generarTrozoBallena, generarGotasSangre } from './game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles, generarAnimal, limpiarTodosLosAnimales, agregarPuntos, whaleImg, whaleListo, WHALE_SPRITE_DATA, generarTrozoBallena, generarGotasSangre, generarBurbujasDeSangre } from './game.js';
 
 // --- ESTADO DEL NIVEL 9 ---
 let levelState = {};
+
+// --- EFECTO DE DERROTA ÉPICO (SVG Paths) ---
+const WHALE_PIECES_PATHS = [
+    // Cabeza
+    new Path2D('M-70,-40 C-50,-65 30,-60 60,-30 L80,20 C50,55 -40,50 -70,20 Z'),
+    // Cola
+    new Path2D('M0,0 C-40,-25 -60,-20 -80,-40 L-90,-30 C-70,5 -50,10 0,0 Z'),
+    // Trozo de cuerpo 1
+    new Path2D('M-40,-30 L40,-25 L45,30 L-35,35 Z'),
+    // Trozo de cuerpo 2
+    new Path2D('M-25,-35 Q25,-40 45,-15 L35,35 Q-15,45 -30,25 Z'),
+    // Trozo de cuerpo 3 (más pequeño)
+    new Path2D('M-15,-20 L20,-25 L25,15 L-10,20 Z'),
+    // Aleta (simulada)
+    new Path2D('M0,0 C10,-30 30,-25 40,-5 L10,15 Z')
+];
 
 // --- SUBNIVELES ---
 const SUBNIVELES = [
@@ -40,6 +56,8 @@ function spawnMegaWhale() {
         isEnraged: true, // Siempre enfurecida
         chargeTimer: 5.0, // Temporizador para la embestida
         isCharging: false,
+        estado: 'alive', // 'alive', 'muriendo'
+        timerMuerte: 0,
     };
     // Sincronizar con el estado global para la barra de vida
     estadoJuego.jefe = levelState.jefe;
@@ -57,6 +75,7 @@ export function init() {
         spawnTimer: 4.0,
         tiempoRestante: sub.meta,
         jefe: null,
+        whalePieces: [], // Para la animación de muerte
     };
 
     estadoJuego.jefe = null;
@@ -94,6 +113,40 @@ export function update(dt) {
     // Lógica del jefe
     if (sub.tipo === 'kill_boss_whale' && levelState.jefe) {
         const jefe = levelState.jefe;
+
+        if (jefe.estado === 'muriendo') {
+            // --- LÓGICA DE MUERTE ÉPICA ---
+            jefe.timerMuerte -= dt;
+
+            // Actualizar trozos
+            for (const piece of levelState.whalePieces) {
+                piece.vy += 200 * dt; // Gravedad
+                piece.x += piece.vx * dt;
+                piece.y += piece.vy * dt;
+                piece.rotacion += piece.vRot * dt;
+                piece.vida -= dt;
+
+                // Dejar rastro de sangre y burbujas
+                if (Math.random() < 0.5) {
+                    generarGotasSangre(piece.x, piece.y);
+                }
+            }
+
+            // Generar explosiones continuas
+            if (Math.random() < 0.8) {
+                const explosionX = jefe.x + (Math.random() - 0.5) * jefe.w;
+                const explosionY = jefe.y + (Math.random() - 0.5) * jefe.h;
+                generarExplosion(explosionX, explosionY, '#FFFFFF', 50 + Math.random() * 100);
+            }
+
+            if (jefe.timerMuerte <= 0) {
+                levelState.progresoSubnivel = 1;
+                completarSubnivel();
+                levelState.jefe = null; // El jefe desaparece
+            }
+            return; // No hacer nada más si está muriendo
+        }
+
         jefe.timerGolpe = Math.max(0, jefe.timerGolpe - dt);
 
         jefe.timerFrame += dt;
@@ -157,18 +210,45 @@ export function update(dt) {
 
 function recibirDanoJefe(proyectil, cantidad) {
     const jefe = levelState.jefe;
-    if (!jefe || jefe.hp <= 0) return;
+    if (!jefe || jefe.hp <= 0 || jefe.estado === 'muriendo') return;
     
     jefe.hp -= cantidad;
     jefe.timerGolpe = 0.15;
     S.reproducir('boss_hit');
     generarTrozoBallena(proyectil.x, proyectil.y, 3, 100);
     generarGotasSangre(proyectil.x, proyectil.y);
-
+    
     if (jefe.hp <= 0) {
-        generarExplosion(jefe.x, jefe.y, '#FFFFFF', jefe.w);
-        levelState.progresoSubnivel = 1;
-        completarSubnivel();
+        jefe.estado = 'muriendo';
+        jefe.timerMuerte = 5.0; // 5 segundos de animación de muerte
+        jefe.hp = 0; // Para que la barra de vida no se vaya a negativo
+        startWhaleBreakup(jefe);
+    }
+}
+
+function startWhaleBreakup(jefe) {
+    levelState.whalePieces = [];
+    S.reproducir('choque'); // Sonido inicial de la ruptura
+
+    for (const path of WHALE_PIECES_PATHS) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 200 + Math.random() * 300;
+        const vida = 4.0 + Math.random() * 2.0;
+        const coloresCarne = ['#ab4e52', '#8e3a46', '#6d2e37'];
+
+        levelState.whalePieces.push({
+            path: path,
+            x: jefe.x + (Math.random() - 0.5) * 50,
+            y: jefe.y + (Math.random() - 0.5) * 50,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd - 200, // Impulso inicial hacia arriba
+            vRot: (Math.random() - 0.5) * 4,
+            rotacion: Math.random() * Math.PI * 2,
+            vida: vida,
+            vidaMax: vida,
+            color: coloresCarne[Math.floor(Math.random() * coloresCarne.length)],
+            strokeColor: '#5c1f27'
+        });
     }
 }
 
@@ -176,6 +256,33 @@ export function draw() {
     if (!ctx || !whaleListo || !levelState.jefe || SUBNIVELES[levelState.subnivelActual].tipo !== 'kill_boss_whale') return;
 
     const jefe = levelState.jefe;
+
+    if (jefe.estado === 'muriendo') {
+        // --- DIBUJAR LA MUERTE ÉPICA ---
+        ctx.save();
+        for (const piece of levelState.whalePieces) {
+            if (piece.vida <= 0) continue;
+            ctx.save();
+            ctx.translate(piece.x, piece.y);
+            ctx.rotate(piece.rotacion);
+            ctx.globalAlpha = clamp(piece.vida / piece.vidaMax, 0, 1);
+            
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
+            grad.addColorStop(0, '#fefefe'); // Centro claro (hueso)
+            grad.addColorStop(0.5, piece.color);
+            grad.addColorStop(1, piece.strokeColor);
+
+            ctx.fillStyle = grad;
+            ctx.strokeStyle = piece.strokeColor;
+            ctx.lineWidth = 5;
+            ctx.fill(piece.path);
+            ctx.stroke(piece.path);
+            ctx.restore();
+        }
+        ctx.restore();
+        return; // No dibujar el jefe normal
+    }
+
     const offsetFlotante = Math.sin(levelState.tiempoDeJuego * 0.8) * 15;
     
     ctx.save();
