@@ -518,7 +518,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null) {
             capturado: false, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'whale',
-            hp: 50, maxHp: 50, // Mucho más resistente
+            hp: 120, maxHp: 120, // ¡Ahora es mucho más resistente!
         });
     } else {
         if (esEsbirroJefe) {
