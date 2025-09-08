@@ -899,6 +899,18 @@ function actualizar(dt) {
         d.y += d.vy * dtAjustado;
         d.rotacion += d.vRot * dtAjustado;
         d.vida -= dtAjustado;
+
+        // Dejar un rastro de sangre
+        if (Math.random() < 0.4) { // 40% de probabilidad por frame de soltar una partícula
+            generarParticula(particulasExplosion, {
+                x: d.x, y: d.y,
+                vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20,
+                r: 1 + Math.random() * 2,
+                vida: 0.5 + Math.random() * 0.5,
+                color: '#8b0000' // Rojo oscuro
+            });
+        }
+
         if (d.vida <= 0 || d.y > H + 50) {
             whaleDebris.splice(i, 1);
         }
@@ -1084,9 +1096,16 @@ function renderizar(dt) {
         ctx.rotate(d.rotacion);
         ctx.scale(0.8, 0.8); // Hacerlos un poco más pequeños
         ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
-        ctx.fillStyle = d.color;
-        ctx.strokeStyle = '#9a2a2a'; // Borde rojo sangre
-        ctx.lineWidth = 3;
+
+        // Gradiente para un aspecto más orgánico y sangriento
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40);
+        grad.addColorStop(0, '#fee'); // Centro más claro (hueso/grasa)
+        grad.addColorStop(0.4, d.color); // Color principal de la carne
+        grad.addColorStop(1, '#6d2e37'); // Borde más oscuro
+
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = '#5c1f27'; // Borde rojo sangre muy oscuro
+        ctx.lineWidth = 4;
         ctx.fill(d.path);
         ctx.stroke(d.path);
         ctx.restore();
