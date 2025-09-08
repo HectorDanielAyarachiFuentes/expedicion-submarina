@@ -398,6 +398,25 @@ function generarGotasSangre(x, y) {
         });
     }
 }
+
+function generarBurbujasEmbestidaTiburom(x, y) {
+    // Generar una estela de burbujas más intensa durante la embestida
+    for (let i = 0; i < 2; i++) {
+        if (Math.random() > 0.4) {
+            const offsetX = (Math.random() - 0.5) * 50; // Alrededor del cuerpo
+            const offsetY = (Math.random() - 0.5) * 50;
+            generarParticula(particulasBurbujas, {
+                x: x + offsetX,
+                y: y + offsetY,
+                vx: (Math.random() - 0.5) * 40 - 60, // Hacia atrás principalmente
+                vy: (Math.random() - 0.5) * 40,
+                r: Math.random() * 3.5 + 2,
+                vida: 0.7 + Math.random() * 0.7,
+                color: '' // El color no se usa para las burbujas, solo el stroke
+            });
+        }
+    }
+}
 // ========= Funciones de Recompensa (disponibles para los niveles) =========
 export function limpiarTodosLosAnimales() {
     animales.forEach(a => generarExplosion(a.x, a.y, '#aaffff'));
@@ -722,6 +741,7 @@ function actualizar(dt) {
                 // El tiburón está cazando, se mueve en su vector de ataque
                 a.x += a.vx * dtAjustado;
                 a.y += a.vy * dtAjustado;
+                generarBurbujasEmbestidaTiburom(a.x, a.y);
                 // Si sale de la pantalla, deja de cazar
                 if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
                     a.isHunting = false;
