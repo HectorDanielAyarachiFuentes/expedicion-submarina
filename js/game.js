@@ -385,7 +385,7 @@ cargarImagen('img/tiburon.png', function (img) {
     } 
 });
 
-const WHALE_SPRITE_DATA = {
+export const WHALE_SPRITE_DATA = {
   "meta": {
     "app": "Sprite Sheet Suite v4.3",
     "image": "ballena.png",
@@ -442,7 +442,7 @@ const WHALE_SPRITE_DATA = {
   ]
 };
 
-let whaleImg = null, whaleListo = false;
+export let whaleImg = null, whaleListo = false;
 cargarImagen('img/ballena.png', function (img) { 
     if (img) { 
         whaleImg = img; 
@@ -535,7 +535,7 @@ export function generarTrozoBallena(x, y, numTrozos = 3, fuerza = 150) {
     }
 }
 
-function generarGotasSangre(x, y) {
+export function generarGotasSangre(x, y) {
     for (let i = 0; i < 10 + Math.random() * 10; i++) {
         const ang = Math.random() * Math.PI * 2;
         const spd = 20 + Math.random() * 100;
@@ -588,7 +588,8 @@ function generarBurbujasEmbestidaTiburom(x, y) {
 // ========= Funciones de Recompensa (disponibles para los niveles) =========
 export function limpiarTodosLosAnimales() {
     animales.forEach(a => generarExplosion(a.x, a.y, '#aaffff'));
-    animales = [];
+    // Modificamos el array existente en lugar de crear uno nuevo. Es más seguro.
+    animales.length = 0;
 }
 export function agregarPuntos(cantidad) {
     if (estadoJuego) estadoJuego.puntuacion += cantidad;
@@ -1249,6 +1250,13 @@ function actualizar(dt) {
 
     // Animar el patrón del propulsor
     thrusterPatternOffsetX = (thrusterPatternOffsetX - dtAjustado * 800) % 512;
+
+    // Limpieza de pantalla diferida (solicitada por los niveles para evitar errores)
+    // Esto se ejecuta después de todos los bucles de actualización de entidades.
+    if (estadoJuego.levelFlags.clearScreen) {
+        limpiarTodosLosAnimales();
+        estadoJuego.levelFlags.clearScreen = false;
+    }
 
     comprobarCompletadoNivel();
 }

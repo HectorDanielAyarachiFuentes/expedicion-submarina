@@ -18,7 +18,7 @@ const poolDeMisiones = [
     {
         id: 2, texto: "MISIÓN: ¡Elimina 10 animales en 20 segundos!", tipo: 'CONTAR_TOTAL',
         objetivo: { cantidad: 10 }, tiempoLimite: 20,
-        recompensa: () => { limpiarTodosLosAnimales(); agregarPuntos(500); }
+        recompensa: () => { estadoJuego.levelFlags.clearScreen = true; agregarPuntos(500); }
     },
     {
         id: 3, texto: "MISIÓN: ¡Logra una racha de 7 capturas!", tipo: 'RACHA',
@@ -34,7 +34,7 @@ const poolDeMisiones = [
     {
         id: 5, texto: "SUPERVIVENCIA: ¡Sobrevive 25 segundos!", tipo: 'SUPERVIVENCIA',
         tiempoLimite: 25,
-        recompensa: () => { limpiarTodosLosAnimales(); agregarPuntos(1000); }
+        recompensa: () => { estadoJuego.levelFlags.clearScreen = true; agregarPuntos(1000); }
     }
 ];
 

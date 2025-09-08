@@ -81,6 +81,8 @@ export function onFallo() {
 
 // Esta función se llama cuando se mata un enemigo (desde game.js via levels.js)
 export function onKill() {
+    if (levelState.subnivelActual >= SUBNIVELES.length) return; // Evita errores si el nivel ya terminó
+
     levelState.kills++;
     const sub = SUBNIVELES[levelState.subnivelActual];
     if (sub.tipo === 'kill' || sub.tipo === 'kill_aggressive') {
@@ -108,7 +110,8 @@ function completarSubnivel() {
     levelState.progresoSubnivel = 0;
     levelState.tiempoRestante = nuevoSub.tiempoLimite;
     levelState.tiempoParaProximoEvento = 1.0;
-    limpiarTodosLosAnimales();
+    // En lugar de limpiar aquí y causar un error, le pedimos al motor que lo haga.
+    estadoJuego.levelFlags.clearScreen = true;
     agregarPuntos(500 * levelState.subnivelActual);
 }
 

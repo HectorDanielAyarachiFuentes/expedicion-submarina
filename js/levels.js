@@ -9,6 +9,7 @@ import * as Level5 from './level5.js';
 import * as Level6 from './level6.js';
 import * as Level7 from './level7.js';
 import * as Level8 from './level8.js';
+import * as Level9 from './level9.js';
 
 // Importamos dependencias de game.js
 import { estadoJuego, dificultadBase } from './game.js';
@@ -23,7 +24,8 @@ export const CONFIG_NIVELES = [
   { nombre: 'NIVEL 5: COLAPSO DE LA FOSA', objetivo: 'Escapa durante 60 segundos', meta: 60, tipo: 'survive', speedMultiplier: 0 }, // Velocidad controlada por el nivel
   { nombre: 'NIVEL 6: EL VORTEX DE LAS PROFUNDIDADES', objetivo: 'Sobrevive 120 segundos', meta: 120, tipo: 'survive', speedMultiplier: 0 }, // Velocidad controlada por el nivel
   { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Supera el desafío.", meta: 1, tipo: 'boss', speedMultiplier: 1.2 },
-  { nombre: "NIVEL 8: ABISMO PROFUNDO", objetivo: "Captura 25 especímenes dorados", meta: 25, tipo: 'capture', speedMultiplier: 1.5 }
+  { nombre: "NIVEL 8: ABISMO PROFUNDO", objetivo: "Supera los desafíos del abismo", meta: 25, tipo: 'boss', speedMultiplier: 1.5 },
+  { nombre: "NIVEL 9: EL ASESINO DE BALLENAS", objetivo: "Completa la cacería", meta: 1, tipo: 'boss', speedMultiplier: 1.1 }
 ];
 
 // 3. MAPA DE MÓDULOS DE NIVEL
@@ -38,6 +40,7 @@ const levelModules = {
     6: Level6,
     7: Level7,
     8: Level8,
+    9: Level9,
 };
 
 // Guardamos una referencia al módulo del nivel que está activo
