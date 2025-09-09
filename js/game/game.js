@@ -1280,6 +1280,21 @@ function actualizar(dt) {
         const t = torpedos[i];
         t.x += (t.isVertical ? 0 : WEAPON_CONFIG.torpedo.velocidad) * dtAjustado;
         t.y -= (t.isVertical ? WEAPON_CONFIG.torpedo.velocidad : 0) * dtAjustado;
+
+        // >>> NUEVO: Estela de burbujas para torpedos <<<
+        if (Math.random() < 0.9) { // Más denso para los torpedos
+            const bubbleX = t.x - (t.isVertical ? 0 : t.w / 2);
+            const bubbleY = t.y + (t.isVertical ? t.h / 2 : 0);
+            generarParticula(particulasBurbujas, {
+                x: bubbleX,
+                y: bubbleY,
+                vx: (Math.random() - 0.5) * 30,
+                vy: (Math.random() - 0.5) * 30 + 20, // Burbujas van hacia atrás/arriba
+                r: Math.random() * 2.5 + 1,
+                vida: 0.8 + Math.random() * 0.8,
+                color: ''
+            });
+        }
         if (t.y < -t.h || t.x > W + t.w) { 
             torpedos.splice(i, 1); 
             continue; 
@@ -1291,7 +1306,21 @@ function actualizar(dt) {
 
     for (let i = proyectiles.length - 1; i >= 0; i--) {
         const p = proyectiles[i];
-        p.x += p.vx * dtAjustado; p.y += p.vy * dtAjustado; p.vida -= dtAjustado;
+        p.x += p.vx * dtAjustado; p.y += p.vy * dtAjustado; p.vida -= dtAjustado; 
+        // >>> NUEVO: Estela de burbujas para proyectiles <<<
+        if (Math.random() < 0.4) { // 40% de probabilidad por frame
+            generarParticula(particulasBurbujas, {
+                x: p.x,
+                y: p.y,
+                // Las burbujas se quedan atrás y flotan
+                vx: p.vx * 0.05 + (Math.random() - 0.5) * 20,
+                vy: p.vy * 0.05 - 20 - Math.random() * 20,
+                r: Math.random() * 1.5 + 0.5, // Burbujas pequeñas
+                vida: 0.4 + Math.random() * 0.4,
+                color: '' // Stroke de burbuja por defecto
+            });
+        }
+
         if (p.vida <= 0 || p.x > W + 20 || p.x < -20 || p.y < -20 || p.y > H + 20) {
             proyectiles.splice(i, 1);
             continue;
@@ -1641,9 +1670,51 @@ function renderizar(dt) {
             ctx.fill();
             ctx.restore();
         }
-        ctx.fillStyle = '#ffcc00';
-        for (const t of torpedos) { ctx.fillRect(t.x - t.w / 2, t.y - t.h / 2, t.w, t.h); }
-        for (const p of proyectiles) { ctx.fillStyle = p.color; ctx.fillRect(p.x - p.w / 2, p.y - p.h / 2, p.w, p.h); }
+        // --- Dibuja Torpedos (Mejorado) ---
+        for (const t of torpedos) {
+            ctx.save();
+            ctx.translate(t.x, t.y);
+            const angle = t.isVertical ? -Math.PI / 2 : 0;
+            ctx.rotate(angle);
+            // Cuerpo del torpedo
+            const grad = ctx.createLinearGradient(-t.w / 2, 0, t.w / 2, 0);
+            grad.addColorStop(0, '#ffdd99');
+            grad.addColorStop(0.5, '#ffcc00');
+            grad.addColorStop(1, '#ffaa00');
+            ctx.fillStyle = grad;
+            // Forma de torpedo (rectángulo con punta redondeada)
+            ctx.beginPath();
+            ctx.moveTo(-t.w / 2, -t.h / 2);
+            ctx.lineTo(t.w / 2 - t.h, -t.h / 2);
+            ctx.arc(t.w / 2 - t.h, 0, t.h / 2, -Math.PI / 2, Math.PI / 2);
+            ctx.lineTo(-t.w / 2, t.h / 2);
+            ctx.closePath();
+            ctx.fill();
+            // Pequeño resplandor de propulsión
+            ctx.fillStyle = 'rgba(255, 200, 100, 0.7)';
+            ctx.beginPath();
+            ctx.arc(-t.w / 2, 0, t.h / 1.5, -Math.PI / 2, Math.PI / 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        // --- Dibuja Proyectiles (Mejorado) ---
+        for (const p of proyectiles) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            const angle = Math.atan2(p.vy, p.vx);
+            ctx.rotate(angle);
+            // Resplandor
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 8;
+            // Cuerpo principal de la bala con gradiente para efecto de trazadora
+            const grad = ctx.createLinearGradient(-p.w / 2, 0, p.w / 2, 0);
+            grad.addColorStop(0, p.color); // Cola del color del proyectil
+            grad.addColorStop(0.8, p.color);
+            grad.addColorStop(1, 'white'); // Punta blanca brillante
+            ctx.fillStyle = grad;
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            ctx.restore();
+        }
         ctx.fillStyle = '#101010';
         for (const ink of estadoJuego.proyectilesTinta) { ctx.beginPath(); ctx.arc(ink.x, ink.y, ink.r, 0, Math.PI * 2); ctx.fill(); }
 
