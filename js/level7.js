@@ -1,7 +1,7 @@
 // js/level7.js
 'use strict';
 
-import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo, generarTrozoBallena } from './game.js';
+import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo, generarTrozoBallena } from './game/game.js';
 import { getLevelSpeed } from './levels.js';
 
 // --- ESTADO DEL NIVEL 7 ---

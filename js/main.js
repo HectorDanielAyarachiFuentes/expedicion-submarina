@@ -2,7 +2,7 @@
 'use strict';
 
 // Importamos las dos funciones principales que necesitamos del motor del juego
-import { init, gameLoop } from './game.js';
+import { init, gameLoop } from './game/game.js';
 
 // Inicializa toda la lógica del juego, los eventos, el estado y la UI.
 init();

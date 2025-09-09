@@ -12,7 +12,7 @@ import * as Level8 from './level8.js';
 import * as Level9 from './level9.js';
 
 // Importamos dependencias de game.js
-import { estadoJuego, dificultadBase } from './game.js';
+import { estadoJuego, dificultadBase } from './game/game.js';
 
 // 2. CONFIGURACIÓN CENTRALIZADA DE NIVELES
 // He movido el multiplicador de velocidad aquí para que toda la configuración esté en un solo lugar.

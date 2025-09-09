@@ -1,7 +1,7 @@
 'use strict';
 
 // Importaciones desde el motor del juego
-import { generarAnimal, dificultadBase, limpiarTodosLosAnimales, agregarPuntos, activarSlowMotion, estadoJuego } from './game.js';
+import { generarAnimal, dificultadBase, limpiarTodosLosAnimales, agregarPuntos, activarSlowMotion, estadoJuego } from './game/game.js';
 
 // --- ESTADO DEL NIVEL 8 ---
 let levelState = {};

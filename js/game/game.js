@@ -1,16 +1,25 @@
 'use strict';
 
 // Importamos la lógica de niveles
-import * as Levels from './levels.js';
+import * as Levels from '../levels.js';
 
 // ========= Funciones Auxiliares (las que son de uso general) =========
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
-export function dificultadBase() {
+export function dificultadBase() { 
     if (!estadoJuego) return 0;
     return estadoJuego.tiempoTranscurrido / 150;
 }
-function cargarImagen(url, cb) { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => cb(im); im.onerror = () => cb(null); im.src = url; }
+function cargarImagen(url, cb) {
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => cb(im);
+    im.onerror = () => {
+        console.error(`Error al cargar la imagen: ${url}. Asegúrate de que el archivo existe en la ruta correcta y el nombre no tiene errores de tipeo.`);
+        cb(null);
+    };
+    im.src = url;
+}
 
 // ========= Lienzos (Canvas) - Exportamos los que se necesitan en otros módulos (ctx) =========
 const bgCanvas = document.getElementById('bgCanvas'), bgCtx = bgCanvas.getContext('2d');
@@ -91,11 +100,17 @@ export const S = (function () {
         shotgun: 'sonidos/shotgun.wav',
         machinegun: 'sonidos/machinegun.wav',
         reload: 'sonidos/reload.wav',
-        laser_beam: 'sonidos/laser.wav'
+        laser_beam: 'sonidos/laser.wav',
+        // Sonidos que faltaban (usados en los niveles pero no definidos aquí)
+        choque_ligero: 'sonidos/choque_ligero.wav',
+        disparo_enemigo: 'sonidos/disparo_enemigo.wav',
+        explosion_grande: 'sonidos/explosion_grande.wav',
+        explosion_simple: 'sonidos/explosion_simple.wav',
+        powerup: 'sonidos/powerup.wav'
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
-    function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k.startsWith('music_')) { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } a[k] = el; } catch (e) { console.warn(`No se pudo cargar el audio: ${mapaFuentes[k]}`); } } }
+    function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k.startsWith('music_')) { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = el; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
     function reproducir(k) {
         const el = a[k];
         if (!el) return;
