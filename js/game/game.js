@@ -442,10 +442,37 @@ let __iniciando = false;
 let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = Math.PI / 24;
 const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
-const BOOST_FORCE = 400;
 export let torpedos = []; // prettier-ignore
 const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta', 'laser'];
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
+
+// --- CONFIGURACIÓN CENTRALIZADA DE ARMAS ---
+const WEAPON_CONFIG = {
+    garra: { velocidad: 1400, alcance: 0.7 }, // Alcance como % del ancho de pantalla
+    shotgun: {
+        enfriamiento: 2.5,
+        balas: 25,
+        dispersion: 1.5,
+        velocidadProyectil: { min: 700, max: 1100 },
+        vidaProyectil: { min: 0.5, max: 0.8 }
+    },
+    metralleta: {
+        enfriamiento: 3.0,
+        balas: 30,
+        dispersion: 0.2,
+        velocidadProyectil: 1600,
+        vidaProyectil: 0.8
+    },
+    laser: {
+        consumoEnergia: 30, // por segundo
+        regeneracionEnergia: 20, // por segundo
+        danoPorTick: 2,
+        cooldownTick: 0.1
+    },
+    torpedo: { enfriamiento: 1.5, velocidad: 1200, dano: 5 },
+    boost: { fuerza: 400, consumo: 35, regeneracion: 15, enfriamiento: 2.0 }
+};
+
 const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
 const MIERDEi_ANIMATION_SPEED = 0.06;
@@ -586,8 +613,8 @@ function dispararGarfio() {
     const cannonY = isLevel5 ? baseY - 45 : baseY;
     generarRafagaBurbujasDisparo(cannonX, cannonY, isLevel5);
     const dx = isLevel5 ? 0 : 1;
-    const dy = isLevel5 ? -1 : 0;
-    jugador.garra = { x: baseX, y: baseY, dx, dy, velocidad: 1400, fase: 'ida', golpeado: null, alcance: W * 0.7, recorrido: 0 };
+    const dy = isLevel5 ? -1 : 0; // prettier-ignore
+    jugador.garra = { x: baseX, y: baseY, dx, dy, velocidad: WEAPON_CONFIG.garra.velocidad, fase: 'ida', golpeado: null, alcance: W * WEAPON_CONFIG.garra.alcance, recorrido: 0 };
     S.reproducir('arpon');
 }
 
@@ -597,20 +624,22 @@ function dispararShotgun() {
     const px = isLevel5 ? jugador.x : jugador.x + 40;
     const py = isLevel5 ? jugador.y - 40 : jugador.y;
     generarRafagaBurbujasDisparo(px, py, isLevel5);
-    for (let i = 0; i < 25; i++) {
+    const config = WEAPON_CONFIG.shotgun;
+    for (let i = 0; i < config.balas; i++) {
         const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
-        const dispersion = 1.5;
-        const angulo = anguloBase + (Math.random() - 0.5) * dispersion;
-        const velocidad = 700 + Math.random() * 400;
-        proyectiles.push({ x: px, y: py, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 8, h: 3, color: '#ffb733', vida: 0.5 + Math.random() * 0.3 });
+        const angulo = anguloBase + (Math.random() - 0.5) * config.dispersion;
+        const velocidad = config.velocidadProyectil.min + Math.random() * (config.velocidadProyectil.max - config.velocidadProyectil.min);
+        const vida = config.vidaProyectil.min + Math.random() * (config.vidaProyectil.max - config.vidaProyectil.min);
+        proyectiles.push({ x: px, y: py, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 8, h: 3, color: '#ffb733', vida: vida });
     }
-    estadoJuego.enfriamientoArma = 2.5;
+    estadoJuego.enfriamientoArma = config.enfriamiento;
     S.reproducir('shotgun');
     setTimeout(() => S.reproducir('reload'), 500);
 }
 
 function dispararMetralleta() {
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
+    const config = WEAPON_CONFIG.metralleta;
     const isLevel5 = estadoJuego.nivel === 5;
     const px = isLevel5 ? jugador.x : jugador.x + 40;
     const py = isLevel5 ? jugador.y - 40 : jugador.y;
@@ -618,15 +647,14 @@ function dispararMetralleta() {
     const numBalas = 30;
     for (let i = 0; i < numBalas; i++) {
         const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
-        const dispersion = 0.2;
-        const angulo = anguloBase + (Math.random() - 0.5) * dispersion;
-        const velocidad = 1600;
-        const offset = (i / numBalas) * velocidad * 0.05;
+        const angulo = anguloBase + (Math.random() - 0.5) * config.dispersion;
+        const velocidad = config.velocidadProyectil;
+        const offset = (i / numBalas) * velocidad * 0.05; // Efecto de ráfaga
         const offsetX = isLevel5 ? Math.cos(angulo + Math.PI / 2) * offset : offset;
         const offsetY = isLevel5 ? Math.sin(angulo + Math.PI / 2) * offset : 0;
-        proyectiles.push({ x: px + offsetX, y: py + offsetY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 12, h: 2, color: '#ff6363', vida: 0.8 });
+        proyectiles.push({ x: px + offsetX, y: py + offsetY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 12, h: 2, color: '#ff6363', vida: config.vidaProyectil });
     }
-    estadoJuego.enfriamientoArma = 3.0;
+    estadoJuego.enfriamientoArma = config.enfriamiento;
     let soundCount = 0;
     const soundInterval = setInterval(() => { S.reproducir('machinegun'); soundCount++; if (soundCount >= 5) clearInterval(soundInterval); }, 60);
     setTimeout(() => S.reproducir('reload'), 800);
@@ -654,7 +682,7 @@ function lanzarTorpedo() {
     } else {
         torpedos.push({ x: px, y: py, w: 20, h: 6, isVertical: false });
     }
-    estadoJuego.enfriamientoTorpedo = ENFRIAMIENTO_TORPEDO;
+    estadoJuego.enfriamientoTorpedo = WEAPON_CONFIG.torpedo.enfriamiento;
     S.reproducir('torpedo');
 }
 
@@ -758,7 +786,7 @@ function actualizar(dt) {
     estadoJuego.boostActivo = teclas['b'] && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
 
     if (estadoJuego.boostActivo) {
-        estadoJuego.boostEnergia -= 35 * dtAjustado;
+        estadoJuego.boostEnergia -= WEAPON_CONFIG.boost.consumo * dtAjustado;
 
         // El impulso ahora empuja en la dirección del movimiento, o hacia adelante si está quieto.
         let boostVx = 1, boostVy = 0;
@@ -766,19 +794,19 @@ function actualizar(dt) {
             boostVx = vx / JUGADOR_VELOCIDAD; // Normalizar el vector de velocidad
             boostVy = vy / JUGADOR_VELOCIDAD;
         }
-        jugador.x += boostVx * BOOST_FORCE * dtAjustado;
-        jugador.y += boostVy * BOOST_FORCE * dtAjustado;
+        jugador.x += boostVx * WEAPON_CONFIG.boost.fuerza * dtAjustado;
+        jugador.y += boostVy * WEAPON_CONFIG.boost.fuerza * dtAjustado;
 
         for(let i = 0; i < 5; i++) { // Generar burbujas intensas
             generarBurbujaPropulsion(jugador.x - 40, jugador.y + (Math.random() - 0.5) * 30, false);
         }
     } else {
         if (estadoJuego.boostEnfriamiento <= 0) {
-            estadoJuego.boostEnergia += 15 * dtAjustado; // Regeneración de energía
+            estadoJuego.boostEnergia += WEAPON_CONFIG.boost.regeneracion * dtAjustado; // Regeneración de energía
             estadoJuego.boostEnergia = Math.min(estadoJuego.boostEnergia, estadoJuego.boostMaxEnergia);
         }
     }
-    
+
     if (estadoJuego.boostEnergia <= 0) {
         estadoJuego.boostEnergia = 0;
         if (estadoJuego.boostEnfriamiento <= 0) { // Iniciar enfriamiento solo una vez
@@ -794,7 +822,7 @@ function actualizar(dt) {
     if (estadoJuego.armaActual === 'laser') {
         if (teclas[' '] && estadoJuego.laserEnergia > 0) {
             estadoJuego.laserActivo = true;
-            estadoJuego.laserEnergia = Math.max(0, estadoJuego.laserEnergia - 30 * dtAjustado);
+            estadoJuego.laserEnergia = Math.max(0, estadoJuego.laserEnergia - WEAPON_CONFIG.laser.consumoEnergia * dtAjustado);
             S.bucle('laser_beam');
         } else {
             estadoJuego.laserActivo = false;
@@ -808,7 +836,7 @@ function actualizar(dt) {
     }
     // Regeneración de energía del láser
     if (!estadoJuego.laserActivo && estadoJuego.laserEnergia < estadoJuego.laserMaxEnergia) {
-        estadoJuego.laserEnergia += 20 * dtAjustado;
+        estadoJuego.laserEnergia += WEAPON_CONFIG.laser.regeneracionEnergia * dtAjustado;
         estadoJuego.laserEnergia = Math.min(estadoJuego.laserEnergia, estadoJuego.laserMaxEnergia);
     }
 
@@ -1009,8 +1037,8 @@ function actualizar(dt) {
             if (!a.capturado && laserHitbox.x < a.x + a.w / 2 && laserHitbox.x + laserHitbox.w > a.x - a.w / 2 && laserHitbox.y < a.y + a.h / 2 && laserHitbox.y + laserHitbox.h > a.y - a.h / 2) {
                 if (a.hp !== undefined) {
                     if (!a.laserHitTimer || a.laserHitTimer <= 0) {
-                        a.hp -= 2; // Daño por tick
-                        a.laserHitTimer = 0.1; // Cooldown entre ticks de daño
+                        a.hp -= WEAPON_CONFIG.laser.danoPorTick; // Daño por tick
+                        a.laserHitTimer = WEAPON_CONFIG.laser.cooldownTick; // Cooldown entre ticks de daño
                         if (a.tipo === 'whale') generarGotasSangre(a.x, a.y);
                         generarExplosion(a.x, a.y, '#ff5555', 5);
                     }
@@ -1038,7 +1066,7 @@ function actualizar(dt) {
             if (!a.capturado && proyectil.x < a.x + a.w / 2 && proyectil.x + (proyectil.w || 0) > a.x - a.w / 2 && proyectil.y < a.y + a.h / 2 && proyectil.y + (proyectil.h || 0) > a.y - a.h / 2) {
                 // Enemigos con HP (como la ballena)
                 if (a.hp !== undefined) {
-                    const damage = proyectil.isVertical !== undefined ? 5 : 1; // Torpedos hacen más daño
+                    const damage = proyectil.isVertical !== undefined ? WEAPON_CONFIG.torpedo.dano : 1; // Torpedos hacen más daño
                     a.hp -= damage;
                     if (a.tipo === 'whale' || a.tipo === 'shark') {
                         generarTrozoBallena(proyectil.x, proyectil.y);
@@ -1068,8 +1096,8 @@ function actualizar(dt) {
     // --- Actualización de Proyectiles (Torpedos y Balas) ---
     for (let i = torpedos.length - 1; i >= 0; i--) {
         const t = torpedos[i];
-        t.x += (t.isVertical ? 0 : 1200) * dtAjustado;
-        t.y -= (t.isVertical ? 1200 : 0) * dtAjustado;
+        t.x += (t.isVertical ? 0 : WEAPON_CONFIG.torpedo.velocidad) * dtAjustado;
+        t.y -= (t.isVertical ? WEAPON_CONFIG.torpedo.velocidad : 0) * dtAjustado;
         if (t.y < -t.h || t.x > W + t.w) { 
             torpedos.splice(i, 1); 
             continue; 
