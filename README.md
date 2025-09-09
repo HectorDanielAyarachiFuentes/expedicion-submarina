@@ -1,4 +1,4 @@
-# La Expedición 🗺️ - Una Aventura Submarina Retro 👾
+# La Expedición 🗺️ - Una Aventura Submarina Retro
 
 
 <p align="center">
