@@ -1084,6 +1084,20 @@ function actualizar(dt) {
                     break;
             }
             // --- FIN SUGERENCIA ---
+            // >>> NUEVO: Estela de burbujas para los peces <<<
+            if (Math.random() < 0.15) { // No generar en cada frame para un efecto más sutil
+                const tailX = a.x + a.w / 2; // La cola del pez
+                const tailY = a.y;
+                generarParticula(particulasBurbujas, {
+                    x: tailX,
+                    y: tailY,
+                    vx: 20 + Math.random() * 20, // Burbujas van un poco hacia la derecha (quedan atrás)
+                    vy: (Math.random() - 0.5) * 20 - 15, // Tienden a flotar hacia arriba
+                    r: Math.random() * 1.5 + 0.5, // Burbujas pequeñas
+                    vida: 0.8 + Math.random() * 0.7,
+                    color: '' // El color no se usa para las burbujas, solo el stroke
+                });
+            }
             // Animación para otras criaturas
             a.timerFrame += dtAjustado; 
             if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
