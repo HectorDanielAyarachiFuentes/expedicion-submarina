@@ -202,7 +202,7 @@ function guardarNivelMaximo() { try { const proximoNivelDesbloqueado = Math.min(
 let robotImg = null, robotListo = false, spriteAncho = 96, spriteAlto = 64, robotEscala = 2;
 cargarImagen('img/subastian.png', function (img) { if (img) { robotImg = img; robotListo = true; const altoObjetivo = 64; const ratio = img.width / img.height; spriteAlto = altoObjetivo; spriteAncho = Math.round(altoObjetivo * ratio); } });
 let criaturasImg = null, criaturasListas = false, cFrameAncho = 0, cFrameAlto = 0, cFilas = 0;
-cargarImagen('img/DeepseaCreatures_spritesheet.png', function (img) { if (img) { criaturasImg = img; cFrameAncho = Math.floor(img.width / 2); cFilas = Math.max(1, Math.floor(img.height / cFrameAncho)); cFrameAlto = Math.floor(img.height / cFilas); criaturasListas = true; } });
+cargarImagen('img/sprites/DeepseaCreatures_spritesheet.png', function (img) { if (img) { criaturasImg = img; cFrameAncho = Math.floor(img.width / 2); cFilas = Math.max(1, Math.floor(img.height / cFrameAncho)); cFrameAlto = Math.floor(img.height / cFilas); criaturasListas = true; } });
 let bgImg = null, bgListo = false, bgOffset = 0, bgAncho = 0, bgAlto = 0, BG_VELOCIDAD_BASE = 35;
 cargarImagen('img/Fondos/bg_back.png', function (img) { if (img) { bgImg = img; bgListo = true; bgAncho = img.width; bgAlto = img.height; } });
 let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0, FG_VELOCIDAD_BASE = 60;
@@ -220,7 +220,7 @@ function comprobarMierdeiListo() {
         mierdeiListo = true;
     }
 }
-cargarImagen('img/mierdei.png', function(img) {
+cargarImagen('img/sprites/mierdei.png', function(img) {
     if (img) {
         mierdeiImg = img;
         mierdeiImgCargada = true;
@@ -246,7 +246,7 @@ function comprobarSharkListo() {
         sharkListo = true;
     }
 }
-cargarImagen('img/tiburon.png', function (img) { 
+cargarImagen('img/sprites/tiburon.png', function (img) { 
     if (img) { 
         sharkImg = img; 
         sharkImgCargada = true;
@@ -270,7 +270,7 @@ function comprobarWhaleListo() {
         whaleListo = true;
     }
 }
-cargarImagen('img/ballena.png', function (img) { 
+cargarImagen('img/sprites/ballena.png', function (img) { 
     if (img) { 
         whaleImg = img; 
         whaleImgCargada = true;
