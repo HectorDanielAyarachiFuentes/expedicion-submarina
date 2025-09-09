@@ -1138,11 +1138,22 @@ function actualizar(dt) {
     
     // Daño del láser
     if (estadoJuego.laserActivo) {
-        const laserStartX = jugador.x + 40;
-        const laserStartY = jugador.y;
-        const laserLength = W;
-        const laserWidth = 10;
-        const laserHitbox = { x: laserStartX, y: laserStartY - laserWidth / 2, w: laserLength, h: laserWidth };
+        const isLevel5 = estadoJuego.nivel === 5;
+        let laserHitbox;
+
+        if (isLevel5) {
+            const laserStartX = jugador.x;
+            const laserStartY = jugador.y - 40; // Desde la "punta" del submarino
+            const laserLength = laserStartY; // Hacia arriba hasta el borde
+            const laserWidth = 10;
+            laserHitbox = { x: laserStartX - laserWidth / 2, y: 0, w: laserWidth, h: laserLength };
+        } else {
+            const laserStartX = jugador.x + 40;
+            const laserStartY = jugador.y;
+            const laserLength = W;
+            const laserWidth = 10;
+            laserHitbox = { x: laserStartX, y: laserStartY - laserWidth / 2, w: laserLength, h: laserWidth };
+        }
 
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
@@ -1473,26 +1484,49 @@ function renderizar(dt) {
 
             // DIBUJAR LÁSER
             if (estadoJuego.laserActivo) {
-                const laserStartX = px + 40;
-                const laserStartY = py;
-                const laserLength = W;
+                const isLevel5 = estadoJuego.nivel === 5;
                 const laserWidth = 8 + Math.sin(estadoJuego.tiempoTranscurrido * 50) * 4; // Ancho pulsante
                 const energyRatio = estadoJuego.laserEnergia / estadoJuego.laserMaxEnergia;
 
                 ctx.save();
-                // Núcleo brillante
-                const coreGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX + laserLength, laserStartY);
-                coreGrad.addColorStop(0, `rgba(255, 255, 255, ${energyRatio})`);
-                coreGrad.addColorStop(0.1, `rgba(255, 255, 255, ${energyRatio * 0.8})`);
-                coreGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
-                ctx.fillStyle = coreGrad;
-                ctx.fillRect(laserStartX, laserStartY - laserWidth / 4, laserLength, laserWidth / 2);
-                // Resplandor exterior
-                const glowGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX + laserLength, laserStartY);
-                glowGrad.addColorStop(0, `rgba(255, 100, 100, ${energyRatio * 0.6})`);
-                glowGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
-                ctx.fillStyle = glowGrad;
-                ctx.fillRect(laserStartX, laserStartY - laserWidth / 2, laserLength, laserWidth);
+
+                if (isLevel5) {
+                    const laserStartX = px;
+                    const laserStartY = py - 40;
+                    const laserLength = laserStartY; // Hacia arriba
+
+                    // Núcleo brillante
+                    const coreGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX, laserStartY - laserLength);
+                    coreGrad.addColorStop(0, `rgba(255, 255, 255, ${energyRatio})`);
+                    coreGrad.addColorStop(0.1, `rgba(255, 255, 255, ${energyRatio * 0.8})`);
+                    coreGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
+                    ctx.fillStyle = coreGrad;
+                    ctx.fillRect(laserStartX - laserWidth / 4, laserStartY - laserLength, laserWidth / 2, laserLength);
+                    // Resplandor exterior
+                    const glowGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX, laserStartY - laserLength);
+                    glowGrad.addColorStop(0, `rgba(255, 100, 100, ${energyRatio * 0.6})`);
+                    glowGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
+                    ctx.fillStyle = glowGrad;
+                    ctx.fillRect(laserStartX - laserWidth / 2, laserStartY - laserLength, laserWidth, laserLength);
+                } else {
+                    const laserStartX = px + 40;
+                    const laserStartY = py;
+                    const laserLength = W;
+
+                    // Núcleo brillante
+                    const coreGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX + laserLength, laserStartY);
+                    coreGrad.addColorStop(0, `rgba(255, 255, 255, ${energyRatio})`);
+                    coreGrad.addColorStop(0.1, `rgba(255, 255, 255, ${energyRatio * 0.8})`);
+                    coreGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
+                    ctx.fillStyle = coreGrad;
+                    ctx.fillRect(laserStartX, laserStartY - laserWidth / 4, laserLength, laserWidth / 2);
+                    // Resplandor exterior
+                    const glowGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX + laserLength, laserStartY);
+                    glowGrad.addColorStop(0, `rgba(255, 100, 100, ${energyRatio * 0.6})`);
+                    glowGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
+                    ctx.fillStyle = glowGrad;
+                    ctx.fillRect(laserStartX, laserStartY - laserWidth / 2, laserLength, laserWidth);
+                }
                 ctx.restore();
             }
         }
