@@ -1599,51 +1599,84 @@ function renderizar(dt) {
                 ctx.restore();
             }
 
-            // --- Dibuja el Láser ---
+            // --- Dibuja el Láser (NUEVO EFECTO MEJORADO) ---
             if (estadoJuego.laserActivo) {
                 const isLevel5 = estadoJuego.nivel === 5;
-                const laserWidth = 8 + Math.sin(estadoJuego.tiempoTranscurrido * 50) * 4; // Ancho pulsante
                 const energyRatio = estadoJuego.laserEnergia / estadoJuego.laserMaxEnergia;
+                const time = estadoJuego.tiempoTranscurrido;
+
+                // Parámetros del láser
+                const baseWidth = 20;
+                const pulse = Math.sin(time * 60) * 3; // Pulso más rápido y sutil
+                const beamWidth = (baseWidth + pulse) * energyRatio;
+
+                // Posición y ángulo
+                const laserStartX = isLevel5 ? px : px + 40;
+                const laserStartY = isLevel5 ? py - 40 : py;
+                const angle = isLevel5 ? -Math.PI / 2 : 0;
+                const length = isLevel5 ? laserStartY : W - laserStartX;
 
                 ctx.save();
+                ctx.translate(laserStartX, laserStartY);
+                ctx.rotate(angle);
 
-                if (isLevel5) {
-                    const laserStartX = px;
-                    const laserStartY = py - 40;
-                    const laserLength = laserStartY; // Hacia arriba
+                // 1. Resplandor exterior (ancho y suave)
+                const glowWidth = beamWidth * 2.5;
+                const glowGrad = ctx.createLinearGradient(0, -glowWidth / 2, 0, glowWidth / 2);
+                glowGrad.addColorStop(0, 'rgba(255, 100, 100, 0)');
+                glowGrad.addColorStop(0.5, `rgba(255, 100, 100, ${energyRatio * 0.4})`);
+                glowGrad.addColorStop(1, 'rgba(255, 100, 100, 0)');
+                ctx.fillStyle = glowGrad;
+                ctx.fillRect(0, -glowWidth / 2, length, glowWidth);
 
-                    // Núcleo brillante
-                    const coreGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX, laserStartY - laserLength);
-                    coreGrad.addColorStop(0, `rgba(255, 255, 255, ${energyRatio})`);
-                    coreGrad.addColorStop(0.1, `rgba(255, 255, 255, ${energyRatio * 0.8})`);
-                    coreGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
-                    ctx.fillStyle = coreGrad;
-                    ctx.fillRect(laserStartX - laserWidth / 4, laserStartY - laserLength, laserWidth / 2, laserLength);
-                    // Resplandor exterior
-                    const glowGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX, laserStartY - laserLength);
-                    glowGrad.addColorStop(0, `rgba(255, 100, 100, ${energyRatio * 0.6})`);
-                    glowGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
-                    ctx.fillStyle = glowGrad;
-                    ctx.fillRect(laserStartX - laserWidth / 2, laserStartY - laserLength, laserWidth, laserLength);
-                } else {
-                    const laserStartX = px + 40;
-                    const laserStartY = py;
-                    const laserLength = W;
-
-                    // Núcleo brillante
-                    const coreGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX + laserLength, laserStartY);
-                    coreGrad.addColorStop(0, `rgba(255, 255, 255, ${energyRatio})`);
-                    coreGrad.addColorStop(0.1, `rgba(255, 255, 255, ${energyRatio * 0.8})`);
-                    coreGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
-                    ctx.fillStyle = coreGrad;
-                    ctx.fillRect(laserStartX, laserStartY - laserWidth / 4, laserLength, laserWidth / 2);
-                    // Resplandor exterior
-                    const glowGrad = ctx.createLinearGradient(laserStartX, laserStartY, laserStartX + laserLength, laserStartY);
-                    glowGrad.addColorStop(0, `rgba(255, 100, 100, ${energyRatio * 0.6})`);
-                    glowGrad.addColorStop(1, `rgba(255, 100, 100, 0)`);
-                    ctx.fillStyle = glowGrad;
-                    ctx.fillRect(laserStartX, laserStartY - laserWidth / 2, laserLength, laserWidth);
+                // 2. Patrón de energía (usando el del propulsor)
+                if (thrusterPatternReady && thrusterPattern) {
+                    ctx.save();
+                    // El patrón se mueve para dar sensación de flujo
+                    ctx.translate(thrusterPatternOffsetX, 0);
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = thrusterPattern;
+                    ctx.globalAlpha = 0.6 * energyRatio;
+                    ctx.fillRect(-thrusterPatternOffsetX, -beamWidth / 2, length + thrusterPatternOffsetX, beamWidth);
+                    ctx.restore();
                 }
+
+                // 3. Núcleo interior (delgado y brillante)
+                const coreWidth = beamWidth * 0.25;
+                const coreGrad = ctx.createLinearGradient(0, -coreWidth / 2, 0, coreWidth / 2);
+                coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                coreGrad.addColorStop(0.5, `rgba(255, 255, 220, ${energyRatio})`);
+                coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = coreGrad;
+                ctx.fillRect(0, -coreWidth / 2, length, coreWidth);
+
+                // 4. "Lens flare" en el origen
+                ctx.globalCompositeOperation = 'lighter';
+                const flareRadius = beamWidth * 0.8;
+                const flareGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, flareRadius);
+                flareGrad.addColorStop(0, `rgba(255, 255, 255, ${energyRatio * 0.9})`);
+                flareGrad.addColorStop(0.3, `rgba(255, 255, 200, ${energyRatio * 0.7})`);
+                flareGrad.addColorStop(1, 'rgba(255, 100, 100, 0)');
+                ctx.fillStyle = flareGrad;
+                ctx.beginPath();
+                ctx.arc(0, 0, flareRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 5. Partículas crepitantes a lo largo del rayo
+                const numParticles = 10;
+                for (let i = 0; i < numParticles; i++) {
+                    const pLife = Math.random();
+                    if (pLife > energyRatio) continue; // Menos partículas con menos energía
+
+                    const pX = Math.random() * length;
+                    const pY = (Math.random() - 0.5) * beamWidth;
+                    const pSize = Math.random() * 2 + 1;
+                    ctx.fillStyle = `rgba(255, 255, 220, ${Math.random() * 0.8})`;
+                    ctx.beginPath();
+                    ctx.arc(pX, pY, pSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
                 ctx.restore();
             }
         }
