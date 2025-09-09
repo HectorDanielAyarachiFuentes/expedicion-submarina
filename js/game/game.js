@@ -1511,10 +1511,19 @@ function dibujarHUD() {
 
     if (estadoJuego.enEjecucion) {
         hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`;
-        
+
         const mision = Levels.getEstadoMision();
         if (mision) {
-            hudObjectiveText.innerHTML = `<span class="mission-title">${mision.texto}</span>${mision.progreso}`;
+            // --- REFACTORIZACIÓN DE SEGURIDAD (CSP) ---
+            // Se evita usar innerHTML para construir elementos. En su lugar, se crean
+            // y añaden de forma segura, lo que es una mejor práctica y evita problemas
+            // con políticas de seguridad de contenido (CSP) estrictas.
+            hudObjectiveText.innerHTML = ''; // Limpiar contenido anterior
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'mission-title';
+            titleSpan.textContent = mision.texto;
+            hudObjectiveText.appendChild(titleSpan);
+            hudObjectiveText.appendChild(document.createTextNode(mision.progreso));
         } else {
             hudObjectiveText.innerHTML = '';
             const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
