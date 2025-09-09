@@ -336,7 +336,7 @@ function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY =
 
 // --- Sistema de Partículas ---
 // Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
-export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [];
+export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [], particulasPolvoMarino = [];
 export let proyectiles = [];
 
 // --- Funciones de Partículas ---
@@ -377,6 +377,47 @@ function iniciarParticulas() {
     const densidad = Math.max(40, Math.min(140, Math.floor((W * H) / 28000)));
     for (let i = 0; i < densidad; i++) generarParticula(particulas, { x: Math.random() * W, y: Math.random() * H, vx: -(8 + Math.random() * 22), vy: -(10 + Math.random() * 25), r: Math.random() * 2 + 1.2, vida: 999, color: '#cfe9ff', baseA: 0.25 + Math.random() * 0.25 });
 }
+
+// --- NUEVO: Sistema de partículas de polvo/plancton para dar profundidad ---
+function generarParticulaPolvoMarino(esInicio = false) {
+    const profundidad = 0.2 + Math.random() * 0.8; // de 0.2 a 1.0
+    particulasPolvoMarino.push({
+        x: esInicio ? Math.random() * W : W + 10,
+        y: Math.random() * H,
+        profundidad: profundidad,
+        r: (0.5 + Math.random() * 1.5) * profundidad,
+        vy: (Math.random() - 0.5) * 10, // ligero deriva vertical
+        opacidad: (0.1 + Math.random() * 0.4) * profundidad
+    });
+}
+
+function iniciarPolvoMarino() {
+    particulasPolvoMarino.length = 0;
+    // Ajustar la densidad según el tamaño de la pantalla para un efecto consistente
+    const densidad = Math.max(50, Math.min(200, Math.floor((W * H) / 12000)));
+    for (let i = 0; i < densidad; i++) {
+        generarParticulaPolvoMarino(true); // true = es la generación inicial
+    }
+}
+
+function actualizarPolvoMarino(dt) {
+    // El polvo se mueve con el fondo para crear un efecto de paralaje
+    const scrollFondo = estadoJuego.levelFlags.scrollBackground !== false;
+    const velocidadBaseScroll = scrollFondo ? BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)) : 0;
+
+    for (let i = particulasPolvoMarino.length - 1; i >= 0; i--) {
+        const p = particulasPolvoMarino[i];
+        // Las partículas más "profundas" (cercanas) se mueven más rápido
+        p.x -= velocidadBaseScroll * p.profundidad * dt;
+        p.y += p.vy * dt;
+
+        // Si una partícula se sale de la pantalla, la reciclamos en el otro lado
+        if (p.x < -5) { p.x = W + 5; p.y = Math.random() * H; }
+        if (p.y < -5) { p.y = H + 5; } else if (p.y > H + 5) { p.y = -5; }
+    }
+}
+// --- FIN NUEVO ---
+
 function actualizarParticulas(dt) {
     for (let arr of [particulas, particulasExplosion, particulasTinta]) {
         for (let i = arr.length - 1; i >= 0; i--) {
@@ -577,11 +618,13 @@ function reiniciar(nivelDeInicio = 1) {
     animales = [];
     torpedos = [];
     proyectiles = [];
-    whaleDebris = [];    
+    whaleDebris = [];
     particulasTinta = [];
+    particulasPolvoMarino = [];
 
     autoSize();
     iniciarParticulas();
+    iniciarPolvoMarino();
     if (gameplayHints) gameplayHints.style.display = 'none';
 }
 
@@ -1336,6 +1379,7 @@ function actualizar(dt) {
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dtAjustado);
     
     actualizarParticulas(dtAjustado);
+    actualizarPolvoMarino(dtAjustado);
 
     // Actualizar trozos de ballena
     for (let i = whaleDebris.length - 1; i >= 0; i--) {
@@ -1781,6 +1825,7 @@ function renderizar(dt) {
 
     ctx.restore();
     dibujarMascaraLuz();
+    dibujarPolvoMarino(); // Dibuja el polvo/plancton en el canvas de efectos
     dibujarHUD();
 }
 
@@ -1814,6 +1859,23 @@ function dibujarFondo(dt) {
         bgCtx.fillStyle = '#06131f';
         bgCtx.fillRect(0, 0, W, H);
     }
+}
+
+// --- NUEVO: Función para dibujar el polvo marino ---
+function dibujarPolvoMarino() {
+    // Dibuja en el canvas de efectos (fx) para que aparezca por encima del juego
+    if (!fx || !estadoJuego || !estadoJuego.enEjecucion) return;
+    fx.save();
+    fx.globalCompositeOperation = 'lighter'; // Un modo de mezcla que queda bien para partículas de luz/polvo
+
+    for (const p of particulasPolvoMarino) {
+        // La opacidad ya está calculada en la partícula
+        fx.fillStyle = `rgba(207, 233, 255, ${p.opacidad})`;
+        fx.beginPath();
+        fx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        fx.fill();
+    }
+    fx.restore();
 }
 
 function dibujarMascaraLuz() {
