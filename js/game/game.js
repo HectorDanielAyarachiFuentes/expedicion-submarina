@@ -1,6 +1,21 @@
 'use strict';
 
 // =================================================================================
+//  0. GESTOR DE ERRORES GLOBAL
+// =================================================================================
+// Este manejador atrapará cualquier error no capturado en el código,
+// lo mostrará en la consola y evitará que el juego se bloquee por completo.
+window.onerror = function (message, source, lineno, colno, error) {
+    console.error("!! ERROR NO CAPTURADO !!");
+    console.error("Mensaje:", message);
+    console.error("Fuente:", source);
+    console.error("Línea:", lineno, "Columna:", colno);
+    console.error("Objeto Error:", error);
+    // Para evitar que el navegador muestre su propio diálogo de error
+    return true;
+};
+
+// =================================================================================
 //  1. IMPORTACIONES Y FUNCIONES AUXILIARES GLOBALES
 // =================================================================================
 
@@ -1773,15 +1788,18 @@ export function gameLoop(t) {
     const dt = Math.min(0.033, (t - ultimo) / 1000 || 0);
     ultimo = t;
 
-    if (estadoJuego && estadoJuego.faseJuego === 'playing') {
-        actualizar(dt);
-    }
-    renderizar(dt);
+    try {
+        if (estadoJuego && estadoJuego.faseJuego === 'playing') {
+            actualizar(dt);
+        }
+        renderizar(dt);
 
-    if (animarSubmarino) {
-        renderizarSubmarinoBailarin(t);
+        if (animarSubmarino) {
+            renderizarSubmarinoBailarin(t);
+        }
+    } catch (e) {
+        console.error("Error en el bucle principal del juego:", e);
     }
-    
     // Solicita al navegador que vuelva a llamar a esta función en el próximo frame.
     requestAnimationFrame(gameLoop);
 }

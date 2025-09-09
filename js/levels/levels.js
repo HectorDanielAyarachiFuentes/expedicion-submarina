@@ -57,7 +57,11 @@ export function initLevel(nivel) {
     activeLevelModule = levelModules[nivel] || null;
 
     if (activeLevelModule && typeof activeLevelModule.init === 'function') {
-        activeLevelModule.init();
+        try {
+            activeLevelModule.init();
+        } catch (e) {
+            console.error(`Error al inicializar el Nivel ${nivel}:`, e);
+        }
     } else {
         console.warn(`El módulo para el nivel ${nivel} no existe o no tiene una función init().`);
     }
@@ -69,7 +73,11 @@ export function initLevel(nivel) {
  */
 export function updateLevel(dt) {
     if (activeLevelModule && typeof activeLevelModule.update === 'function') {
-        activeLevelModule.update(dt);
+        try {
+            activeLevelModule.update(dt);
+        } catch (e) {
+            console.error(`Error en el update() del nivel activo:`, e);
+        }
     }
 }
 
@@ -78,7 +86,11 @@ export function updateLevel(dt) {
  */
 export function drawLevel() {
     if (activeLevelModule && typeof activeLevelModule.draw === 'function') {
-        activeLevelModule.draw();
+        try {
+            activeLevelModule.draw();
+        } catch (e) {
+            console.error(`Error en el draw() del nivel activo:`, e);
+        }
     }
 }
 
@@ -92,7 +104,11 @@ export function drawLevel() {
  */
 export function getEstadoMision() {
     if (activeLevelModule && typeof activeLevelModule.getEstadoMision === 'function') {
-        return activeLevelModule.getEstadoMision();
+        try {
+            return activeLevelModule.getEstadoMision();
+        } catch (e) {
+            console.error(`Error en getEstadoMision() del nivel activo:`, e);
+        }
     }
     return null;
 }
@@ -103,7 +119,11 @@ export function getEstadoMision() {
  */
 export function onAnimalCazado(tipoAnimal) {
     if (activeLevelModule && typeof activeLevelModule.onAnimalCazado === 'function') {
-        activeLevelModule.onAnimalCazado(tipoAnimal);
+        try {
+            activeLevelModule.onAnimalCazado(tipoAnimal);
+        } catch (e) {
+            console.error(`Error en onAnimalCazado() del nivel activo:`, e);
+        }
     }
 }
 
@@ -112,7 +132,11 @@ export function onAnimalCazado(tipoAnimal) {
  */
 export function onFallo() {
     if (activeLevelModule && typeof activeLevelModule.onFallo === 'function') {
-        activeLevelModule.onFallo();
+        try {
+            activeLevelModule.onFallo();
+        } catch (e) {
+            console.error(`Error en onFallo() del nivel activo:`, e);
+        }
     }
 }
 
@@ -122,7 +146,11 @@ export function onFallo() {
  */
 export function onKill(tipoAnimal) {
     if (activeLevelModule && typeof activeLevelModule.onKill === 'function') {
-        activeLevelModule.onKill(tipoAnimal);
+        try {
+            activeLevelModule.onKill(tipoAnimal);
+        } catch (e) {
+            console.error(`Error en onKill() del nivel activo:`, e);
+        }
     }
 }
 
