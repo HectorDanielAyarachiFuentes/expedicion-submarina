@@ -2,7 +2,7 @@
 'use strict';
 
 // Importamos todo lo que necesitamos, incluyendo proyectiles y torpedos
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles } from './game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles } from '../game/game.js';
 
 // --- ESTADO Y ENTIDADES DEL NIVEL 4 ---
 let escombros = [];

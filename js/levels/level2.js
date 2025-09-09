@@ -4,7 +4,7 @@
 // - generarAnimal: Para crear enemigos.
 // - dificultadBase: Para que el nivel se vuelva más difícil con el tiempo.
 // - estadoJuego: Para modificar propiedades globales como la oscuridad.
-import { generarAnimal, dificultadBase, estadoJuego } from './game/game.js';
+import { generarAnimal, dificultadBase, estadoJuego } from '../game/game.js';
 
 // 2. ESTADO INTERNO DEL NIVEL
 // Usamos un objeto para guardar las variables de este nivel. Es más limpio que tenerlas sueltas.

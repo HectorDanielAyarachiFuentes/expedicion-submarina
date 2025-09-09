@@ -1,7 +1,7 @@
 'use strict';
 
 // Importamos lo que necesitamos de game.js
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles, generarParticula, particulasBurbujas } from './game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles, generarParticula, particulasBurbujas } from '../game/game.js';
 
 // --- ESTADO Y ENTIDADES DEL NIVEL 5 ---
 let escombros = [];

@@ -4,7 +4,7 @@
 import { 
     estadoJuego, jugador, W, H, carriles, ctx, generarAnimal, S, clamp, 
     perderJuego, NUM_CARRILES, proyectiles, torpedos, generarExplosion, generarNubeDeTinta
-} from './game/game.js';
+} from '../game/game.js';
 
 // 2. FUNCIONES EXPORTADAS (LA "API" DEL NIVEL)
 

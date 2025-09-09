@@ -1,7 +1,7 @@
 'use strict';
 
 // Importamos la lógica de niveles
-import * as Levels from '../levels.js';
+import * as Levels from '../levels/levels.js';
 
 // ========= Funciones Auxiliares (las que son de uso general) =========
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -102,11 +102,11 @@ export const S = (function () {
         reload: 'sonidos/reload.wav',
         laser_beam: 'sonidos/laser.wav',
         // Sonidos que faltaban (usados en los niveles pero no definidos aquí)
-        choque_ligero: 'sonidos/choque_ligero.wav',
-        disparo_enemigo: 'sonidos/disparo_enemigo.wav',
-        explosion_grande: 'sonidos/explosion_grande.wav',
-        explosion_simple: 'sonidos/explosion_simple.wav',
-        powerup: 'sonidos/powerup.wav'
+        choque_ligero: 'sonidos/choque_ligero.mp3',
+        disparo_enemigo: 'sonidos/disparo_enemigo.mp3',
+        explosion_grande: 'sonidos/explosion_grande.mp3',
+        explosion_simple: 'sonidos/explosion_simple.mp3',
+        powerup: 'sonidos/powerup.mp3'
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
