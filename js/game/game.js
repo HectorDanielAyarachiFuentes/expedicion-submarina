@@ -165,17 +165,21 @@ export const S = (function () {
     function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k.startsWith('music_')) { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = el; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
     function reproducir(k) {
         const el = a[k];
-        if (!el) return;
+        if (!el) {
+            console.warn(`Se intentó reproducir un sonido no cargado: '${k}'`);
+            return;
+        }
         try {
             el.currentTime = 0;
             const promise = el.play();
             if (promise !== undefined) {
                 promise.catch(error => {
-                    // Silencia el error de interrupción de reproducción, que es común en los navegadores
-                    // y no afecta la funcionalidad del juego.
+                    if (error.name !== 'AbortError') {
+                        console.error(`Error al reproducir el sonido '${k}':`, error);
+                    }
                 });
             }
-        } catch (e) { }
+        } catch (e) { console.error(`Error inesperado al intentar reproducir el sonido '${k}':`, e); }
     }
     function detener(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; try { el.pause(); el.currentTime = 0; } catch (e) { } }
     function playRandomMusic() {
