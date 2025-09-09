@@ -137,17 +137,17 @@ export const S = (function () {
     let musicaActual = null;
 
     const mapaFuentes = {
-        arpon: 'sonidos/arpon.wav',
+        arpon: 'sonidos/submarino/arpon.wav',
         choque: 'sonidos/choque.wav',
         gameover: 'sonidos/gameover.wav',
-        torpedo: 'sonidos/torpedo.wav',
+        torpedo: 'sonidos/submarino/torpedo.wav',
         boss_hit: 'sonidos/boss_hit.mp3',
         victory: 'sonidos/victoria.mp3',
         ink: 'sonidos/ink.wav',
-        shotgun: 'sonidos/shotgun.wav',
-        machinegun: 'sonidos/machinegun.wav',
-        reload: 'sonidos/reload.wav',
-        laser_beam: 'sonidos/laser.wav',
+        shotgun: 'sonidos/submarino/shotgun.wav',
+        machinegun: 'sonidos/submarino/machinegun.wav',
+        reload: 'sonidos/submarino/reload.wav',
+        laser_beam: 'sonidos/submarino/laser.wav',
         // Sonidos que faltaban (usados en los niveles pero no definidos aquí)
         choque_ligero: 'sonidos/choque_ligero.mp3',
         disparo_enemigo: 'sonidos/disparo_enemigo.mp3',
