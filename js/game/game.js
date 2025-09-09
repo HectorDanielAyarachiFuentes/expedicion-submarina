@@ -31,7 +31,7 @@ export function dificultadBase() {
 }
 
 // --- Cargadores de Recursos Asíncronos ---
-function cargarImagen(url, cb) {
+export function cargarImagen(url, cb) {
     const im = new Image();
     im.crossOrigin = 'anonymous';
     im.onload = () => cb(im);
@@ -300,43 +300,10 @@ cargarJson('js/json_sprites/whale.json', function(data) {
     }
 });
 
-// --- Recursos SVG Generados Dinámicamente ---
-// Estos SVG se crean como strings y se cargan como imágenes para efectos dinámicos.
 let thrusterPattern = null;
 let thrusterPatternReady = false;
 let thrusterPatternOffsetX = 0;
 
-const thrusterSvgString = `
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="128">
-  <defs>
-    <filter id="thruster-distortion" x="-50%" y="-50%" width="200%" height="200%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.015 0.2" numOctaves="3" seed="0" result="turbulence"/>
-      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="25" xChannelSelector="R" yChannelSelector="G"/>
-      <feGaussianBlur stdDeviation="2"/>
-      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 3 -0.7" />
-    </filter>
-    <linearGradient id="thrusterGradient" x1="0" x2="1" y1="0" y2="0">
-        <stop offset="0%" stop-color="rgba(255, 255, 255, 1)" />
-        <stop offset="60%" stop-color="rgba(180, 220, 255, 1)" />
-        <stop offset="100%" stop-color="rgba(100, 180, 255, 0)" />
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="512" height="128" fill="url(#thrusterGradient)" filter="url(#thruster-distortion)"/>
-</svg>`;
-
-const propellerSvgString = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-    <defs>
-        <linearGradient id="propBladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#fef08a" />
-            <stop offset="100%" style="stop-color:#ca8a04" />
-        </linearGradient>
-    </defs>
-    <g transform="rotate(0 50 50)"><path d="M 50,50 C 55,30 85,35 95,50 L 50,50 Z" fill="url(#propBladeGrad)" /></g>
-    <g transform="rotate(120 50 50)"><path d="M 50,50 C 55,30 85,35 95,50 L 50,50 Z" fill="url(#propBladeGrad)" /></g>
-    <g transform="rotate(240 50 50)"><path d="M 50,50 C 55,30 85,35 95,50 L 50,50 Z" fill="url(#propBladeGrad)" /></g>
-    <circle cx="50" cy="50" r="15" fill="#eab308" stroke="#a16207" stroke-width="4"/>
-</svg>`;
 let propellerImg = null;
 let propellerReady = false;
 let propellerRotation = 0;
@@ -1989,27 +1956,22 @@ export function init() {
     reiniciar();
     mostrarVistaMenuPrincipal(false);
 
-    // --- Carga de Recursos SVG Dinámicos ---
-    thrusterPatternReady = false;
-    const thrusterPatternImage = new Image();
-    thrusterPatternImage.onload = () => {
+    // --- Carga de Recursos SVG (desde archivos) ---
+    cargarImagen('js/svg/thruster.svg', function(img) {
+        if (!img) return;
         const patternCanvas = document.createElement('canvas');
-        patternCanvas.width = thrusterPatternImage.width;
-        patternCanvas.height = thrusterPatternImage.height;
+        patternCanvas.width = img.width;
+        patternCanvas.height = img.height;
         const patternCtx = patternCanvas.getContext('2d');
         if (!patternCtx) return;
-        patternCtx.drawImage(thrusterPatternImage, 0, 0);
+        patternCtx.drawImage(img, 0, 0);
         thrusterPattern = ctx.createPattern(patternCanvas, 'repeat-x');
         thrusterPatternReady = true;
-    };
-    thrusterPatternImage.src = 'data:image/svg+xml;base64,' + btoa(thrusterSvgString);
+    });
 
-    // Cargar el SVG de la hélice
-    propellerReady = false;
-    const propellerImage = new Image();
-    propellerImage.onload = () => {
-        propellerImg = propellerImage;
+    cargarImagen('js/svg/propeller.svg', function(img) {
+        if (!img) return;
+        propellerImg = img;
         propellerReady = true;
-    };
-    propellerImage.src = 'data:image/svg+xml;base64,' + btoa(propellerSvgString);
+    });
 }

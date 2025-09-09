@@ -1,35 +1,11 @@
 // js/level7.js
 'use strict';
 
-import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo, generarTrozoBallena } from '../game/game.js';
+import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, proyectiles, torpedos, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo, generarTrozoBallena, cargarImagen } from '../game/game.js';
 import { getLevelSpeed } from './levels.js';
 
 // --- ESTADO DEL NIVEL 7 ---
 let levelState = {};
-
-// --- RECURSOS DEL LÁSER SVG ---
-let laserPattern = null;
-let laserPatternReady = false;
-let patternOffsetY = 0; // Para animar el patrón
-
-const laserSvgString = `
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="256">
-  <defs>
-    <filter id="electric-glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.05 0.9" numOctaves="2" result="turbulence"/>
-      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="20" xChannelSelector="R" yChannelSelector="G"/>
-      <feGaussianBlur stdDeviation="1"/>
-      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 3 -1" />
-    </filter>
-    <linearGradient id="beamGradient" x1="0" x2="1" y1="0" y2="0">
-      <stop offset="0%" stop-color="rgba(255, 180, 180, 0)" />
-      <stop offset="35%" stop-color="rgba(255, 220, 220, 1)" />
-      <stop offset="65%" stop-color="rgba(255, 220, 220, 1)" />
-      <stop offset="100%" stop-color="rgba(255, 180, 180, 0)" />
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="64" height="256" fill="url(#beamGradient)" filter="url(#electric-glow)"/>
-</svg>`;
 
 // --- SUBNIVELES ---
 const SUBNIVELES = [
@@ -80,6 +56,10 @@ function spawnMierdeiBombardero(jefe) {
         timerFrame: 0,
     });
 }
+
+let laserPattern = null;
+let laserPatternReady = false;
+let patternOffsetY = 0; // Para animar el patrón
 
 /**
  * Dispara un láser desde el jefe hacia una posición aleatoria
@@ -148,22 +128,21 @@ export function init() {
     
     // Cargar el patrón SVG para el láser
     laserPatternReady = false;
-    const laserPatternImage = new Image();
-    laserPatternImage.onload = () => {
+    cargarImagen('js/svg/laser_boss.svg', (img) => {
+        if (!img) {
+            console.error("No se pudo cargar el patrón de láser SVG desde el archivo.");
+            return;
+        }
         const patternCanvas = document.createElement('canvas');
-        patternCanvas.width = laserPatternImage.width;
-        patternCanvas.height = laserPatternImage.height;
+        patternCanvas.width = img.width;
+        patternCanvas.height = img.height;
         const patternCtx = patternCanvas.getContext('2d');
         if (!patternCtx) return;
-        patternCtx.drawImage(laserPatternImage, 0, 0);
+        patternCtx.drawImage(img, 0, 0);
         laserPattern = ctx.createPattern(patternCanvas, 'repeat-y');
         laserPatternReady = true;
-        console.log("Patrón de láser SVG cargado y listo.");
-    };
-    laserPatternImage.onerror = () => {
-        console.error("No se pudo cargar el patrón de láser SVG.");
-    };
-    laserPatternImage.src = 'data:image/svg+xml;base64,' + btoa(laserSvgString);
+        console.log("Patrón de láser SVG cargado y listo desde archivo.");
+    });
     
     // Mostrar barra de vida del jefe solo en subnivel 3
     const bossHealthContainer = document.getElementById('bossHealthContainer');
