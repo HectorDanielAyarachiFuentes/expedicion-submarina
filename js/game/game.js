@@ -733,6 +733,10 @@ function actualizar(dt) {
     // Llama a la lógica de actualización del nivel actual
     Levels.updateLevel(dtAjustado);
     
+    // Aplicar el movimiento calculado a partir de las teclas
+    jugador.x += vx * dtAjustado;
+    jugador.y += vy * dtAjustado;
+
     // --- Actualización de la Posición e Inclinación del Jugador ---
     jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
     jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
