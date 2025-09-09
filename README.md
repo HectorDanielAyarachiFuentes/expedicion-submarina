@@ -1,4 +1,5 @@
-# La Expedición - Una Aventura Submarina Retro
+# La Expedición 🗺️ - Una Aventura Submarina 🌊 Retro 👾
+
 
 <p align="center">
   <img src="img/logo.png" alt="Logo de La Expedición" width="400"/>
