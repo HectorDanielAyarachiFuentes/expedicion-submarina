@@ -22,12 +22,20 @@
 
 ## 🚀 Galería de la Misión
 
-| Menú Principal | Gameplay Intenso | Batalla contra Jefe |
-| :---: | :---: | :---: |
-| *Imagen del menú principal* | *GIF de gameplay* | *Imagen de la batalla contra el Kraken* |
-| `(img/readme/screenshot_menu.png)` | `(img/readme/screenshot_gameplay.gif)` | `(img/readme/screenshot_boss.png)` |
+| El Comienzo de la Aventura | Un Ecosistema Hostil |
+| :-------------------------: | :-----------------------: |
+| <img src="https://github.com/HectorDanielAyarachiFuentes/expedicion-submarina/blob/main/img-README/Inicio.jpeg?raw=true" width="400"> | <img src="https://github.com/HectorDanielAyarachiFuentes/expedicion-submarina/blob/main/img-README/enemigos.jpeg?raw=true" width="400"> |
+| *El viaje comienza. ¡Prepárate para sumergirte!* | *Las profundidades están llenas de vida... y no toda es amigable.* |
+| **Escenarios Desafiantes** | **Ascenso Desesperado** |
+| <img src="https://github.com/HectorDanielAyarachiFuentes/expedicion-submarina/blob/main/img-README/mapadesafiente.jpeg?raw=true" width="400"> | <img src="https://github.com/HectorDanielAyarachiFuentes/expedicion-submarina/blob/main/img-README/mapavertical.jpeg?raw=true" width="400"> |
+| *Navega por cañones traicioneros y campos de escombros.* | *Escapa de un colapso inminente en un frenético ascenso vertical.* |
+| **Gigantes del Océano** | **Depredadores Alfa** |
+| <img src="https://github.com/HectorDanielAyarachiFuentes/expedicion-submarina/blob/main/img-README/vidamarina1.jpeg?raw=true" width="400"> | <img src="https://github.com/HectorDanielAyarachiFuentes/expedicion-submarina/blob/main/img-README/vidamarina2.jpeg?raw=true" width="400"> |
+| *Encuéntrate con majestuosas ballenas. ¿Serán aliadas o adversarias?* | *Cuidado con los tiburones que acechan en la oscuridad.* |
+| **Jefes Legendarios** | **El Caos Personificado** |
+| <img src="https://github.com/HectorDanielAyarachiFuentes/expedicion-submarina/blob/main/img-README/vidamarina3.jpeg?raw=true" width="400"> | <img src="https://github.com/HectorDanielAyarachiFuentes/expedicion-submarina/blob/main/img-README/vidamarina4.jpeg?raw=true" width="400"> |
+| *Enfréntate a leyendas antiguas. El Kraken te espera en su guarida.* | *Sobrevive al encuentro con el demencial Jefe Mierdei.* |
 
-*Nota: Se recomienda crear una carpeta `img/readme` para alojar las capturas de pantalla y GIFs del juego.*
 
 ## ✨ Características Principales
 
@@ -114,4 +122,3 @@ expedicion-submarina/
 ---
 
 *¡Gracias por jugar y explorar las profundidades!*
-
