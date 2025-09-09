@@ -1,15 +1,21 @@
 'use strict';
 
-// Importamos la lógica de niveles
+// =================================================================================
+//  1. IMPORTACIONES Y FUNCIONES AUXILIARES GLOBALES
+// =================================================================================
+
+// --- Módulos ---
 import * as Levels from '../levels/levels.js';
 
-// ========= Funciones Auxiliares (las que son de uso general) =========
+// --- Funciones Matemáticas y de Utilidad ---
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 export function dificultadBase() { 
     if (!estadoJuego) return 0;
     return estadoJuego.tiempoTranscurrido / 150;
 }
+
+// --- Cargadores de Recursos Asíncronos ---
 function cargarImagen(url, cb) {
     const im = new Image();
     im.crossOrigin = 'anonymous';
@@ -35,13 +41,19 @@ function cargarJson(url, cb) {
         });
 }
 
-// ========= Lienzos (Canvas) - Exportamos los que se necesitan en otros módulos (ctx) =========
+// =================================================================================
+//  2. CONFIGURACIÓN DE LIENZOS (CANVAS) Y REFERENCIAS A LA UI
+// =================================================================================
+
+// --- Lienzos (Canvas) ---
+// Cada canvas representa una capa del juego para optimizar el renderizado.
 const bgCanvas = document.getElementById('bgCanvas'), bgCtx = bgCanvas.getContext('2d');
 export const cvs = document.getElementById('gameCanvas'), ctx = cvs.getContext('2d');
 const fxCanvas = document.getElementById('fxCanvas'), fx = fxCanvas.getContext('2d');
 const hudCanvas = document.getElementById('hudCanvas'), hud = hudCanvas.getContext('2d');
 
-// ========= Referencias de la Interfaz de Usuario (UI) =========
+// --- Referencias a Elementos del DOM ---
+// Obtenemos todas las referencias a los elementos HTML para manipular la UI.
 const overlay = document.getElementById('overlay');
 const mainMenu = document.getElementById('mainMenu');
 const levelTransition = document.getElementById('levelTransition');
@@ -81,6 +93,8 @@ const infoAnimCtx = infoAnimCanvas ? infoAnimCanvas.getContext('2d') : null;
 let animarSubmarino = false;
 
 function actualizarIconos() {
+  // Esta función cambia la apariencia del botón de silencio
+  // para reflejar si el sonido está activado o no.
   if (!muteBtn) return;
   const slash = document.getElementById('muteSlash');
   if (S.estaSilenciado()) {
@@ -92,7 +106,11 @@ function actualizarIconos() {
   }
 }
 
-// ========= Audio (S) =========
+// =================================================================================
+//  3. GESTOR DE AUDIO (SINGLETON)
+// =================================================================================
+// El objeto 'S' (de Sonido) es un singleton que maneja toda la lógica de audio.
+// Carga todos los sonidos al inicio y proporciona métodos para reproducir, detener, etc.
 const PLAYLIST = [
     'canciones/Abismo_de_Acero.mp3',
     'canciones/Batalla_de_las_Profundidades.mp3'
@@ -164,7 +182,11 @@ export const S = (function () {
     return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic };
 })();
 
-// ========= Puntuación y Progreso del Jugador =========
+// =================================================================================
+//  4. GESTIÓN DE DATOS DEL JUGADOR (LOCALSTORAGE)
+// =================================================================================
+// Se encarga de guardar y recuperar la puntuación máxima y el nivel más alto
+// alcanzado por el jugador, para persistir entre sesiones de juego.
 const CLAVE_PUNTUACION = 'expedicion_hiscore_v2';
 const CLAVE_NIVEL_MAX = 'expedicion_maxlevel_v2';
 let puntuacionMaxima = 0; try { puntuacionMaxima = parseInt(localStorage.getItem(CLAVE_PUNTUACION) || '0', 10) || 0; } catch (e) { }
@@ -172,7 +194,11 @@ let nivelMaximoAlcanzado = 1; try { nivelMaximoAlcanzado = parseInt(localStorage
 function guardarPuntuacionMaxima() { try { localStorage.setItem(CLAVE_PUNTUACION, String(puntuacionMaxima)); } catch (e) { } }
 function guardarNivelMaximo() { try { const proximoNivelDesbloqueado = Math.min(estadoJuego.nivel + 1, Levels.CONFIG_NIVELES.length); if (proximoNivelDesbloqueado > nivelMaximoAlcanzado) { nivelMaximoAlcanzado = proximoNivelDesbloqueado; localStorage.setItem(CLAVE_NIVEL_MAX, String(nivelMaximoAlcanzado)); } } catch (e) { } }
 
-// ========= Recursos (Assets) =========
+// =================================================================================
+//  5. CARGA DE RECURSOS DEL JUEGO (ASSETS)
+// =================================================================================
+
+// --- Sprites Principales ---
 let robotImg = null, robotListo = false, spriteAncho = 96, spriteAlto = 64, robotEscala = 2;
 cargarImagen('img/subastian.png', function (img) { if (img) { robotImg = img; robotListo = true; const altoObjetivo = 64; const ratio = img.width / img.height; spriteAlto = altoObjetivo; spriteAncho = Math.round(altoObjetivo * ratio); } });
 let criaturasImg = null, criaturasListas = false, cFrameAncho = 0, cFrameAlto = 0, cFilas = 0;
@@ -182,6 +208,9 @@ cargarImagen('img/Fondos/bg_back.png', function (img) { if (img) { bgImg = img; 
 let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0, FG_VELOCIDAD_BASE = 60;
 cargarImagen('img/Fondos/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
 
+// --- Spritesheets Animados (con JSON) ---
+// Cada uno de estos sprites tiene una imagen y un archivo JSON que define los frames.
+// Se cargan de forma asíncrona y se usan banderas para saber cuándo están listos.
 export let MIERDEI_SPRITE_DATA = null;
 export let mierdeiImg = null, mierdeiListo = false;
 let mierdeiImgCargada = false;
@@ -256,7 +285,8 @@ cargarJson('js/json_sprites/whale.json', function(data) {
     }
 });
 
-// --- RECURSOS DEL PROPULSOR (SVG) ---
+// --- Recursos SVG Generados Dinámicamente ---
+// Estos SVG se crean como strings y se cargan como imágenes para efectos dinámicos.
 let thrusterPattern = null;
 let thrusterPatternReady = false;
 let thrusterPatternOffsetX = 0;
@@ -297,15 +327,23 @@ let propellerReady = false;
 let propellerRotation = 0;
 let propellerCurrentSpeed = 0;
 
-// ========= Geometría y Utilidades (Exportamos las que se necesitan fuera) =========
+// =================================================================================
+//  6. GEOMETRÍA DEL JUEGO Y SISTEMA DE PARTÍCULAS
+// =================================================================================
+
+// --- Geometría y Carriles ---
 export let W = innerWidth, H = innerHeight;
 export const NUM_CARRILES = 5;
 export let carriles = [];
 function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY = H * 0.82; for (let i = 0; i < NUM_CARRILES; i++) { const t = i / (NUM_CARRILES - 1); carriles.push(minY + t * (maxY - minY)); } }
 
-// ========= Partículas y Efectos =========
+// --- Sistema de Partículas ---
+// Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
 export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [];
 export let proyectiles = [];
+
+// --- Funciones de Partículas ---
+// Funciones para crear, actualizar y dibujar las partículas.
 export function generarParticula(arr, opts) { arr.push({ x: opts.x, y: opts.y, vx: opts.vx, vy: opts.vy, r: opts.r, vida: opts.vida, vidaMax: opts.vida, color: opts.color, tw: Math.random() * Math.PI * 2, baseA: opts.baseA || 1 }); }
 function iniciarParticulas() {
     particulas.length = 0;
@@ -317,6 +355,8 @@ function actualizarParticulas(dt) { for (let arr of [particulas, particulasExplo
 function dibujarParticulas() { if (!ctx) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.strokeStyle = '#aae2ff'; ctx.lineWidth = 1.5; for (const p of particulasBurbujas) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.7; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); }
 function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 0.6) { const velocidadBaseX = isLevel5 ? 0 : 60; const velocidadBaseY = isLevel5 ? 60 : 0; const dispersion = 25; generarParticula(particulasBurbujas, { x: x, y: y, vx: velocidadBaseX + (Math.random() - 0.5) * dispersion, vy: velocidadBaseY + (Math.random() - 0.5) * dispersion - 20, r: Math.random() * 2 + 1, vida: 1 + Math.random() * 1.5, color: '' }); } }
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
+
+// --- Generadores de Efectos Especiales ---
 export function generarExplosion(x, y, color = '#ff8833') { for (let i = 0; i < 20; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * 100; generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * 2 + 1, vida: 0.4 + Math.random() * 0.4, color }); } }
 export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i = 0; i < 50; i++) { const ang = Math.random() * Math.PI * 2, spd = 20 + Math.random() * size; generarParticula(particulasTinta, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 15 + Math.random() * size * 0.8, vida: 2.5 + Math.random() * 2, color: '#101010' }); } }
 
@@ -391,7 +431,12 @@ function generarBurbujasEmbestidaTiburom(x, y) {
         }
     }
 }
-// ========= Funciones de Recompensa (disponibles para los niveles) =========
+
+// =================================================================================
+//  7. FUNCIONES DE ACCIÓN Y ESTADO DEL JUEGO
+// =================================================================================
+
+// --- Funciones de Recompensa y Power-ups ---
 export function limpiarTodosLosAnimales() {
     animales.forEach(a => generarExplosion(a.x, a.y, '#aaffff'));
     // Modificamos el array existente en lugar de crear uno nuevo. Es más seguro.
@@ -407,7 +452,7 @@ export function activarSlowMotion(duracion) {
     }
 }
 
-// ========= Lógica del Juego (Estado y Entidades - Exportamos los necesarios) =========
+// --- Estado Principal y Entidades ---
 export let estadoJuego = null, jugador, animales;
 let teclas = {};
 let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
@@ -423,6 +468,7 @@ const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
 const MIERDEi_ANIMATION_SPEED = 0.06;
 
+// --- Funciones de Control del Juego ---
 function reiniciar(nivelDeInicio = 1) {
     estadoJuego = {
         faseJuego: 'menu', enEjecucion: false, rescatados: 0, puntuacion: 0, profundidad_m: 0, vidas: 30, animVida: 0, velocidad: 260, tiempoTranscurrido: 0, bloqueoEntrada: 0.2,
@@ -469,6 +515,7 @@ function reiniciar(nivelDeInicio = 1) {
 function velocidadActual() { return Levels.getLevelSpeed(); }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
+// --- Generación de Enemigos ---
 export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrides = {}) {
     const minY = H * 0.15;
     const maxY = H * 0.85;
@@ -547,6 +594,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
     }
 }
 
+// --- Acciones del Jugador (Disparos) ---
 function dispararGarfio() {
     if (!jugador || jugador.garra || !estadoJuego || estadoJuego.bloqueoEntrada > 0) return;
     const isLevel5 = estadoJuego.nivel === 5;
@@ -628,6 +676,10 @@ function lanzarTorpedo() {
     S.reproducir('torpedo');
 }
 
+// =================================================================================
+//  8. BUCLE PRINCIPAL DE ACTUALIZACIÓN (UPDATE)
+// =================================================================================
+// Esta es la función más importante. Se ejecuta en cada frame y actualiza el estado de todo el juego.
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
 
@@ -639,6 +691,7 @@ function actualizar(dt) {
     }
     const dtAjustado = dt * estadoJuego.velocidadJuego;
 
+    // --- Actualización de Timers y Estado General ---
     estadoJuego.tiempoTranscurrido += dtAjustado;
     estadoJuego.bloqueoEntrada = Math.max(0, estadoJuego.bloqueoEntrada - dtAjustado);
     if (estadoJuego.enfriamientoTorpedo > 0) estadoJuego.enfriamientoTorpedo -= dtAjustado;
@@ -651,6 +704,7 @@ function actualizar(dt) {
     const progresoProfundidad = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1);
     estadoJuego.profundidad_m = Math.max(estadoJuego.profundidad_m, Math.floor(lerp(0, 3900, progresoProfundidad)));
     
+    // --- Procesamiento de la Entrada del Jugador (Movimiento) ---
     let vx = 0, vy = 0;
     if (teclas['ArrowUp']) vy -= 1;
     if (teclas['ArrowDown']) vy += 1;
@@ -664,7 +718,7 @@ function actualizar(dt) {
         generarBurbujaPropulsion(jugador.x - 30, jugador.y, false);
     }
     
-    // Animar la rotación de la hélice con aceleración suave
+    // --- Animación de la Hélice ---
     const isMoving = len > 0;
     let targetSpeed = 5; // Velocidad de ralentí
     if (estadoJuego.boostActivo) {
@@ -676,8 +730,10 @@ function actualizar(dt) {
     propellerCurrentSpeed = lerp(propellerCurrentSpeed, targetSpeed, dtAjustado * 8);
     propellerRotation += propellerCurrentSpeed * dtAjustado;
 
+    // Llama a la lógica de actualización del nivel actual
     Levels.updateLevel(dtAjustado);
     
+    // --- Actualización de la Posición e Inclinación del Jugador ---
     jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
     jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
     if (vy < 0) inclinacionRobotObjetivo = -INCLINACION_MAX;
@@ -691,7 +747,7 @@ function actualizar(dt) {
     }
     inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dtAjustado);
 
-    // Lógica de disparo para armas de un solo tiro
+    // --- Procesamiento de la Entrada del Jugador (Acciones) ---
     if (teclas[' '] && estadoJuego.bloqueoEntrada === 0 && estadoJuego.armaActual !== 'laser') { disparar(); teclas[' '] = false; }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
     if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
@@ -707,15 +763,12 @@ function actualizar(dt) {
         estadoJuego.armaCambiandoTimer = 0.3;
     }
     
+    // --- Actualización del Progreso del Nivel ---
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dtAjustado, configNivel.meta);
     
-    // Movimiento del jugador
-    jugador.x += vx * dtAjustado;
-    jugador.y += vy * dtAjustado;
-
-    // Lógica del Impulso (Boost)
+    // --- Lógica de Habilidades: Impulso (Boost) ---
     estadoJuego.boostActivo = teclas['b'] && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
 
     if (estadoJuego.boostActivo) {
@@ -751,7 +804,7 @@ function actualizar(dt) {
         estadoJuego.boostEnfriamiento -= dtAjustado;
     }
 
-    // Lógica del Arma Láser
+    // --- Lógica de Habilidades: Arma Láser ---
     if (estadoJuego.armaActual === 'laser') {
         if (teclas[' '] && estadoJuego.laserEnergia > 0) {
             estadoJuego.laserActivo = true;
@@ -773,11 +826,12 @@ function actualizar(dt) {
         estadoJuego.laserEnergia = Math.min(estadoJuego.laserEnergia, estadoJuego.laserMaxEnergia);
     }
 
+    // --- Actualización de Enemigos (Animales) ---
     for (let i = animales.length - 1; i >= 0; i--) { 
         const a = animales[i]; 
         if (a.laserHitTimer > 0) a.laserHitTimer -= dtAjustado;
         
-        // IA específica para cada tipo de enemigo
+        // --- IA y Movimiento Específico por Tipo de Enemigo ---
         if (a.tipo === 'shark') {
             if (a.isHunting) {
                 // El tiburón está cazando, se mueve en su vector de ataque
@@ -853,6 +907,7 @@ function actualizar(dt) {
             if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
         }
         
+        // --- Colisión Jugador-Enemigo ---
         if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) {
             const damage = a.tipo === 'whale' ? 7 : 1;
 
@@ -876,12 +931,14 @@ function actualizar(dt) {
             continue;
         } 
         
+        // --- Limpieza de Enemigos Fuera de Pantalla ---
         if (a.x < -a.w) { 
             animales.splice(i, 1); 
         } 
     }
     
-    if (jugador.garra) {
+    // --- Lógica del Garfio ---
+    if (jugador.garra) { 
         const g = jugador.garra;
         const spd = g.velocidad * dtAjustado;
         if (g.fase === 'ida') {
@@ -942,7 +999,7 @@ function actualizar(dt) {
         }
     }
     
-    // Daño del láser
+    // --- Lógica de Daño del Láser ---
     if (estadoJuego.laserActivo) {
         const isLevel5 = estadoJuego.nivel === 5;
         let laserHitbox;
@@ -988,9 +1045,7 @@ function actualizar(dt) {
         }
     }
 
-    // >>> CAMBIO CLAVE <<<
-    // Esta función ahora SÓLO se encarga de las colisiones con animales normales.
-    // La colisión con el jefe es responsabilidad del módulo level3.js.
+    // --- Lógica de Colisión de Proyectiles ---
     function chequearColisionProyectil(proyectil) {
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
@@ -1024,6 +1079,7 @@ function actualizar(dt) {
         return false;
     }
 
+    // --- Actualización de Proyectiles (Torpedos y Balas) ---
     for (let i = torpedos.length - 1; i >= 0; i--) {
         const t = torpedos[i];
         t.x += (t.isVertical ? 0 : 1200) * dtAjustado;
@@ -1049,10 +1105,12 @@ function actualizar(dt) {
         }
     }
     
+    // --- Actualización de Otros Proyectiles y Efectos ---
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dtAjustado; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dtAjustado);
     
     actualizarParticulas(dtAjustado);
+
     // Actualizar trozos de ballena
     for (let i = whaleDebris.length - 1; i >= 0; i--) {
         const d = whaleDebris[i];
@@ -1091,10 +1149,15 @@ function actualizar(dt) {
     comprobarCompletadoNivel();
 }
 
+// =================================================================================
+//  9. BUCLE PRINCIPAL DE RENDERIZADO (DRAW)
+// =================================================================================
+// Se encarga de dibujar todo en la pantalla en el orden correcto (de atrás hacia adelante).
 function renderizar(dt) {
     if (estadoJuego) dibujarFondo(dt);
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
+
     if (estadoJuego) {
         // La llamada a drawLevel() es la que permitirá que level3.js dibuje al jefe.
         Levels.drawLevel();
@@ -1105,6 +1168,7 @@ function renderizar(dt) {
             ctx.save();
             
             if (a.tipo === 'mierdei') {
+                // --- Dibuja el Mierdei ---
                 ctx.translate(a.x, a.y + offsetFlotante);
                 if (mierdeiListo && MIERDEI_SPRITE_DATA) {
                     const frameData = MIERDEI_SPRITE_DATA.frames[a.frame];
@@ -1119,6 +1183,7 @@ function renderizar(dt) {
                     }
                 }
             } else if (a.tipo === 'shark') {
+                // --- Dibuja el Tiburón ---
                 ctx.translate(a.x, a.y);
                 if (sharkListo && SHARK_SPRITE_DATA) {
                     const frameData = SHARK_SPRITE_DATA.frames[a.frame];
@@ -1139,6 +1204,7 @@ function renderizar(dt) {
                     }
                 }
             } else if (a.tipo === 'whale') {
+                // --- Dibuja la Ballena ---
                 ctx.translate(a.x, a.y + offsetFlotante);
                 if (a.isEnraged) {
                     ctx.filter = 'hue-rotate(-25deg) brightness(1.4) saturate(3)';
@@ -1171,6 +1237,7 @@ function renderizar(dt) {
                 }
 
             } else {
+                // --- Dibuja las Criaturas Genéricas ---
                 if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
                 if (a.tipo === 'rojo') ctx.filter = 'sepia(1) saturate(5) hue-rotate(-40deg)';
                 if (a.tipo === 'dorado') ctx.filter = 'brightness(1.5) saturate(3) hue-rotate(15deg)';
@@ -1189,6 +1256,7 @@ function renderizar(dt) {
             ctx.restore();
         }
         
+        // --- Dibuja al Jugador y sus Efectos ---
         if (jugador) {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
             // Animación de flotación sutil
@@ -1201,7 +1269,7 @@ function renderizar(dt) {
             const anguloFinal = isLevel5 ? -Math.PI / 2 + inclinacionRobot : inclinacionRobot;
             ctx.rotate(anguloFinal);
 
-            // DIBUJAR HÉLICE (detrás del submarino) con motion blur
+            // --- Dibuja la Hélice ---
             if (propellerReady && propellerImg) {
                 ctx.save();
                 const propOffsetX = -spriteAncho * robotEscala / 2 - 10;
@@ -1223,6 +1291,7 @@ function renderizar(dt) {
                 ctx.restore();
             }
 
+            // --- Dibuja el Submarino ---
             if (robotListo) {
                 ctx.imageSmoothingEnabled = false;
                 const dw = spriteAncho * robotEscala, dh = spriteAlto * robotEscala;
@@ -1235,7 +1304,7 @@ function renderizar(dt) {
             }
             ctx.restore();
 
-            // DIBUJAR PROPULSOR (MEJORADO Y DINÁMICO)
+            // --- Dibuja el Propulsor ---
             if (thrusterPatternReady && thrusterPattern && propellerCurrentSpeed > 6) { // Se dibuja si se mueve, no solo en ralentí
                 const isBoosting = estadoJuego.boostActivo;
                 const moveIntensity = clamp((propellerCurrentSpeed - 5) / 20, 0, 1); // 0 en ralentí, 1 a velocidad normal
@@ -1288,7 +1357,7 @@ function renderizar(dt) {
                 ctx.restore();
             }
 
-            // DIBUJAR LÁSER
+            // --- Dibuja el Láser ---
             if (estadoJuego.laserActivo) {
                 const isLevel5 = estadoJuego.nivel === 5;
                 const laserWidth = 8 + Math.sin(estadoJuego.tiempoTranscurrido * 50) * 4; // Ancho pulsante
@@ -1336,6 +1405,8 @@ function renderizar(dt) {
                 ctx.restore();
             }
         }
+
+        // --- Dibuja los Proyectiles ---
         if (jugador && jugador.garra) {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
             const hx0 = jugador.x;
@@ -1364,8 +1435,10 @@ function renderizar(dt) {
         for (const ink of estadoJuego.proyectilesTinta) { ctx.beginPath(); ctx.arc(ink.x, ink.y, ink.r, 0, Math.PI * 2); ctx.fill(); }
         ctx.imageSmoothingEnabled = true;
     }
+
+    // --- Dibuja Partículas y Efectos Finales ---
     dibujarParticulas();
-    // Dibujar trozos de ballena
+
     ctx.save();
     for (const d of whaleDebris) {
         ctx.save();
@@ -1387,11 +1460,13 @@ function renderizar(dt) {
         ctx.stroke(d.path);
         ctx.restore();
     }
+
     ctx.restore();
     dibujarMascaraLuz();
     dibujarHUD();
 }
 
+// --- Funciones de Renderizado Auxiliares ---
 function dibujarFondo(dt) {
     if (!estadoJuego || !bgCtx) return;
     // >>> CAMBIO CLAVE <<<
@@ -1445,6 +1520,7 @@ function dibujarMascaraLuz() {
 }
 
 function dibujarHUD() {
+    // Esta función es compleja. Se encarga de actualizar todo el texto y las barras de la UI.
     if (!estadoJuego || !hudLevelText || !hudObjectiveText) return;
 
     if (estadoJuego.enEjecucion) {
@@ -1575,6 +1651,11 @@ function dibujarHUD() {
     }
 }
 
+// =================================================================================
+//  10. CONTROL DEL FLUJO DEL JUEGO
+// =================================================================================
+// Estas funciones manejan los estados principales: inicio, fin, pausa, transiciones.
+
 function iniciarJuego(nivel = 1) {
     if (__iniciando) return; __iniciando = true;
     if (estadoJuego && estadoJuego.enEjecucion) { __iniciando = false; return; }
@@ -1674,7 +1755,6 @@ function poblarSelectorDeNiveles() {
     });
 }
 
-
 function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; S.pausar('music'); mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.style.display = 'none'; } }
 function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
 function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { document.body.classList.toggle('immersive'); return; } const el = document.documentElement; try { if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) { if (el.requestFullscreen) return el.requestFullscreen(); if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen(); } else { if (document.exitFullscreen) return document.exitFullscreen(); if (document.webkitExitFullscreen) return document.webkitExitFullscreen(); } } catch (err) { console.warn('Pantalla completa no disponible', err); } }
@@ -1682,10 +1762,13 @@ function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { docume
 function autoSize() { const topHud = document.getElementById('top-hud'); const alturaTotalHud = topHud ? topHud.offsetHeight : 70; const v = { w: innerWidth, h: innerHeight - alturaTotalHud }; [bgCanvas, cvs, fxCanvas, hudCanvas].forEach(c => { if (c) { c.width = v.w; c.height = v.h; } }); W = v.w; H = v.h; calcularCarriles(); if (!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); } }
 
 // ========= Función de Bucle de Juego (se exporta a main.js) =========
+// Este es el corazón del juego, el bucle que se ejecuta continuamente.
 let ultimo = 0;
 export function gameLoop(t) {
+    // Calcula el delta time (dt) para un movimiento consistente independientemente de los FPS.
     const dt = Math.min(0.033, (t - ultimo) / 1000 || 0);
     ultimo = t;
+
     if (estadoJuego && estadoJuego.faseJuego === 'playing') {
         actualizar(dt);
     }
@@ -1694,10 +1777,12 @@ export function gameLoop(t) {
     if (animarSubmarino) {
         renderizarSubmarinoBailarin(t);
     }
-
+    
+    // Solicita al navegador que vuelva a llamar a esta función en el próximo frame.
     requestAnimationFrame(gameLoop);
 }
 
+// --- Animación especial para la pantalla de información ---
 function renderizarSubmarinoBailarin(t) {
     if (!infoAnimCtx || !robotListo) return;
     const w = infoAnimCanvas.width;
@@ -1747,12 +1832,17 @@ function renderizarSubmarinoBailarin(t) {
     infoAnimCtx.restore();
 }
 
-// ========= Inicialización y Eventos =========
+// =================================================================================
+//  11. INICIALIZACIÓN GENERAL Y GESTIÓN DE EVENTOS
+// =================================================================================
+// La función `init` se llama una sola vez cuando la página carga.
+// Configura todos los listeners de eventos (teclado, ratón, botones de la UI).
+
 let arrastreId = -1, arrastreActivo = false, arrastreY = 0;
 function estaSobreUI(x, y) { const elementos = [muteBtn, infoBtn, fsBtn, shareBtn, githubBtn, overlay, infoOverlay, levelSelectBtn, backToMainBtn]; for (const el of elementos) { if (!el) continue; const style = getComputedStyle(el); if (style.display === 'none' || style.visibility === 'hidden') continue; const r = el.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true; } return false; }
 
 export function init() {
-    // 1. EVENTOS DE TECLADO Y RATÓN (Puntero)
+    // --- 1. EVENTOS DE TECLADO Y RATÓN (Puntero) ---
     addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
     addEventListener('keyup', function (e) { teclas[e.key] = false; });
     window.addEventListener('pointerdown', (e) => {
@@ -1778,7 +1868,7 @@ export function init() {
     }, { passive: false });
     window.addEventListener('resize', autoSize);
 
-    // 2. BOTONES DEL MENÚ PRINCIPAL
+    // --- 2. BOTONES DEL MENÚ PRINCIPAL ---
     if (startBtn) {
         startBtn.onclick = function (e) {
             e.stopPropagation();
@@ -1812,7 +1902,7 @@ export function init() {
         };
     }
 
-    // 3. BOTONES DE LA BARRA DE HUD SUPERIOR
+    // --- 3. BOTONES DE LA BARRA DE HUD SUPERIOR ---
     if (muteBtn) { muteBtn.onclick = function () { S.alternarSilenciado(); actualizarIconos(); }; }
     if (infoBtn) {
         infoBtn.onclick = () => {
@@ -1839,7 +1929,7 @@ export function init() {
         };
     }
     
-    // 4. OTROS EVENTOS DE UI
+    // --- 4. OTROS EVENTOS DE UI ---
     if (logoHUD) { logoHUD.addEventListener('click', abrirMenuPrincipal); }
     if (closeInfo) {
         closeInfo.onclick = function () {
@@ -1870,14 +1960,14 @@ export function init() {
         });
     }
 
-    // 5. INICIALIZACIÓN FINAL DEL JUEGO
+    // --- 5. INICIALIZACIÓN FINAL DEL JUEGO ---
     autoSize();
     S.init();
     actualizarIconos();
     reiniciar();
     mostrarVistaMenuPrincipal(false);
 
-    // Cargar el patrón SVG para el propulsor
+    // --- Carga de Recursos SVG Dinámicos ---
     thrusterPatternReady = false;
     const thrusterPatternImage = new Image();
     thrusterPatternImage.onload = () => {
