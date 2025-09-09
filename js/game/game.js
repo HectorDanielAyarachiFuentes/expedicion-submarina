@@ -153,7 +153,12 @@ export const S = (function () {
         disparo_enemigo: 'sonidos/disparo_enemigo.mp3',
         explosion_grande: 'sonidos/explosion_grande.mp3',
         explosion_simple: 'sonidos/explosion_simple.mp3',
-        powerup: 'sonidos/powerup.mp3'
+        powerup: 'sonidos/powerup.mp3',
+        // Sonidos de ballena
+        whale_song1: 'sonidos/ballena/ballenacanta1.mp3',
+        whale_song2: 'sonidos/ballena/ballenacanta2.mp3',
+        whale_song3: 'sonidos/ballena/ballenacanta3.mp3',
+        whale_spout: 'sonidos/ballena/ballenachorro.mp3'
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
@@ -179,6 +184,12 @@ export const S = (function () {
         musicaActual = nuevaCancionKey;
         reproducir(musicaActual); // Usar la función `reproducir` que ya maneja el error
     }
+    function playRandomWhaleSong() {
+        const whaleSongs = Object.keys(a).filter(k => k.startsWith('whale_song'));
+        if (whaleSongs.length === 0) return;
+        const songToPlay = whaleSongs[Math.floor(Math.random() * whaleSongs.length)];
+        reproducir(songToPlay);
+    }
     function pausar(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; try { el.pause(); } catch (e) { } }
     function bucle(k) {
         if (k === 'music' && musicaActual) k = musicaActual;
@@ -193,8 +204,8 @@ export const S = (function () {
     }
     function setSilenciado(m) { for (const k in a) { try { a[k].muted = !!m; } catch (e) { } } _silenciado = !!m; }
     function estaSilenciado() { return _silenciado; }
-    function alternarSilenciado() { setSilenciado(!estaSilenciado()); }
-    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic };
+    function alternarSilenciado() { setSilenciado(!estaSilenciado()); } 
+    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic, playRandomWhaleSong };
 })();
 
 // =================================================================================
@@ -353,7 +364,7 @@ function generarChorroDeAgua(x, y, dirY) {
             esChorroDañino: true // Flag para detectar colisión
         });
     }
-    S.reproducir('shotgun');
+    S.reproducir('whale_spout');
 }
 
 function iniciarParticulas() {
@@ -636,7 +647,8 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             spoutCooldown: 3.0 + Math.random() * 3, // Temporizador para el chorro de agua
             tailSwipeCooldown: 5.0 + Math.random() * 4, // Temporizador para el coletazo
             isTailSwiping: false,
-            tailSwipeProgress: 0
+            tailSwipeProgress: 0,
+            songCooldown: 2.0 + Math.random() * 2, // Cooldown para el canto ambiental (REDUCIDO PARA PRUEBAS)
             // --- FIN SUGERENCIA ---
         });
     } else {
@@ -964,6 +976,15 @@ function actualizar(dt) {
                 const dirY = a.y > H / 2 ? -1 : 1; // Dispara lejos del centro de la pantalla
                 generarChorroDeAgua(a.x - a.w * 0.2, a.y, dirY);
                 a.spoutCooldown = 3.5 + Math.random() * 2.5; // Reinicia el temporizador
+            }
+
+            // --- LÓGICA DE CANTO AMBIENTAL ---
+            if (a.songCooldown > 0) {
+                a.songCooldown -= dtAjustado;
+            } else {
+                S.playRandomWhaleSong();
+                // Reinicia el temporizador para el próximo canto (REDUCIDO PARA PRUEBAS)
+                a.songCooldown = 5.0 + Math.random() * 5.0;
             }
 
             // 2. Ataque de coletazo (Tail Swipe)
