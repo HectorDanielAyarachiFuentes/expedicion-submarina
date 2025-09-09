@@ -20,6 +20,20 @@ function cargarImagen(url, cb) {
     };
     im.src = url;
 }
+function cargarJson(url, cb) {
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => cb(data))
+        .catch(e => {
+            console.error(`Error al cargar el JSON: ${url}.`, e);
+            cb(null);
+        });
+}
 
 // ========= Lienzos (Canvas) - Exportamos los que se necesitan en otros módulos (ctx) =========
 const bgCanvas = document.getElementById('bgCanvas'), bgCtx = bgCanvas.getContext('2d');
@@ -168,301 +182,78 @@ cargarImagen('img/bg_back.png', function (img) { if (img) { bgImg = img; bgListo
 let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0, FG_VELOCIDAD_BASE = 60;
 cargarImagen('img/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
 
-export const MIERDEI_SPRITE_DATA = {
-  "meta": {
-    "app": "Sprite Sheet Suite v4.3",
-    "image": "mierdei.png",
-    "size": { "w": 1344, "h": 768 },
-    "clips": [ { "name": "Default", "frames": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89 ] } ]
-  },
-  "frames": [
-    { "id": 0, "name": "frame_0_0_0", "rect": { "x": 9, "y": 4, "w": 122, "h": 78 } },
-    { "id": 1, "name": "frame_0_0_1", "rect": { "x": 130, "y": 4, "w": 137, "h": 78 } },
-    { "id": 2, "name": "frame_0_0_2", "rect": { "x": 267, "y": 4, "w": 145, "h": 78 } },
-    { "id": 3, "name": "frame_0_0_3", "rect": { "x": 412, "y": 4, "w": 140, "h": 78 } },
-    { "id": 4, "name": "frame_0_0_4", "rect": { "x": 552, "y": 4, "w": 129, "h": 78 } },
-    { "id": 5, "name": "frame_0_0_5", "rect": { "x": 681, "y": 4, "w": 144, "h": 78 } },
-    { "id": 6, "name": "frame_0_0_6", "rect": { "x": 825, "y": 4, "w": 117, "h": 78 } },
-    { "id": 7, "name": "frame_0_0_7", "rect": { "x": 941, "y": 4, "w": 149, "h": 78 } },
-    { "id": 8, "name": "frame_0_0_8", "rect": { "x": 1090, "y": 4, "w": 124, "h": 78 } },
-    { "id": 9, "name": "frame_0_0_9", "rect": { "x": 1214, "y": 4, "w": 129, "h": 78 } },
-    { "id": 10, "name": "frame_0_1_0", "rect": { "x": 9, "y": 82, "w": 130, "h": 82 } },
-    { "id": 11, "name": "frame_0_1_1", "rect": { "x": 138, "y": 82, "w": 122, "h": 82 } },
-    { "id": 12, "name": "frame_0_1_2", "rect": { "x": 261, "y": 82, "w": 150, "h": 82 } },
-    { "id": 13, "name": "frame_0_1_3", "rect": { "x": 410, "y": 82, "w": 133, "h": 82 } },
-    { "id": 14, "name": "frame_0_1_4", "rect": { "x": 543, "y": 82, "w": 124, "h": 82 } },
-    { "id": 15, "name": "frame_0_1_5", "rect": { "x": 667, "y": 82, "w": 153, "h": 82 } },
-    { "id": 16, "name": "frame_0_1_6", "rect": { "x": 820, "y": 82, "w": 134, "h": 82 } },
-    { "id": 17, "name": "frame_0_1_7", "rect": { "x": 954, "y": 82, "w": 128, "h": 82 } },
-    { "id": 18, "name": "frame_0_1_8", "rect": { "x": 1082, "y": 82, "w": 135, "h": 82 } },
-    { "id": 19, "name": "frame_0_1_9", "rect": { "x": 1217, "y": 82, "w": 126, "h": 82 } },
-    { "id": 20, "name": "frame_0_2_0", "rect": { "x": 9, "y": 164, "w": 124, "h": 78 } },
-    { "id": 21, "name": "frame_0_2_1", "rect": { "x": 133, "y": 164, "w": 151, "h": 78 } },
-    { "id": 22, "name": "frame_0_2_2", "rect": { "x": 284, "y": 164, "w": 137, "h": 78 } },
-    { "id": 23, "name": "frame_0_2_3", "rect": { "x": 421, "y": 164, "w": 122, "h": 78 } },
-    { "id": 24, "name": "frame_0_2_4", "rect": { "x": 543, "y": 164, "w": 150, "h": 78 } },
-    { "id": 25, "name": "frame_0_2_5", "rect": { "x": 693, "y": 164, "w": 121, "h": 78 } },
-    { "id": 26, "name": "frame_0_2_6", "rect": { "x": 814, "y": 164, "w": 141, "h": 78 } },
-    { "id": 27, "name": "frame_0_2_7", "rect": { "x": 955, "y": 164, "w": 127, "h": 78 } },
-    { "id": 28, "name": "frame_0_2_8", "rect": { "x": 1082, "y": 164, "w": 138, "h": 78 } },
-    { "id": 29, "name": "frame_0_2_9", "rect": { "x": 1220, "y": 164, "w": 123, "h": 78 } },
-    { "id": 30, "name": "frame_0_3_0", "rect": { "x": 9, "y": 241, "w": 134, "h": 93 } },
-    { "id": 31, "name": "frame_0_3_1", "rect": { "x": 142, "y": 241, "w": 121, "h": 93 } },
-    { "id": 32, "name": "frame_0_3_2", "rect": { "x": 263, "y": 241, "w": 145, "h": 93 } },
-    { "id": 33, "name": "frame_0_3_3", "rect": { "x": 408, "y": 241, "w": 131, "h": 93 } },
-    { "id": 34, "name": "frame_0_3_4", "rect": { "x": 539, "y": 241, "w": 143, "h": 93 } },
-    { "id": 35, "name": "frame_0_3_5", "rect": { "x": 682, "y": 241, "w": 132, "h": 93 } },
-    { "id": 36, "name": "frame_0_3_6", "rect": { "x": 814, "y": 241, "w": 134, "h": 93 } },
-    { "id": 37, "name": "frame_0_3_7", "rect": { "x": 949, "y": 241, "w": 137, "h": 93 } },
-    { "id": 38, "name": "frame_0_3_8", "rect": { "x": 1085, "y": 241, "w": 145, "h": 93 } },
-    { "id": 39, "name": "frame_0_3_9", "rect": { "x": 1230, "y": 241, "w": 113, "h": 93 } },
-    { "id": 40, "name": "frame_0_4_0", "rect": { "x": 9, "y": 334, "w": 131, "h": 89 } },
-    { "id": 41, "name": "frame_0_4_1", "rect": { "x": 140, "y": 334, "w": 130, "h": 89 } },
-    { "id": 42, "name": "frame_0_4_2", "rect": { "x": 270, "y": 334, "w": 158, "h": 89 } },
-    { "id": 43, "name": "frame_0_4_3", "rect": { "x": 428, "y": 334, "w": 102, "h": 89 } },
-    { "id": 44, "name": "frame_0_4_4", "rect": { "x": 529, "y": 334, "w": 156, "h": 89 } },
-    { "id": 45, "name": "frame_0_4_5", "rect": { "x": 685, "y": 334, "w": 122, "h": 89 } },
-    { "id": 46, "name": "frame_0_4_6", "rect": { "x": 808, "y": 334, "w": 144, "h": 89 } },
-    { "id": 47, "name": "frame_0_4_7", "rect": { "x": 952, "y": 334, "w": 118, "h": 89 } },
-    { "id": 48, "name": "frame_0_4_8", "rect": { "x": 1070, "y": 334, "w": 150, "h": 89 } },
-    { "id": 49, "name": "frame_0_4_9", "rect": { "x": 1221, "y": 334, "w": 122, "h": 89 } },
-    { "id": 50, "name": "frame_0_5_0", "rect": { "x": 9, "y": 423, "w": 126, "h": 96 } },
-    { "id": 51, "name": "frame_0_5_1", "rect": { "x": 135, "y": 423, "w": 129, "h": 96 } },
-    { "id": 52, "name": "frame_0_5_2", "rect": { "x": 264, "y": 423, "w": 148, "h": 96 } },
-    { "id": 53, "name": "frame_0_5_3", "rect": { "x": 412, "y": 423, "w": 130, "h": 96 } },
-    { "id": 54, "name": "frame_0_5_4", "rect": { "x": 542, "y": 423, "w": 132, "h": 96 } },
-    { "id": 55, "name": "frame_0_5_5", "rect": { "x": 674, "y": 423, "w": 139, "h": 96 } },
-    { "id": 56, "name": "frame_0_5_6", "rect": { "x": 813, "y": 423, "w": 135, "h": 96 } },
-    { "id": 57, "name": "frame_0_5_7", "rect": { "x": 949, "y": 423, "w": 127, "h": 96 } },
-    { "id": 58, "name": "frame_0_5_8", "rect": { "x": 1076, "y": 423, "w": 136, "h": 96 } },
-    { "id": 59, "name": "frame_0_5_9", "rect": { "x": 1212, "y": 423, "w": 131, "h": 96 } },
-    { "id": 60, "name": "frame_0_6_0", "rect": { "x": 9, "y": 519, "w": 139, "h": 80 } },
-    { "id": 61, "name": "frame_0_6_1", "rect": { "x": 148, "y": 519, "w": 115, "h": 80 } },
-    { "id": 62, "name": "frame_0_6_2", "rect": { "x": 263, "y": 519, "w": 151, "h": 80 } },
-    { "id": 63, "name": "frame_0_6_3", "rect": { "x": 414, "y": 519, "w": 118, "h": 80 } },
-    { "id": 64, "name": "frame_0_6_4", "rect": { "x": 533, "y": 519, "w": 140, "h": 80 } },
-    { "id": 65, "name": "frame_0_6_5", "rect": { "x": 673, "y": 519, "w": 142, "h": 80 } },
-    { "id": 66, "name": "frame_0_6_6", "rect": { "x": 814, "y": 519, "w": 141, "h": 80 } },
-    { "id": 67, "name": "frame_0_6_7", "rect": { "x": 955, "y": 519, "w": 115, "h": 80 } },
-    { "id": 68, "name": "frame_0_6_8", "rect": { "x": 1070, "y": 519, "w": 128, "h": 80 } },
-    { "id": 69, "name": "frame_0_6_9", "rect": { "x": 1198, "y": 519, "w": 145, "h": 80 } },
-    { "id": 70, "name": "frame_0_7_0", "rect": { "x": 9, "y": 599, "w": 133, "h": 90 } },
-    { "id": 71, "name": "frame_0_7_1", "rect": { "x": 141, "y": 599, "w": 132, "h": 90 } },
-    { "id": 72, "name": "frame_0_7_2", "rect": { "x": 273, "y": 599, "w": 132, "h": 90 } },
-    { "id": 73, "name": "frame_0_7_3", "rect": { "x": 405, "y": 599, "w": 131, "h": 90 } },
-    { "id": 74, "name": "frame_0_7_4", "rect": { "x": 537, "y": 599, "w": 140, "h": 90 } },
-    { "id": 75, "name": "frame_0_7_5", "rect": { "x": 677, "y": 599, "w": 134, "h": 90 } },
-    { "id": 76, "name": "frame_0_7_6", "rect": { "x": 811, "y": 599, "w": 146, "h": 90 } },
-    { "id": 77, "name": "frame_0_7_7", "rect": { "x": 957, "y": 599, "w": 130, "h": 90 } },
-    { "id": 78, "name": "frame_0_7_8", "rect": { "x": 1087, "y": 599, "w": 134, "h": 90 } },
-    { "id": 79, "name": "frame_0_7_9", "rect": { "x": 1221, "y": 599, "w": 122, "h": 90 } },
-    { "id": 80, "name": "frame_0_8_0", "rect": { "x": 9, "y": 689, "w": 121, "h": 71 } },
-    { "id": 81, "name": "frame_0_8_1", "rect": { "x": 129, "y": 689, "w": 154, "h": 71 } },
-    { "id": 82, "name": "frame_0_8_2", "rect": { "x": 283, "y": 689, "w": 125, "h": 71 } },
-    { "id": 83, "name": "frame_0_8_3", "rect": { "x": 408, "y": 689, "w": 138, "h": 71 } },
-    { "id": 84, "name": "frame_0_8_4", "rect": { "x": 545, "y": 689, "w": 146, "h": 71 } },
-    { "id": 85, "name": "frame_0_8_5", "rect": { "x": 692, "y": 689, "w": 114, "h": 71 } },
-    { "id": 86, "name": "frame_0_8_6", "rect": { "x": 805, "y": 689, "w": 140, "h": 71 } },
-    { "id": 87, "name": "frame_0_8_7", "rect": { "x": 945, "y": 689, "w": 150, "h": 71 } },
-    { "id": 88, "name": "frame_0_8_8", "rect": { "x": 1096, "y": 689, "w": 118, "h": 71 } },
-    { "id": 89, "name": "frame_0_8_9", "rect": { "x": 1214, "y": 689, "w": 129, "h": 71 } }
-  ]
-};
+export let MIERDEI_SPRITE_DATA = null;
 export let mierdeiImg = null, mierdeiListo = false;
+let mierdeiImgCargada = false;
+let mierdeiJsonCargado = false;
+function comprobarMierdeiListo() {
+    if (mierdeiImgCargada && mierdeiJsonCargado) {
+        mierdeiListo = true;
+    }
+}
 cargarImagen('img/mierdei.png', function(img) {
     if (img) {
         mierdeiImg = img;
-        mierdeiListo = true;
+        mierdeiImgCargada = true;
+        comprobarMierdeiListo();
     } else {
         console.error("No se pudo cargar la imagen 'img/mierdei.png'. Asegúrate de que la ruta es correcta.");
     }
 });
+cargarJson('js/json_sprites/mierdei.json', function(data) {
+    if (data) {
+        MIERDEI_SPRITE_DATA = data;
+        mierdeiJsonCargado = true;
+        comprobarMierdeiListo();
+    }
+});
 
-const SHARK_SPRITE_DATA = {
-  "meta": {
-    "app": "Sprite Sheet Suite v4.3",
-    "image": "tiburon.png",
-    "size": {
-      "w": 2048,
-      "h": 2048
-    },
-    "clips": [
-      {
-        "name": "Default",
-        "frames": [
-          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92
-        ]
-      }
-    ]
-  },
-  "frames": [
-    { "id": 0, "name": "sprite_0", "rect": { "x": 1056, "y": 43, "w": 209, "h": 110 }, "type": "simple" },
-    { "id": 1, "name": "sprite_1", "rect": { "x": 816, "y": 44, "w": 209, "h": 107 }, "type": "simple" },
-    { "id": 2, "name": "sprite_2", "rect": { "x": 578, "y": 47, "w": 205, "h": 105 }, "type": "simple" },
-    { "id": 3, "name": "sprite_3", "rect": { "x": 1290, "y": 47, "w": 199, "h": 104 }, "type": "simple" },
-    { "id": 4, "name": "sprite_4", "rect": { "x": 1521, "y": 47, "w": 192, "h": 102 }, "type": "simple" },
-    { "id": 5, "name": "sprite_5", "rect": { "x": 1754, "y": 48, "w": 190, "h": 101 }, "type": "simple" },
-    { "id": 6, "name": "sprite_6", "rect": { "x": 93, "y": 49, "w": 209, "h": 107 }, "type": "simple" },
-    { "id": 7, "name": "sprite_7", "rect": { "x": 342, "y": 50, "w": 203, "h": 103 }, "type": "simple" },
-    { "id": 8, "name": "sprite_8", "rect": { "x": 1295, "y": 201, "w": 211, "h": 109 }, "type": "simple" },
-    { "id": 9, "name": "sprite_9", "rect": { "x": 1526, "y": 201, "w": 211, "h": 109 }, "type": "simple" },
-    { "id": 10, "name": "sprite_10", "rect": { "x": 1059, "y": 202, "w": 208, "h": 109 }, "type": "simple" },
-    { "id": 11, "name": "sprite_11", "rect": { "x": 823, "y": 203, "w": 209, "h": 108 }, "type": "simple" },
-    { "id": 12, "name": "sprite_12", "rect": { "x": 589, "y": 204, "w": 212, "h": 109 }, "type": "simple" },
-    { "id": 13, "name": "sprite_13", "rect": { "x": 359, "y": 206, "w": 211, "h": 107 }, "type": "simple" },
-    { "id": 14, "name": "sprite_14", "rect": { "x": 1762, "y": 207, "w": 205, "h": 98 }, "type": "simple" },
-    { "id": 15, "name": "sprite_15", "rect": { "x": 106, "y": 208, "w": 211, "h": 108 }, "type": "simple" },
-    { "id": 16, "name": "sprite_16", "rect": { "x": 1295, "y": 379, "w": 210, "h": 109 }, "type": "simple" },
-    { "id": 17, "name": "sprite_17", "rect": { "x": 1530, "y": 380, "w": 210, "h": 117 }, "type": "simple" },
-    { "id": 18, "name": "sprite_18", "rect": { "x": 826, "y": 381, "w": 210, "h": 110 }, "type": "simple" },
-    { "id": 19, "name": "sprite_19", "rect": { "x": 1058, "y": 382, "w": 207, "h": 107 }, "type": "simple" },
-    { "id": 20, "name": "sprite_20", "rect": { "x": 358, "y": 383, "w": 209, "h": 109 }, "type": "simple" },
-    { "id": 21, "name": "sprite_21", "rect": { "x": 593, "y": 383, "w": 208, "h": 108 }, "type": "simple" },
-    { "id": 22, "name": "sprite_22", "rect": { "x": 100, "y": 387, "w": 208, "h": 115 }, "type": "simple" },
-    { "id": 23, "name": "sprite_23", "rect": { "x": 1527, "y": 545, "w": 209, "h": 115 }, "type": "simple" },
-    { "id": 24, "name": "sprite_24", "rect": { "x": 1292, "y": 546, "w": 210, "h": 116 }, "type": "simple" },
-    { "id": 25, "name": "sprite_25", "rect": { "x": 1055, "y": 547, "w": 208, "h": 117 }, "type": "simple" },
-    { "id": 26, "name": "sprite_26", "rect": { "x": 828, "y": 548, "w": 208, "h": 118 }, "type": "simple" },
-    { "id": 27, "name": "sprite_27", "rect": { "x": 590, "y": 550, "w": 210, "h": 117 }, "type": "simple" },
-    { "id": 28, "name": "sprite_28", "rect": { "x": 354, "y": 551, "w": 208, "h": 118 }, "type": "simple" },
-    { "id": 29, "name": "sprite_29", "rect": { "x": 1767, "y": 554, "w": 184, "h": 96 }, "type": "simple" },
-    { "id": 30, "name": "sprite_30", "rect": { "x": 99, "y": 556, "w": 208, "h": 114 }, "type": "simple" },
-    { "id": 31, "name": "sprite_31", "rect": { "x": 1301, "y": 701, "w": 195, "h": 107 }, "type": "simple" },
-    { "id": 32, "name": "sprite_32", "rect": { "x": 1538, "y": 701, "w": 190, "h": 108 }, "type": "simple" },
-    { "id": 33, "name": "sprite_33", "rect": { "x": 1064, "y": 704, "w": 195, "h": 102 }, "type": "simple" },
-    { "id": 34, "name": "sprite_34", "rect": { "x": 839, "y": 706, "w": 198, "h": 102 }, "type": "simple" },
-    { "id": 35, "name": "sprite_35", "rect": { "x": 1770, "y": 706, "w": 192, "h": 97 }, "type": "simple" },
-    { "id": 36, "name": "sprite_36", "rect": { "x": 592, "y": 709, "w": 199, "h": 107 }, "type": "simple" },
-    { "id": 37, "name": "sprite_37", "rect": { "x": 355, "y": 711, "w": 206, "h": 109 }, "type": "simple" },
-    { "id": 38, "name": "sprite_38", "rect": { "x": 104, "y": 714, "w": 205, "h": 106 }, "type": "simple" },
-    { "id": 39, "name": "sprite_39", "rect": { "x": 1766, "y": 872, "w": 188, "h": 100 }, "type": "simple" },
-    { "id": 40, "name": "sprite_40", "rect": { "x": 1295, "y": 873, "w": 196, "h": 100 }, "type": "simple" },
-    { "id": 41, "name": "sprite_41", "rect": { "x": 1057, "y": 875, "w": 195, "h": 102 }, "type": "simple" },
-    { "id": 42, "name": "sprite_42", "rect": { "x": 826, "y": 876, "w": 194, "h": 102 }, "type": "simple" },
-    { "id": 43, "name": "sprite_43", "rect": { "x": 1530, "y": 876, "w": 191, "h": 98 }, "type": "simple" },
-    { "id": 44, "name": "sprite_44", "rect": { "x": 588, "y": 877, "w": 198, "h": 103 }, "type": "simple" },
-    { "id": 45, "name": "sprite_45", "rect": { "x": 108, "y": 879, "w": 196, "h": 100 }, "type": "simple" },
-    { "id": 46, "name": "sprite_46", "rect": { "x": 353, "y": 879, "w": 200, "h": 101 }, "type": "simple" },
-    { "id": 47, "name": "sprite_47", "rect": { "x": 1526, "y": 1032, "w": 198, "h": 98 }, "type": "simple" },
-    { "id": 48, "name": "sprite_49", "rect": { "x": 1302, "y": 1036, "w": 205, "h": 103 }, "type": "simple" },
-    { "id": 49, "name": "sprite_50", "rect": { "x": 834, "y": 1038, "w": 198, "h": 101 }, "type": "simple" },
-    { "id": 50, "name": "sprite_51", "rect": { "x": 1068, "y": 1038, "w": 197, "h": 100 }, "type": "simple" },
-    { "id": 51, "name": "sprite_52", "rect": { "x": 598, "y": 1040, "w": 199, "h": 101 }, "type": "simple" },
-    { "id": 52, "name": "sprite_53", "rect": { "x": 354, "y": 1041, "w": 207, "h": 101 }, "type": "simple" },
-    { "id": 53, "name": "sprite_54", "rect": { "x": 108, "y": 1043, "w": 203, "h": 100 }, "type": "simple" },
-    { "id": 54, "name": "sprite_55", "rect": { "x": 1308, "y": 1184, "w": 195, "h": 116 }, "type": "simple" },
-    { "id": 55, "name": "sprite_56", "rect": { "x": 1541, "y": 1186, "w": 190, "h": 105 }, "type": "simple" },
-    { "id": 56, "name": "sprite_58", "rect": { "x": 1074, "y": 1193, "w": 197, "h": 110 }, "type": "simple" },
-    { "id": 57, "name": "sprite_59", "rect": { "x": 836, "y": 1197, "w": 198, "h": 108 }, "type": "simple" },
-    { "id": 58, "name": "sprite_60", "rect": { "x": 602, "y": 1198, "w": 198, "h": 108 }, "type": "simple" },
-    { "id": 59, "name": "sprite_61", "rect": { "x": 356, "y": 1200, "w": 203, "h": 104 }, "type": "simple" },
-    { "id": 60, "name": "sprite_62", "rect": { "x": 107, "y": 1201, "w": 202, "h": 103 }, "type": "simple" },
-    { "id": 61, "name": "sprite_63", "rect": { "x": 1551, "y": 1364, "w": 190, "h": 105 }, "type": "simple" },
-    { "id": 62, "name": "sprite_64", "rect": { "x": 1783, "y": 1365, "w": 175, "h": 107 }, "type": "simple" },
-    { "id": 63, "name": "sprite_65", "rect": { "x": 1311, "y": 1366, "w": 197, "h": 113 }, "type": "simple" },
-    { "id": 64, "name": "sprite_66", "rect": { "x": 1078, "y": 1372, "w": 197, "h": 105 }, "type": "simple" },
-    { "id": 65, "name": "sprite_67", "rect": { "x": 838, "y": 1376, "w": 199, "h": 108 }, "type": "simple" },
-    { "id": 66, "name": "sprite_68", "rect": { "x": 601, "y": 1377, "w": 198, "h": 108 }, "type": "simple" },
-    { "id": 67, "name": "sprite_69", "rect": { "x": 360, "y": 1379, "w": 200, "h": 108 }, "type": "simple" },
-    { "id": 68, "name": "sprite_70", "rect": { "x": 111, "y": 1382, "w": 200, "h": 99 }, "type": "simple" },
-    { "id": 69, "name": "sprite_71", "rect": { "x": 1556, "y": 1530, "w": 190, "h": 124 }, "type": "simple" },
-    { "id": 70, "name": "sprite_72", "rect": { "x": 1314, "y": 1534, "w": 199, "h": 119 }, "type": "simple" },
-    { "id": 71, "name": "sprite_73", "rect": { "x": 1784, "y": 1538, "w": 181, "h": 105 }, "type": "simple" },
-    { "id": 72, "name": "sprite_74", "rect": { "x": 1073, "y": 1546, "w": 204, "h": 109 }, "type": "simple" },
-    { "id": 73, "name": "sprite_75", "rect": { "x": 111, "y": 1555, "w": 208, "h": 109 }, "type": "simple" },
-    { "id": 74, "name": "sprite_76", "rect": { "x": 363, "y": 1555, "w": 208, "h": 109 }, "type": "simple" },
-    { "id": 75, "name": "sprite_77", "rect": { "x": 605, "y": 1555, "w": 204, "h": 109 }, "type": "simple" },
-    { "id": 76, "name": "sprite_78", "rect": { "x": 842, "y": 1555, "w": 199, "h": 107 }, "type": "simple" },
-    { "id": 77, "name": "sprite_79", "rect": { "x": 1558, "y": 1717, "w": 199, "h": 104 }, "type": "simple" },
-    { "id": 78, "name": "sprite_80", "rect": { "x": 1781, "y": 1721, "w": 176, "h": 108 }, "type": "simple" },
-    { "id": 79, "name": "sprite_81", "rect": { "x": 1083, "y": 1728, "w": 200, "h": 107 }, "type": "simple" },
-    { "id": 80, "name": "sprite_82", "rect": { "x": 1317, "y": 1731, "w": 186, "h": 101 }, "type": "simple" },
-    { "id": 81, "name": "sprite_83", "rect": { "x": 112, "y": 1732, "w": 206, "h": 109 }, "type": "simple" },
-    { "id": 82, "name": "sprite_84", "rect": { "x": 364, "y": 1732, "w": 209, "h": 110 }, "type": "simple" },
-    { "id": 83, "name": "sprite_85", "rect": { "x": 608, "y": 1732, "w": 205, "h": 109 }, "type": "simple" },
-    { "id": 84, "name": "sprite_86", "rect": { "x": 844, "y": 1732, "w": 200, "h": 108 }, "type": "simple" },
-    { "id": 85, "name": "sprite_87", "rect": { "x": 1562, "y": 1893, "w": 193, "h": 96 }, "type": "simple" },
-    { "id": 86, "name": "sprite_88", "rect": { "x": 1082, "y": 1896, "w": 198, "h": 103 }, "type": "simple" },
-    { "id": 87, "name": "sprite_89", "rect": { "x": 1314, "y": 1897, "w": 192, "h": 97 }, "type": "simple" },
-    { "id": 88, "name": "sprite_90", "rect": { "x": 117, "y": 1898, "w": 204, "h": 104 }, "type": "simple" },
-    { "id": 89, "name": "sprite_91", "rect": { "x": 370, "y": 1898, "w": 199, "h": 105 }, "type": "simple" },
-    { "id": 90, "name": "sprite_92", "rect": { "x": 612, "y": 1898, "w": 196, "h": 104 }, "type": "simple" },
-    { "id": 91, "name": "sprite_93", "rect": { "x": 845, "y": 1898, "w": 197, "h": 103 }, "type": "simple" },
-    { "id": 92, "name": "sprite_94", "rect": { "x": 1780, "y": 1898, "w": 174, "h": 104 }, "type": "simple" }
-  ]
-};
-
+let SHARK_SPRITE_DATA = null;
 let sharkImg = null, sharkListo = false;
+let sharkImgCargada = false;
+let sharkJsonCargado = false;
+function comprobarSharkListo() {
+    if (sharkImgCargada && sharkJsonCargado) {
+        sharkListo = true;
+    }
+}
 cargarImagen('img/tiburon.png', function (img) { 
     if (img) { 
         sharkImg = img; 
-        sharkListo = true; 
+        sharkImgCargada = true;
+        comprobarSharkListo();
     } 
 });
+cargarJson('js/json_sprites/shark.json', function(data) {
+    if (data) {
+        SHARK_SPRITE_DATA = data;
+        sharkJsonCargado = true;
+        comprobarSharkListo();
+    }
+});
 
-export const WHALE_SPRITE_DATA = {
-  "meta": {
-    "app": "Sprite Sheet Suite v4.3",
-    "image": "ballena.png",
-    "size": {
-      "w": 1024,
-      "h": 1024
-    },
-    "clips": [
-      {
-        "name": "Default",
-        "frames": [
-          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35
-        ]
-      }
-    ]
-  },
-  "frames": [
-    { "id": 0, "name": "frame_0_0_0", "rect": { "x": 19, "y": 3, "w": 249, "h": 112 } },
-    { "id": 1, "name": "frame_0_0_1", "rect": { "x": 268, "y": 3, "w": 244, "h": 112 } },
-    { "id": 2, "name": "frame_0_0_2", "rect": { "x": 512, "y": 3, "w": 246, "h": 112 } },
-    { "id": 3, "name": "frame_0_0_3", "rect": { "x": 758, "y": 3, "w": 246, "h": 112 } },
-    { "id": 4, "name": "frame_0_1_0", "rect": { "x": 19, "y": 115, "w": 252, "h": 109 } },
-    { "id": 5, "name": "frame_0_1_1", "rect": { "x": 270, "y": 115, "w": 242, "h": 109 } },
-    { "id": 6, "name": "frame_0_1_2", "rect": { "x": 513, "y": 115, "w": 242, "h": 109 } },
-    { "id": 7, "name": "frame_0_1_3", "rect": { "x": 754, "y": 115, "w": 249, "h": 109 } },
-    { "id": 8, "name": "frame_0_2_0", "rect": { "x": 19, "y": 224, "w": 253, "h": 106 } },
-    { "id": 9, "name": "frame_0_2_1", "rect": { "x": 272, "y": 224, "w": 241, "h": 106 } },
-    { "id": 10, "name": "frame_0_2_2", "rect": { "x": 513, "y": 224, "w": 240, "h": 106 } },
-    { "id": 11, "name": "frame_0_2_3", "rect": { "x": 753, "y": 224, "w": 250, "h": 106 } },
-    { "id": 12, "name": "frame_0_3_0", "rect": { "x": 19, "y": 330, "w": 252, "h": 107 } },
-    { "id": 13, "name": "frame_0_3_1", "rect": { "x": 270, "y": 330, "w": 241, "h": 107 } },
-    { "id": 14, "name": "frame_0_3_2", "rect": { "x": 511, "y": 330, "w": 242, "h": 107 } },
-    { "id": 15, "name": "frame_0_3_3", "rect": { "x": 753, "y": 330, "w": 250, "h": 107 } },
-    { "id": 16, "name": "frame_0_4_0", "rect": { "x": 19, "y": 437, "w": 252, "h": 111 } },
-    { "id": 17, "name": "frame_0_4_1", "rect": { "x": 271, "y": 437, "w": 236, "h": 111 } },
-    { "id": 18, "name": "frame_0_4_2", "rect": { "x": 507, "y": 437, "w": 246, "h": 111 } },
-    { "id": 19, "name": "frame_0_4_3", "rect": { "x": 753, "y": 437, "w": 250, "h": 111 } },
-    { "id": 20, "name": "frame_0_5_0", "rect": { "x": 19, "y": 548, "w": 252, "h": 116 } },
-    { "id": 21, "name": "frame_0_5_1", "rect": { "x": 270, "y": 548, "w": 242, "h": 116 } },
-    { "id": 22, "name": "frame_0_5_2", "rect": { "x": 513, "y": 548, "w": 240, "h": 116 } },
-    { "id": 23, "name": "frame_0_5_3", "rect": { "x": 753, "y": 548, "w": 250, "h": 116 } },
-    { "id": 24, "name": "frame_0_6_0", "rect": { "x": 19, "y": 664, "w": 253, "h": 119 } },
-    { "id": 25, "name": "frame_0_6_1", "rect": { "x": 272, "y": 664, "w": 246, "h": 119 } },
-    { "id": 26, "name": "frame_0_6_2", "rect": { "x": 518, "y": 664, "w": 240, "h": 119 } },
-    { "id": 27, "name": "frame_0_6_3", "rect": { "x": 758, "y": 664, "w": 246, "h": 119 } },
-    { "id": 28, "name": "frame_0_7_0", "rect": { "x": 19, "y": 783, "w": 254, "h": 110 } },
-    { "id": 29, "name": "frame_0_7_1", "rect": { "x": 273, "y": 783, "w": 243, "h": 110 } },
-    { "id": 30, "name": "frame_0_7_2", "rect": { "x": 516, "y": 783, "w": 243, "h": 110 } },
-    { "id": 31, "name": "frame_0_7_3", "rect": { "x": 759, "y": 783, "w": 244, "h": 110 } },
-    { "id": 32, "name": "frame_0_8_0", "rect": { "x": 19, "y": 893, "w": 255, "h": 114 } },
-    { "id": 33, "name": "frame_0_8_1", "rect": { "x": 273, "y": 893, "w": 242, "h": 114 } },
-    { "id": 34, "name": "frame_0_8_2", "rect": { "x": 516, "y": 893, "w": 240, "h": 114 } },
-    { "id": 35, "name": "frame_0_8_3", "rect": { "x": 756, "y": 893, "w": 247, "h": 114 } }
-  ]
-};
-
+export let WHALE_SPRITE_DATA = null;
 export let whaleImg = null, whaleListo = false;
+let whaleImgCargada = false;
+let whaleJsonCargado = false;
+function comprobarWhaleListo() {
+    if (whaleImgCargada && whaleJsonCargado) {
+        whaleListo = true;
+    }
+}
 cargarImagen('img/ballena.png', function (img) { 
     if (img) { 
         whaleImg = img; 
-        whaleListo = true; 
+        whaleImgCargada = true;
+        comprobarWhaleListo();
     } 
+});
+cargarJson('js/json_sprites/whale.json', function(data) {
+    if (data) {
+        WHALE_SPRITE_DATA = data;
+        whaleJsonCargado = true;
+        comprobarWhaleListo();
+    }
 });
 
 // --- RECURSOS DEL PROPULSOR (SVG) ---
