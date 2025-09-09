@@ -1,51 +1,117 @@
-// js/level5.js
 'use strict';
 
 // Importamos lo que necesitamos de game.js
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles } from './game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles, generarParticula, particulasBurbujas } from './game.js';
 
 // --- ESTADO Y ENTIDADES DEL NIVEL 5 ---
-let escombrosCayendo = [];
+let escombros = [];
 let corrientes = [];
+let proyectilesEnemigos = [];
 
 let spawnTimerEscombros = 0;
 let spawnTimerCorrientes = 0;
+let levelTimer = 0; // Timer para aumentar la dificultad progresivamente
 
-const VELOCIDAD_ASCENSO = 200; // Píxeles por segundo que la "cámara" sube
+const VELOCIDAD_ASCENSO_INICIAL = 200;
+let velocidadAscensoActual = VELOCIDAD_ASCENSO_INICIAL;
 
-// --- FUNCIONES DEL NIVEL 5 ---
+// --- Formas SVG de múltiples capas para más realismo ---
+const formasEscombrosSVG = [];
+
+function crearFormasSVGComplejas() {
+    formasEscombrosSVG.length = 0;
+    // Cada "forma" es ahora un objeto con una base y una capa de detalle/grietas.
+    // Usamos curvas (Q) para formas más orgánicas.
+    const svgData = [
+        { // Forma 1
+            base: "M -25 -20 L 25 -25 Q 35 0 20 28 L -20 25 Q -40 10 -30 0 Z",
+            detalle: "M -10 -15 L 10 -5 M 0 0 L -5 15 M 10 5 L 20 15"
+        },
+        { // Forma 2
+            base: "M -20 -25 Q 10 -30 35 -5 L 20 20 Q 0 35 -25 10 Z",
+            detalle: "M 0 -15 L 15 -5 M -10 0 Q 0 0 5 15"
+        },
+        { // Forma 3
+            base: "M -15 -30 L 20 -28 Q 35 0 22 24 L 0 32 L -28 15 Q -35 -10 -15 -30 Z",
+            detalle: "M -20 -10 L 0 0 L 15 5 M -10 10 L 5 20"
+        }
+    ];
+
+    svgData.forEach(data => {
+        formasEscombrosSVG.push({
+            base: new Path2D(data.base),
+            detalle: new Path2D(data.detalle)
+        });
+    });
+    console.log("Formas SVG complejas de escombros creadas.");
+}
+
+// --- FUNCIONES DE GENERACIÓN DE ENTIDADES ---
+
+function generarFragmentos(x, y, tamanoOriginal) {
+    const numFragmentos = 4 + Math.floor(Math.random() * 4); // Entre 4 y 7 fragmentos
+    for (let i = 0; i < numFragmentos; i++) {
+        const angulo = Math.random() * Math.PI * 2;
+        const velocidad = 200 + Math.random() * 200;
+        const tamano = tamanoOriginal / 4 + Math.random() * 5;
+        const svgId = Math.floor(Math.random() * formasEscombrosSVG.length);
+
+        escombros.push({
+            x, y,
+            vx: Math.cos(angulo) * velocidad, // Se mueven por sí mismos
+            vy: Math.sin(angulo) * velocidad,
+            tamano,
+            rotacion: Math.random() * Math.PI * 2,
+            vRot: (Math.random() - 0.5) * 15, // Rotan rápido
+            hp: 1,
+            svgId,
+            tipo: 'fragmento',
+            vidaUtil: 1.5 + Math.random() // Desaparecen después de un tiempo
+        });
+    }
+}
 
 function generarEscombro() {
     const x = Math.random() * W;
-    const velocidad = 400 + Math.random() * 400; // Caen más rápido que el ascenso
-    const tamano = 30 + Math.random() * 60;
-    const velocidadRotacion = (Math.random() - 0.5) * 4;
+    const tamano = 35 + Math.random() * 70;
+    const svgId = Math.floor(Math.random() * formasEscombrosSVG.length);
+    let tipo = 'normal';
+    const rand = Math.random();
+    if (rand < 0.20) { // 20% de probabilidad de ser hostil
+        tipo = 'hostil';
+    } else if (rand < 0.35) { // 15% de probabilidad de ser explosivo
+        tipo = 'explosivo';
+    }
 
-    escombrosCayendo.push({
+    escombros.push({
         x: x,
-        y: -tamano, // Empiezan justo arriba de la pantalla
-        vy: velocidad,
+        y: -tamano,
+        vx: 0,
+        vy: 450 + Math.random() * 500, // Velocidad de caída
         tamano: tamano,
         rotacion: Math.random() * Math.PI * 2,
-        vRot: velocidadRotacion,
-        hp: Math.ceil(tamano / 30)
+        vRot: (Math.random() - 0.5) * 4,
+        hp: Math.ceil(tamano / 20),
+        svgId: svgId,
+        tipo: tipo, // Sistema de tipos más versátil
+        tiempoDisparo: tipo === 'hostil' ? 1.5 + Math.random() * 1.5 : 0
     });
 }
 
 function generarCorriente() {
     const desdeIzquierda = Math.random() > 0.5;
     const y = H * 0.1 + Math.random() * H * 0.8;
-    const fuerza = (250 + Math.random() * 200) * (desdeIzquierda ? 1 : -1);
-    const ancho = 150 + Math.random() * 150;
-    const duracion = 1.5 + Math.random() * 2;
-
-    corrientes.push({
-        y,
-        fuerza,
-        ancho,
-        duracion,
-        maxDuracion: duracion,
-        isLeft: desdeIzquierda
+    const fuerza = (300 + Math.random() * 250) * (desdeIzquierda ? 1 : -1);
+    const ancho = 180 + Math.random() * 150;
+    const duracion = 2 + Math.random() * 2;
+    corrientes.push({ 
+        y, 
+        fuerza, 
+        ancho, 
+        duracion, 
+        maxDuracion: duracion, 
+        isLeft: desdeIzquierda,
+        bubbleTimer: 0 // Para generar burbujas
     });
     S.reproducir('ink');
 }
@@ -54,35 +120,74 @@ function generarCorriente() {
 // --- INTERFAZ PÚBLICA DEL MÓDULO ---
 
 export function init() {
-    console.log("Inicializando Nivel 5: El Colapso de la Fosa");
-    escombrosCayendo = [];
+    console.log("Inicializando Nivel 5: El Colapso de la Fosa (HIPERREALISTA)");
+    crearFormasSVGComplejas();
+    
+    escombros = [];
     corrientes = [];
+    proyectilesEnemigos = [];
+    
     spawnTimerEscombros = 0.5;
     spawnTimerCorrientes = 3.0;
+    levelTimer = 0;
+    velocidadAscensoActual = VELOCIDAD_ASCENSO_INICIAL;
+    
     jugador.x = W / 2;
     jugador.y = H - 100;
 }
 
 export function update(dt) {
     if (!estadoJuego || estadoJuego.nivel !== 5) return;
-    
-    // --- LÓGICA DEL NIVEL 5 (SIN MOVIMIENTO DEL JUGADOR) ---
 
-    // 1. SCROLL VERTICAL y corrientes
-    jugador.y -= VELOCIDAD_ASCENSO * dt;
-    for (const escombro of escombrosCayendo) {
-        escombro.y += VELOCIDAD_ASCENSO * dt;
-    }
+    // --- AUMENTO DE DIFICULTAD PROGRESIVO ---
+    levelTimer += dt;
+    velocidadAscensoActual = Math.min(VELOCIDAD_ASCENSO_INICIAL * 2.5, VELOCIDAD_ASCENSO_INICIAL + levelTimer * 4);
+
+    // --- LÓGICA DEL NIVEL 5 ---
+
+    // 1. SCROLL VERTICAL y movimiento de entidades
+    // jugador.y -= velocidadAscensoActual * dt; // Eliminado el ascenso automático. ¡Ahora tú tienes el control!
+    escombros.forEach(e => e.y += velocidadAscensoActual * dt);
+    corrientes.forEach(c => c.y += velocidadAscensoActual * dt);
+    proyectilesEnemigos.forEach(p => p.y += velocidadAscensoActual * dt);
+    
+    // 2. Aplicar fuerza de corrientes y generar efectos
     for (const corriente of corrientes) {
-        corriente.y += VELOCIDAD_ASCENSO * dt;
-        if (jugador.y > corriente.y - corriente.ancho/2 && jugador.y < corriente.y + corriente.ancho/2) {
+        // Generar burbujas en la corriente
+        corriente.bubbleTimer -= dt;
+        if (corriente.bubbleTimer <= 0) {
+            const numBurbujas = 1 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < numBurbujas; i++) {
+                const x = corriente.isLeft ? Math.random() * 450 : W - Math.random() * 450;
+                const y = corriente.y - corriente.ancho / 2 + Math.random() * corriente.ancho;
+                
+                generarParticula(particulasBurbujas, {
+                    x: x, y: y,
+                    vx: corriente.fuerza * (0.5 + Math.random() * 0.5),
+                    vy: (Math.random() - 0.5) * 50 - 20,
+                    r: Math.random() * 3 + 1,
+                    vida: 1.5 + Math.random() * 1.5,
+                    color: ''
+                });
+            }
+            corriente.bubbleTimer = 0.05; // Generar burbujas frecuentemente
+        }
+
+        // Comprobar si el jugador está en la corriente
+        if (jugador.y > corriente.y - corriente.ancho / 2 && jugador.y < corriente.y + corriente.ancho / 2) {
             jugador.x += corriente.fuerza * dt;
+
+            // Generar burbujas de impacto en el jugador
+            if (Math.random() < 0.8) { // No en cada frame para que no sea abrumador
+                const ladoImpacto = corriente.isLeft ? jugador.x - jugador.r : jugador.x + jugador.r;
+                generarParticula(particulasBurbujas, { x: ladoImpacto, y: jugador.y + (Math.random() - 0.5) * 40, vx: corriente.fuerza * (0.2 + Math.random() * 0.3), vy: (Math.random() - 0.5) * 80 - 30, r: Math.random() * 2.5 + 1, vida: 0.8 + Math.random() * 0.6, color: '' });
+            }
         }
     }
     
-    // 2. Comprobar si el jugador se queda atrás
+    // 3. Comprobar si el jugador se queda atrás
     if (jugador.y > H + jugador.r) {
-         if (estadoJuego.vidas > 0) {
+        if (estadoJuego.vidas > 0) {
             estadoJuego.vidas--;
             estadoJuego.animVida = 0.6;
             S.reproducir('choque');
@@ -93,83 +198,125 @@ export function update(dt) {
         }
     }
     
-    // 3. Manejar spawners
+    // 4. Manejar spawners
     spawnTimerEscombros -= dt;
     if (spawnTimerEscombros <= 0) {
         generarEscombro();
-        spawnTimerEscombros = 0.5 + Math.random() * 0.5;
+        spawnTimerEscombros = Math.max(0.2, 1.0 - levelTimer * 0.02);
     }
     spawnTimerCorrientes -= dt;
     if (spawnTimerCorrientes <= 0) {
         generarCorriente();
-        spawnTimerCorrientes = 2.5 + Math.random() * 2;
+        spawnTimerCorrientes = Math.max(2.0, 4.5 - levelTimer * 0.05);
     }
 
-    // 4. Actualizar y comprobar colisiones para cada escombro
-    for (let i = escombrosCayendo.length - 1; i >= 0; i--) {
-        const escombro = escombrosCayendo[i];
-        escombro.y += escombro.vy * dt;
-        escombro.rotacion += escombro.vRot * dt;
+    // 5. Actualizar proyectiles enemigos y colisión con jugador
+    for (let i = proyectilesEnemigos.length - 1; i >= 0; i--) {
+        const p = proyectilesEnemigos[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
 
-        const dist = Math.hypot(jugador.x - escombro.x, jugador.y - escombro.y);
-        if (dist < jugador.r + escombro.tamano / 2) {
-            generarExplosion(escombro.x, escombro.y, '#cccccc');
-            escombrosCayendo.splice(i, 1);
-            if (estadoJuego.vidas > 1) {
-                estadoJuego.vidas -= 2;
+        if (Math.hypot(jugador.x - p.x, jugador.y - p.y) < jugador.r + p.r) {
+            proyectilesEnemigos.splice(i, 1);
+            if (estadoJuego.vidas > 0) {
+                estadoJuego.vidas--;
                 estadoJuego.animVida = 0.6;
-                S.reproducir('choque');
-            } else if (estadoJuego.vidas > 0) {
-                S.reproducir('choque');
-                estadoJuego.vidas = 0;
+                S.reproducir('choque_ligero'); // Idealmente, un sonido de impacto de proyectil
+            }
+            if (estadoJuego.vidas <= 0) {
                 perderJuego();
             }
             continue;
         }
 
+        if (p.y > H + 20 || p.y < -20 || p.x < -20 || p.x > W + 20) {
+            proyectilesEnemigos.splice(i, 1);
+        }
+    }
+
+    // 6. Actualizar y comprobar colisiones para cada escombro
+    for (let i = escombros.length - 1; i >= 0; i--) {
+        const escombro = escombros[i];
+        escombro.y += escombro.vy * dt;
+        escombro.x += (escombro.vx || 0) * dt; // Para los fragmentos
+        escombro.rotacion += escombro.vRot * dt;
+
+        // Lógica de vida útil para fragmentos
+        if (escombro.tipo === 'fragmento') {
+            escombro.vidaUtil -= dt;
+            if (escombro.vidaUtil <= 0) {
+                escombros.splice(i, 1);
+                continue;
+            }
+        }
+        
+        // Lógica de disparo para escombros hostiles
+        if (escombro.tipo === 'hostil') {
+            escombro.tiempoDisparo -= dt;
+            if (escombro.tiempoDisparo <= 0) {
+                const angulo = Math.atan2(jugador.y - escombro.y, jugador.x - escombro.x);
+                proyectilesEnemigos.push({
+                    x: escombro.x, y: escombro.y,
+                    vx: Math.cos(angulo) * 350, vy: Math.sin(angulo) * 350, r: 5
+                });
+                S.reproducir('disparo_enemigo');
+                escombro.tiempoDisparo = 2.0 + Math.random();
+            }
+        }
+
+        // Colisión con el jugador
+        if (Math.hypot(jugador.x - escombro.x, jugador.y - escombro.y) < jugador.r + escombro.tamano / 2) {
+            generarExplosion(escombro.x, escombro.y, '#D3B89F', escombro.tamano);
+            escombros.splice(i, 1);
+            if (estadoJuego.vidas > 1) {
+                estadoJuego.vidas -= 2;
+                estadoJuego.animVida = 0.6;
+                S.reproducir('choque');
+            } else if (estadoJuego.vidas > 0) {
+                estadoJuego.vidas = 0;
+                S.reproducir('choque');
+                perderJuego();
+            }
+            continue;
+        }
+
+        // Colisiones con proyectiles del jugador
         let escombroDestruido = false;
+        [torpedos, proyectiles].forEach((listaProyectiles, tipo) => {
+            if (escombroDestruido) return;
+            for (let j = listaProyectiles.length - 1; j >= 0; j--) {
+                const p = listaProyectiles[j];
+                if (Math.hypot(p.x - escombro.x, p.y - escombro.y) < escombro.tamano / 2 + 10) {
+                    escombro.hp -= (tipo === 0) ? 3 : 1; // tipo 0 = torpedos
+                    listaProyectiles.splice(j, 1);
+                    if (escombro.hp <= 0) {
+                        estadoJuego.puntuacion += Math.floor(escombro.tamano);
+                        
+                        // Lógica de destrucción por tipo
+                        if (escombro.tipo === 'explosivo') {
+                            S.reproducir('explosion_grande'); // Sonido especial
+                            generarFragmentos(escombro.x, escombro.y, escombro.tamano);
+                        } else {
+                            S.reproducir('explosion_simple');
+                            generarExplosion(escombro.x, escombro.y, '#D3B89F', escombro.tamano);
+                        }
 
-        // Colisión con torpedos (más eficiente y correcto)
-        for (let j = torpedos.length - 1; j >= 0; j--) {
-            const t = torpedos[j];
-            if (Math.abs(t.x - escombro.x) * 2 < (t.w + escombro.tamano) &&
-                Math.abs(t.y - escombro.y) * 2 < (t.h + escombro.tamano)) {
-                escombro.hp -= 3; // Los torpedos hacen más daño
-                torpedos.splice(j, 1);
-                if (escombro.hp <= 0) {
-                    generarExplosion(escombro.x, escombro.y, '#cccccc');
-                    escombrosCayendo.splice(i, 1);
-                    estadoJuego.puntuacion += Math.floor(escombro.tamano);
-                    escombroDestruido = true;
-                    break;
+                        escombros.splice(i, 1);
+                        escombroDestruido = true;
+                        break;
+                    }
                 }
             }
-        }
+        });
         if (escombroDestruido) continue;
 
-        // Colisión con proyectiles (más eficiente y correcto)
-        for (let k = proyectiles.length - 1; k >= 0; k--) {
-            const p = proyectiles[k];
-            if (Math.abs(p.x - escombro.x) * 2 < (p.w + escombro.tamano) &&
-                Math.abs(p.y - escombro.y) * 2 < (p.h + escombro.tamano)) {
-                escombro.hp -= 1;
-                proyectiles.splice(k, 1);
-                if (escombro.hp <= 0) {
-                    generarExplosion(escombro.x, escombro.y, '#cccccc');
-                    escombrosCayendo.splice(i, 1);
-                    estadoJuego.puntuacion += Math.floor(escombro.tamano);
-                    escombroDestruido = true;
-                    break;
-                }
-            }
-        }
-        if (escombroDestruido) continue;
-
-        if (escombrosCayendo[i] && escombrosCayendo[i].y > H + escombrosCayendo[i].tamano) {
-            escombrosCayendo.splice(i, 1);
+        // Limpieza de escombros que salen de pantalla
+        if (escombros[i] && escombros[i].y > H + escombros[i].tamano) {
+            escombros.splice(i, 1);
         }
     }
     
+    // Limpieza de corrientes
     for (let i = corrientes.length - 1; i >= 0; i--) {
         corrientes[i].duracion -= dt;
         if (corrientes[i].duracion <= 0 || corrientes[i].y > H + corrientes[i].ancho) {
@@ -178,41 +325,80 @@ export function update(dt) {
     }
 }
 
-
 export function draw() {
     if (!ctx) return;
+    
+    // Dibujar corrientes (NUEVO ESTILO MEJORADO)
     for (const corriente of corrientes) {
-        const alpha = clamp(corriente.duracion / corriente.maxDuracion, 0, 1) * 0.3;
-        const gradX_start = corriente.isLeft ? 0 : W;
-        const gradX_end = corriente.isLeft ? 400 : W - 400;
-        
-        let grad = ctx.createLinearGradient(gradX_start, corriente.y, gradX_end, corriente.y);
-        grad.addColorStop(0, `rgba(200, 230, 255, ${alpha * 2})`);
-        grad.addColorStop(1, `rgba(200, 230, 255, 0)`);
-        ctx.fillStyle = grad;
+        const alpha = clamp(corriente.duracion / corriente.maxDuracion, 0, 1) * 0.4;
+        const xStart = corriente.isLeft ? 0 : W;
+        const xEnd = corriente.isLeft ? 450 : W - 450;
+        const direction = corriente.isLeft ? 1 : -1;
 
-        ctx.beginPath();
-        if(corriente.isLeft) {
-            ctx.moveTo(0, corriente.y - corriente.ancho / 2);
-            ctx.lineTo(400, corriente.y);
-            ctx.lineTo(0, corriente.y + corriente.ancho / 2);
-        } else {
-            ctx.moveTo(W, corriente.y - corriente.ancho / 2);
-            ctx.lineTo(W - 400, corriente.y);
-            ctx.lineTo(W, corriente.y + corriente.ancho / 2);
+        // Dibujar múltiples líneas onduladas para dar sensación de flujo
+        for (let i = 0; i < 5; i++) {
+            ctx.beginPath();
+            ctx.moveTo(xStart, corriente.y - corriente.ancho / 2 + (i * corriente.ancho / 4));
+            
+            const waveAmplitude = 15;
+            const waveFrequency = 0.02;
+            const waveOffset = levelTimer * 150 * direction;
+
+            // Usamos una curva cuadrática para un flujo suave
+            const controlX = (xStart + xEnd) / 2;
+            const controlY = corriente.y + Math.sin((controlX * waveFrequency) + waveOffset) * waveAmplitude;
+
+            ctx.quadraticCurveTo(controlX, controlY, xEnd, corriente.y);
+            
+            ctx.strokeStyle = `rgba(200, 230, 255, ${alpha * (0.5 + Math.random() * 0.5)})`;
+            ctx.lineWidth = 1 + Math.random() * 2;
+            ctx.stroke();
         }
-        ctx.closePath();
-        ctx.fill();
     }
-    ctx.fillStyle = '#6D5A46';
-    ctx.strokeStyle = '#413529';
-    ctx.lineWidth = 2;
-    for (const escombro of escombrosCayendo) {
+    
+    // Dibujar escombros
+    for (const escombro of escombros) {
         ctx.save();
         ctx.translate(escombro.x, escombro.y);
         ctx.rotate(escombro.rotacion);
-        ctx.fillRect(-escombro.tamano / 2, -escombro.tamano / 2, escombro.tamano, escombro.tamano);
-        ctx.strokeRect(-escombro.tamano / 2, -escombro.tamano / 2, escombro.tamano, escombro.tamano);
+        
+        const escala = escombro.tamano / 60;
+        ctx.scale(escala, escala);
+        
+        const forma = formasEscombrosSVG[escombro.svgId];
+        
+        // Colores y efectos por tipo
+        if (escombro.tipo === 'explosivo') {
+            const pulso = 0.5 + (Math.sin(levelTimer * 5) + 1) / 4;
+            ctx.fillStyle = '#4B0082'; // Indigo
+            ctx.strokeStyle = `rgba(255, 20, 147, ${pulso})`; // Rosa brillante pulsante
+            ctx.lineWidth = 8;
+            ctx.stroke(forma.base);
+        } else if (escombro.tipo === 'hostil') {
+            ctx.fillStyle = '#8B4513';
+            ctx.strokeStyle = '#413529';
+            ctx.lineWidth = 5;
+        } else { // Normal y fragmentos
+            ctx.fillStyle = '#6D5A46';
+            ctx.strokeStyle = '#413529';
+            ctx.lineWidth = 5;
+        }
+
+        ctx.fill(forma.base);
+        
+        // Dibujar la capa de detalle (grietas/brillos)
+        ctx.strokeStyle = escombro.tipo === 'explosivo' ? 'rgba(230, 230, 250, 0.8)' : '#332a21';
+        ctx.lineWidth = 3;
+        ctx.stroke(forma.detalle);
+        
         ctx.restore();
+    }
+    
+    // Dibujar proyectiles enemigos
+    ctx.fillStyle = '#FF4500'; // Naranja rojizo
+    for(const p of proyectilesEnemigos) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
