@@ -326,14 +326,63 @@ export let proyectiles = [];
 
 // --- Funciones de Partículas ---
 // Funciones para crear, actualizar y dibujar las partículas.
-export function generarParticula(arr, opts) { arr.push({ x: opts.x, y: opts.y, vx: opts.vx, vy: opts.vy, r: opts.r, vida: opts.vida, vidaMax: opts.vida, color: opts.color, tw: Math.random() * Math.PI * 2, baseA: opts.baseA || 1 }); }
+export function generarParticula(arr, opts) { arr.push({ x: opts.x, y: opts.y, vx: opts.vx, vy: opts.vy, r: opts.r, vida: opts.vida, vidaMax: opts.vida, color: opts.color, tw: Math.random() * Math.PI * 2, baseA: opts.baseA || 1, ...opts }); }
+
+/**
+ * Genera un chorro de burbujas dañinas desde una posición.
+ * Usado por la ballena para su ataque de "Spout".
+ * @param {number} x - Posición inicial X.
+ * @param {number} y - Posición inicial Y.
+ * @param {number} dirY - Dirección vertical del chorro (-1 para arriba, 1 para abajo).
+ */
+function generarChorroDeAgua(x, y, dirY) {
+    const numBurbujas = 45;
+    const anguloCono = Math.PI / 7;
+    const velocidadBase = 550;
+
+    for (let i = 0; i < numBurbujas; i++) {
+        const angulo = (Math.random() - 0.5) * anguloCono;
+        const velocidad = velocidadBase * (0.7 + Math.random() * 0.6);
+        const vx = Math.sin(angulo) * velocidad;
+        const vy = Math.cos(angulo) * velocidad * dirY;
+
+        generarParticula(particulasBurbujas, {
+            x, y, vx, vy,
+            r: 2 + Math.random() * 4,
+            vida: 1.2 + Math.random() * 0.8,
+            esChorroDañino: true // Flag para detectar colisión
+        });
+    }
+    S.reproducir('shotgun');
+}
+
 function iniciarParticulas() {
     particulas.length = 0;
     particulasBurbujas.length = 0;
     const densidad = Math.max(40, Math.min(140, Math.floor((W * H) / 28000)));
     for (let i = 0; i < densidad; i++) generarParticula(particulas, { x: Math.random() * W, y: Math.random() * H, vx: -(8 + Math.random() * 22), vy: -(10 + Math.random() * 25), r: Math.random() * 2 + 1.2, vida: 999, color: '#cfe9ff', baseA: 0.25 + Math.random() * 0.25 });
 }
-function actualizarParticulas(dt) { for (let arr of [particulas, particulasExplosion, particulasTinta, particulasBurbujas]) { for (let i = arr.length - 1; i >= 0; i--) { const p = arr[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; p.tw += dt * 2.0; if (arr === particulasBurbujas) { p.vy -= 40 * dt; p.vx *= 0.98; } if (arr === particulas) { if (p.x < -8 || p.y < -8) { p.x = W + 10 + Math.random() * 20; p.y = H * Math.random(); } } else { if (p.vida <= 0) { arr.splice(i, 1); } } } } }
+function actualizarParticulas(dt) {
+    for (let arr of [particulas, particulasExplosion, particulasTinta]) {
+        for (let i = arr.length - 1; i >= 0; i--) {
+            const p = arr[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; p.tw += dt * 2.0;
+            if (arr === particulas) { if (p.x < -8 || p.y < -8) { p.x = W + 10 + Math.random() * 20; p.y = H * Math.random(); } }
+            else { if (p.vida <= 0) { arr.splice(i, 1); } }
+        }
+    }
+    // Bucle separado para las burbujas para manejar su lógica especial (flotación y colisión)
+    for (let i = particulasBurbujas.length - 1; i >= 0; i--) {
+        const p = particulasBurbujas[i];
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; p.vy -= 40 * dt; p.vx *= 0.98;
+        // Lógica de colisión para el chorro de la ballena
+        if (p.esChorroDañino && Math.hypot(jugador.x - p.x, jugador.y - p.y) < jugador.r + p.r) {
+            if (estadoJuego.vidas > 0) { estadoJuego.vidas--; estadoJuego.animVida = 0.6; S.reproducir('choque_ligero'); }
+            if (estadoJuego.vidas <= 0) perderJuego();
+            p.vida = 0; // La burbuja explota al impactar
+        }
+        if (p.vida <= 0) { particulasBurbujas.splice(i, 1); }
+    }
+}
 function dibujarParticulas() { if (!ctx) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.strokeStyle = '#aae2ff'; ctx.lineWidth = 1.5; for (const p of particulasBurbujas) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.7; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); }
 function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 0.6) { const velocidadBaseX = isLevel5 ? 0 : 60; const velocidadBaseY = isLevel5 ? 60 : 0; const dispersion = 25; generarParticula(particulasBurbujas, { x: x, y: y, vx: velocidadBaseX + (Math.random() - 0.5) * dispersion, vy: velocidadBaseY + (Math.random() - 0.5) * dispersion - 20, r: Math.random() * 2 + 1, vida: 1 + Math.random() * 1.5, color: '' }); } }
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
@@ -513,7 +562,7 @@ function reiniciar(nivelDeInicio = 1) {
     animales = [];
     torpedos = [];
     proyectiles = [];
-    whaleDebris = [];
+    whaleDebris = [];    
     particulasTinta = [];
 
     autoSize();
@@ -583,6 +632,12 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             tipo: 'whale',
             hp: 130, maxHp: 130, // Vida aumentada a 130
             isEnraged: false,
+            // --- SUGERENCIA DE IA: NUEVOS ATAQUES PARA LA BALLENA ---
+            spoutCooldown: 3.0 + Math.random() * 3, // Temporizador para el chorro de agua
+            tailSwipeCooldown: 5.0 + Math.random() * 4, // Temporizador para el coletazo
+            isTailSwiping: false,
+            tailSwipeProgress: 0
+            // --- FIN SUGERENCIA ---
         });
     } else {
         if (esEsbirroJefe) {
@@ -595,10 +650,25 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         
         const tamano = overrides.ancho || 96;
         const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
+
+        // --- SUGERENCIA DE IA: PATRONES DE MOVIMIENTO ---
+        // En lugar de que todos se muevan en línea recta, asignamos un patrón de movimiento.
+        let patronMovimiento = 'lineal';
+        const randMov = Math.random();
+        if (tipo !== 'aggressive' && randMov < 0.3) {
+            patronMovimiento = 'sinusoidal';
+        } else if (tipo !== 'aggressive' && randMov < 0.5) {
+            patronMovimiento = 'pausa_acelera';
+        }
+        // --- FIN SUGERENCIA ---
+
         animales.push({
             x: W + tamano, y, vx: -velocidad, r: 44, w: tamano, h: tamano,
             capturado: false, fila, frame: 0, timerFrame: 0,
-            semillaFase: Math.random() * Math.PI * 2, tipo: tipo
+            semillaFase: Math.random() * Math.PI * 2, tipo: tipo,
+            patronMovimiento: patronMovimiento, // Propiedad para el nuevo tipo de movimiento
+            estadoMovimiento: 'moviendo',      // Estado para la IA de 'pausa_acelera'
+            timerMovimiento: 0                 // Temporizador para la IA de 'pausa_acelera'
         });
     }
 }
@@ -886,7 +956,48 @@ function actualizar(dt) {
                 generarGotasSangre(a.x, a.y); // Salpica sangre
             }
 
-            a.x += a.vx * dtAjustado;
+            // --- SUGERENCIA DE IA: LÓGICA DE NUEVOS ATAQUES ---
+            // 1. Ataque de chorro de agua (Spout)
+            a.spoutCooldown -= dtAjustado;
+            if (a.spoutCooldown <= 0 && !a.isTailSwiping) {
+                // Dispara un chorro de agua hacia arriba o abajo
+                const dirY = a.y > H / 2 ? -1 : 1; // Dispara lejos del centro de la pantalla
+                generarChorroDeAgua(a.x - a.w * 0.2, a.y, dirY);
+                a.spoutCooldown = 3.5 + Math.random() * 2.5; // Reinicia el temporizador
+            }
+
+            // 2. Ataque de coletazo (Tail Swipe)
+            a.tailSwipeCooldown -= dtAjustado;
+            // El coletazo solo ocurre si el jugador está detrás de la ballena
+            if (a.tailSwipeCooldown <= 0 && !a.isTailSwiping && jugador.x > a.x) {
+                a.isTailSwiping = true;
+                a.tailSwipeProgress = 0;
+                a.tailSwipeCooldown = 6.0 + Math.random() * 4.0;
+            }
+
+            if (a.isTailSwiping) {
+                a.tailSwipeProgress += dtAjustado * 4; // El coletazo dura 0.25s
+                // Hitbox del coletazo
+                const tailX = a.x + a.w / 2;
+                const tailY = a.y;
+                const tailRadius = 60; // Radio del área de efecto
+                if (Math.hypot(jugador.x - tailX, jugador.y - tailY) < jugador.r + tailRadius) {
+                    if (estadoJuego.vidas > 0) {
+                        estadoJuego.vidas--;
+                        estadoJuego.animVida = 0.6;
+                        S.reproducir('choque');
+                    }
+                    if (estadoJuego.vidas <= 0) perderJuego();
+                    a.isTailSwiping = false; // El coletazo golpea solo una vez
+                }
+
+                if (a.tailSwipeProgress >= 1) {
+                    a.isTailSwiping = false;
+                }
+            } else {
+                a.x += a.vx * dtAjustado; // Solo se mueve si no está dando un coletazo
+            }
+            // --- FIN SUGERENCIA ---
 
             // Efecto de burbujas de la cola
             if (Math.random() < 0.25) { // Controlar la frecuencia para no sobrecargar
@@ -914,8 +1025,40 @@ function actualizar(dt) {
                 a.frame = (a.frame + 1) % MIERDEI_SPRITE_DATA.frames.length;
             }
         } else {
-            // Movimiento normal para el resto de criaturas
-            a.x += a.vx * dtAjustado; 
+            // --- SUGERENCIA DE IA: LÓGICA DE MOVIMIENTO VARIADO ---
+            switch (a.patronMovimiento) {
+                case 'sinusoidal':
+                    a.x += a.vx * dtAjustado;
+                    // Usamos el tiempo de juego y una semilla para que cada pez tenga una onda única
+                    a.y += Math.sin(estadoJuego.tiempoTranscurrido * 3 + a.semillaFase) * 80 * dtAjustado;
+                    break;
+                case 'pausa_acelera':
+                    if (a.estadoMovimiento === 'moviendo') {
+                        a.x += a.vx * dtAjustado;
+                        // Si cruza cierto punto de la pantalla, entra en estado de pausa
+                        if (a.x < W * 0.85) {
+                            a.estadoMovimiento = 'pausado';
+                            a.timerMovimiento = 0.5 + Math.random() * 0.8; // Pausa entre 0.5 y 1.3s
+                        }
+                    } else if (a.estadoMovimiento === 'pausado') {
+                        a.timerMovimiento -= dtAjustado;
+                        if (a.timerMovimiento <= 0) {
+                            a.estadoMovimiento = 'acelerando';
+                            // Acelera hacia la Y del jugador
+                            const angulo = Math.atan2(jugador.y - a.y, jugador.x - a.x);
+                            a.vx = Math.cos(angulo) * velocidadActual() * 1.5;
+                            a.vy = Math.sin(angulo) * velocidadActual() * 1.5;
+                        }
+                    } else { // 'acelerando'
+                        a.x += a.vx * dtAjustado;
+                        a.y += a.vy * dtAjustado;
+                    }
+                    break;
+                default: // 'lineal'
+                    a.x += a.vx * dtAjustado;
+                    break;
+            }
+            // --- FIN SUGERENCIA ---
             // Animación para otras criaturas
             a.timerFrame += dtAjustado; 
             if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
@@ -1121,6 +1264,7 @@ function actualizar(dt) {
     
     // --- Actualización de Otros Proyectiles y Efectos ---
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dtAjustado; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
+
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dtAjustado);
     
     actualizarParticulas(dtAjustado);
@@ -1220,6 +1364,22 @@ function renderizar(dt) {
             } else if (a.tipo === 'whale') {
                 // --- Dibuja la Ballena ---
                 ctx.translate(a.x, a.y + offsetFlotante);
+
+                // --- SUGERENCIA DE IA: Efecto visual del coletazo ---
+                if (a.isTailSwiping) {
+                    const progress = a.tailSwipeProgress; // 0 a 1
+                    const alpha = Math.sin(progress * Math.PI); // Fade in and out
+                    
+                    // Dibuja un arco para representar el área de barrido
+                    ctx.beginPath();
+                    const tailX = a.w / 2.5; // Origen del coletazo
+                    ctx.arc(tailX, 0, 60, -Math.PI/2, Math.PI/2);
+                    ctx.strokeStyle = `rgba(200, 230, 255, ${alpha * 0.8})`;
+                    ctx.lineWidth = 8;
+                    ctx.stroke();
+                }
+                // --- FIN SUGERENCIA ---
+
                 if (a.isEnraged) {
                     ctx.filter = 'hue-rotate(-25deg) brightness(1.4) saturate(3)';
                 }
@@ -1447,6 +1607,7 @@ function renderizar(dt) {
         for (const p of proyectiles) { ctx.fillStyle = p.color; ctx.fillRect(p.x - p.w / 2, p.y - p.h / 2, p.w, p.h); }
         ctx.fillStyle = '#101010';
         for (const ink of estadoJuego.proyectilesTinta) { ctx.beginPath(); ctx.arc(ink.x, ink.y, ink.r, 0, Math.PI * 2); ctx.fill(); }
+
         ctx.imageSmoothingEnabled = true;
     }
 
