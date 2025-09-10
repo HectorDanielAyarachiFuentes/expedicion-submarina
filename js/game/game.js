@@ -139,11 +139,12 @@ function actualizarIconos() {
 // El objeto 'S' (de Sonido) es un singleton que maneja toda la lógica de audio.
 // Carga todos los sonidos al inicio y proporciona métodos para reproducir, detener, etc.
 const PLAYLIST = [
+    'canciones/dulcehermosa.mp3',
     'canciones/Abismo_de_Acero.mp3',
     'canciones/Batalla_de_las_Profundidades.mp3',
-    'canciones/Beneath the Waves.mp3',
-    'canciones/Ocean\'s Code.mp3',
-    'canciones/Pixel Pandemonium.mp3'
+    'canciones/Beneath_the_Waves.mp3',
+    'canciones/Oceans_Code.mp3',
+    'canciones/Pixel_Pandemonium.mp3'
 ];
 export const S = (function () {
     let creado = false;
@@ -151,11 +152,11 @@ export const S = (function () {
     let _silenciado = false;
     let musicaActual = null;
     let audioCtx = null;
-    let analyser = null;
+    let analyser = null; // prettier-ignore
     let dataArray = null;
 
     const mapaFuentes = {
-        theme_main: 'canciones/dulcehermosa.wav',
+        theme_main: 'canciones/dulcehermosa.mp3',
         arpon: 'sonidos/submarino/arpon.wav',
         choque: 'sonidos/choque.wav',
         gameover: 'sonidos/gameover.wav',
@@ -182,7 +183,7 @@ export const S = (function () {
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
 
-    function initAudioContext() {
+    function initAudioContext() { // prettier-ignore
         if (audioCtx) return;
         try {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -197,7 +198,19 @@ export const S = (function () {
         }
     }
 
-    function init() { if (creado) return; creado = true; initAudioContext(); for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.crossOrigin = "anonymous"; el.preload = 'auto'; if (k.startsWith('music_') || k === 'theme_main') { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = { element: el, source: null }; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
+    function init() {
+        if (creado) return;
+        creado = true;
+        initAudioContext();
+        for (const k in mapaFuentes) {
+            try {
+                const el = new Audio(mapaFuentes[k]);
+                el.crossOrigin = "anonymous";
+                el.preload = 'auto';
+                if (k.startsWith('music_')) { el.loop = false; el.volume = 0.35; el.addEventListener('ended', playRandomMusic); } 
+                else if (k === 'theme_main') { el.loop = true; el.volume = 0.35; } 
+                else { el.volume = 0.5; }
+                el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = { element: el, source: null }; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
     function reproducir(k) {
         const audioObj = a[k];
         if (!audioObj) {
@@ -236,10 +249,24 @@ export const S = (function () {
             }
         } catch (e) { console.error(`Error inesperado al intentar reproducir el sonido '${k}':`, e); }
     }
-    function detener(k) { if (k === 'music' && musicaActual) k = musicaActual; const audioObj = a[k]; if (!audioObj) return; try { audioObj.element.pause(); audioObj.element.currentTime = 0; } catch (e) { } }
+    function detener(k) {
+        if (k === 'music' && musicaActual) k = musicaActual;
+        const audioObj = a[k];
+        if (!audioObj) return;
+        try {
+            if (k.startsWith('music_')) { audioObj.element.removeEventListener('ended', playRandomMusic); }
+            audioObj.element.pause();
+            audioObj.element.currentTime = 0;
+            if (k.startsWith('music_')) { audioObj.element.addEventListener('ended', playRandomMusic); }
+        } catch (e) {}
+    }
+    function startPlaylist() {
+        if (musicaActual) detener(musicaActual);
+        musicaActual = 'music_0';
+        reproducir(musicaActual);
+    }
     function playRandomMusic() {
-        if (musicaActual) { detener(musicaActual); }
-        let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual);
+        let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual); // prettier-ignore
         musicaActual = nuevaCancionKey;
         reproducir(musicaActual); // Usar la función `reproducir` que ya maneja el error
     }
@@ -275,7 +302,7 @@ export const S = (function () {
     function setSilenciado(m) { for (const k in a) { try { a[k].element.muted = !!m; } catch (e) { } } _silenciado = !!m; }
     function estaSilenciado() { return _silenciado; }
     function alternarSilenciado() { setSilenciado(!estaSilenciado()); } 
-    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic, playRandomWhaleSong, getAudioData };
+    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, startPlaylist, playRandomWhaleSong, getAudioData };
 })();
 
 // =================================================================================
@@ -2120,8 +2147,8 @@ function iniciarJuego(nivel = 1) {
     estadoJuego.enEjecucion = true;
     estadoJuego.luzVisible = true;
     S.init();
-    S.detener('theme_main');
-    S.playRandomMusic();
+    S.detener('theme_main'); // prettier-ignore
+    S.startPlaylist();
     if (overlay) overlay.style.display = 'none';
     if (gameplayHints) {
         gameplayHints.style.display = 'flex';
