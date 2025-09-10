@@ -138,8 +138,8 @@ function actualizarIconos() {
 // =================================================================================
 // El objeto 'S' (de Sonido) es un singleton que maneja toda la lógica de audio.
 // Carga todos los sonidos al inicio y proporciona métodos para reproducir, detener, etc.
-const PLAYLIST = [
-    'canciones/dulcehermosa.mp3',
+const THEME_SONG = 'canciones/dulcehermosa.mp3';
+const GAME_PLAYLIST = [
     'canciones/Abismo_de_Acero.mp3',
     'canciones/Batalla_de_las_Profundidades.mp3',
     'canciones/Beneath_the_Waves.mp3',
@@ -147,6 +147,7 @@ const PLAYLIST = [
     'canciones/Pixel_Pandemonium.mp3'
 ];
 export const S = (function () {
+
     let creado = false;
     const a = {}; // Almacenará { element: AudioElement, source: MediaElementAudioSourceNode | null }
     let _silenciado = false;
@@ -156,7 +157,7 @@ export const S = (function () {
     let dataArray = null;
 
     const mapaFuentes = {
-        theme_main: 'canciones/dulcehermosa.mp3',
+        theme_main: THEME_SONG,
         arpon: 'sonidos/submarino/arpon.wav',
         choque: 'sonidos/choque.wav',
         gameover: 'sonidos/gameover.wav',
@@ -181,7 +182,7 @@ export const S = (function () {
         whale_spout: 'sonidos/ballena/ballenachorro.mp3'
     };
 
-    PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
+    GAME_PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
 
     function initAudioContext() { // prettier-ignore
         if (audioCtx) return;
@@ -262,11 +263,10 @@ export const S = (function () {
     }
     function startPlaylist() {
         if (musicaActual) detener(musicaActual);
-        musicaActual = 'music_0';
-        reproducir(musicaActual);
+        playRandomMusic();
     }
     function playRandomMusic() {
-        let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual); // prettier-ignore
+        let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual);
         musicaActual = nuevaCancionKey;
         reproducir(musicaActual); // Usar la función `reproducir` que ya maneja el error
     }
@@ -2200,8 +2200,16 @@ function comprobarCompletadoNivel() {
 }
 function activarTransicionNivel(proximoNivel) { estadoJuego.faseJuego = 'transition'; estadoJuego.enEjecucion = false; const config = Levels.CONFIG_NIVELES[proximoNivel - 1]; if (mainMenu) mainMenu.style.display = 'none'; if (levelTitle) levelTitle.textContent = config.nombre; if (levelDesc) levelDesc.textContent = config.objetivo; if (levelTransition) levelTransition.style.display = 'block'; if (overlay) overlay.style.display = 'grid'; setTimeout(() => { iniciarSiguienteNivel(proximoNivel); }, 4000); }
 function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; torpedos = []; proyectiles = []; estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) { gameplayHints.querySelectorAll('.hint[data-hint-type]').forEach(h => { h.style.display = 'flex'; }); } }
-function mostrarVistaMenuPrincipal(desdePausa) {
+function mostrarVistaMenuPrincipal(desdePausa) {    
     if (!mainMenu) return;
+
+    if (desdePausa) {
+        S.pausar('music');
+    } else {
+        S.detener('music'); // Detiene cualquier música de juego que pudiera haber quedado
+    }
+    S.reproducir('theme_main');
+
     if (brandLogo) brandLogo.style.display = 'block';
     if (finalP) finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas, o matalos.';
     if (titleEl) titleEl.style.display = 'none';
@@ -2238,7 +2246,7 @@ function poblarSelectorDeNiveles() {
     });
 }
 
-function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; S.pausar('music'); mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.style.display = 'none'; } }
+function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.style.display = 'none'; } }
 function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
 function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { document.body.classList.toggle('immersive'); return; } const el = document.documentElement; try { if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) { if (el.requestFullscreen) return el.requestFullscreen(); if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen(); } else { if (document.exitFullscreen) return document.exitFullscreen(); if (document.webkitExitFullscreen) return document.webkitExitFullscreen(); } } catch (err) { console.warn('Pantalla completa no disponible', err); } }
 
@@ -2375,15 +2383,15 @@ export function init() {
         startBtn.onclick = function (e) {
             e.stopPropagation();
             if (modoSuperposicion === 'pause') {
-                S.detener('theme_main');
+                S.detener('theme_main'); // Detenemos el tema del menú
                 if (overlay) overlay.style.display = 'none';
                 if (estadoJuego) {
                     estadoJuego.enEjecucion = true;
                     estadoJuego.bloqueoEntrada = 0.15;
                     if (gameplayHints) gameplayHints.style.display = 'flex';
                 }
-                S.bucle('music');
-            } else {
+                S.bucle('music'); // Reanudamos la música del juego
+            } else { // Si no es pausa, es un nuevo juego
                 iniciarJuego(1);
             }
         };
