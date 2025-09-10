@@ -638,6 +638,7 @@ export let estadoJuego = null, jugador, animales;
 let teclas = {};
 let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
 let __iniciando = false;
+let menuFlyBy = null; // Para la animación del submarino en el menú
 let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = Math.PI / 24;
 const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
@@ -937,9 +938,59 @@ function actualizarCriaturasMenu(dt) {
         // Reciclar si sale de la pantalla para mantener el ambiente vivo
         if (a.x < -a.w) {
             animales.splice(i, 1);
-            if (modoSuperposicion === 'menu') {
-                generarAnimal(false, 'normal');
+            if (modoSuperposicion === 'menu' && !__iniciando) {
+                const tiposMenu = ['normal'];
+                if (sharkListo) tiposMenu.push('shark');
+                if (whaleListo) tiposMenu.push('whale');
+                const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)];
+                // Generar el nuevo animal fuera de la pantalla para que entre suavemente
+                generarAnimal(false, tipoAleatorio, { y: Math.random() * H });
             }
+        }
+    }
+}
+
+/**
+ * Actualiza la animación del submarino que cruza la pantalla en el menú.
+ * @param {number} dt - Delta Time.
+ */
+function actualizarAnimacionMenu(dt) {
+    if (!menuFlyBy) return;
+
+    if (menuFlyBy.active) {
+        menuFlyBy.x += menuFlyBy.vx * dt;
+        // Generar una estela de burbujas
+        if (Math.random() < 0.8) {
+            const bubbleX = menuFlyBy.x - (40 * Math.sign(menuFlyBy.vx));
+            generarBurbujaPropulsion(bubbleX, menuFlyBy.y, false);
+        }
+
+        // Asustar a las criaturas cercanas
+        for (const a of animales) {
+            const dist = Math.hypot(a.x - menuFlyBy.x, a.y - menuFlyBy.y);
+            if (dist < 250) { // Si el submarino está cerca
+                // Empujar a la criatura para que se aleje
+                const angle = Math.atan2(a.y - menuFlyBy.y, a.x - menuFlyBy.x);
+                a.x += Math.cos(angle) * 200 * dt;
+                a.y += Math.sin(angle) * 200 * dt;
+            }
+        }
+
+        // Desactivar cuando sale de la pantalla
+        if ((menuFlyBy.vx > 0 && menuFlyBy.x > W + 200) || (menuFlyBy.vx < 0 && menuFlyBy.x < -200)) {
+            menuFlyBy.active = false;
+            menuFlyBy.cooldown = 8.0 + Math.random() * 10; // Enfriamiento de 8 a 18 segundos
+        }
+    } else {
+        menuFlyBy.cooldown -= dt;
+        if (menuFlyBy.cooldown <= 0) {
+            menuFlyBy.active = true;
+            const desdeIzquierda = Math.random() > 0.5;
+            menuFlyBy.vx = (desdeIzquierda ? 1 : -1) * (900 + Math.random() * 500); // Muy rápido
+            menuFlyBy.x = desdeIzquierda ? -200 : W + 200;
+            menuFlyBy.y = H * 0.2 + Math.random() * H * 0.6; // Altura aleatoria
+            menuFlyBy.rotation = (Math.random() - 0.5) * 0.25; // Inclinación aleatoria
+            S.reproducir('torpedo'); // Sonido de "whoosh"
         }
     }
 }
@@ -1664,6 +1715,11 @@ function renderizar(dt) {
             ctx.restore();
         }
         
+        // Dibuja el submarino de la animación del menú si no se está jugando
+        if (estadoJuego && !estadoJuego.enEjecucion) {
+            dibujarAnimacionMenu();
+        }
+
         // --- Dibuja al Jugador y sus Efectos ---
         if (jugador) {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
@@ -2000,6 +2056,28 @@ function dibujarPolvoMarino() {
     fx.restore();
 }
 
+/**
+ * Dibuja el submarino de la animación del menú si está activo.
+ */
+function dibujarAnimacionMenu() {
+    if (!menuFlyBy || !menuFlyBy.active || !robotListo) return;
+
+    ctx.save();
+    ctx.translate(menuFlyBy.x, menuFlyBy.y);
+
+    // Voltear el sprite si va de izquierda a derecha (el sprite mira a la derecha)
+    if (menuFlyBy.vx < 0) {
+        ctx.scale(-1, 1);
+    }
+    ctx.rotate(menuFlyBy.rotation);
+
+    ctx.imageSmoothingEnabled = false;
+    const dw = spriteAncho * robotEscala;
+    const dh = spriteAlto * robotEscala;
+    ctx.drawImage(robotImg, -dw / 2, -dh / 2, dw, dh);
+
+    ctx.restore();
+}
 function dibujarMascaraLuz() {
     if (!estadoJuego || !fx) return;
     fx.clearRect(0, 0, W, H);
@@ -2261,11 +2339,19 @@ function mostrarVistaMenuPrincipal(desdePausa) {
     modoSuperposicion = desdePausa ? 'pause' : 'menu';
     if (mainMenu) mainMenu.style.display = 'block';
 
+    // Reiniciar la animación del submarino "fly-by"
+    if (menuFlyBy) {
+        menuFlyBy.active = false;
+        menuFlyBy.cooldown = 4.0 + Math.random() * 4; // Primer paso en 4-8 segundos
+    }
+
     // Generar criaturas de fondo si es el menú inicial (no en pausa)
     if (!desdePausa) {
         animales.length = 0; // Limpiar cualquier animal de una partida anterior
-        for (let i = 0; i < 5; i++) {
-            setTimeout(() => generarAnimal(false, 'normal'), i * 1200);
+        const tiposMenu = ['normal', 'normal', 'normal', sharkListo ? 'shark' : 'normal', whaleListo ? 'whale' : 'normal'];
+        for (let i = 0; i < 7; i++) { // Más criaturas para un fondo más vivo
+            const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)];
+            setTimeout(() => generarAnimal(false, tipoAleatorio), i * 1800);
         }
     }
     if (levelTransition) levelTransition.style.display = 'none';
@@ -2328,6 +2414,7 @@ export function gameLoop(t) {
             actualizar(dtAjustado);
         } else {
             actualizarCriaturasMenu(dtAjustado);
+            actualizarAnimacionMenu(dtAjustado);
         }
         renderizar(dt);
 
@@ -2415,6 +2502,16 @@ function estaSobreUI(x, y) { const elementos = [muteBtn, infoBtn, fsBtn, shareBt
 
 export function init() {
     // --- 1. EVENTOS DE TECLADO Y RATÓN (Puntero) ---
+    // Inicializar la animación del menú
+    menuFlyBy = {
+        active: false,
+        x: -200,
+        y: H / 2,
+        vx: 0,
+        cooldown: 5.0, // El primer "fly-by" ocurrirá después de 5 segundos
+        rotation: 0
+    };
+
     addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
     addEventListener('keyup', function (e) { teclas[e.key] = false; });
     window.addEventListener('pointerdown', (e) => {
