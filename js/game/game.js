@@ -22,6 +22,18 @@ window.onerror = function (message, source, lineno, colno, error) {
 // --- Módulos ---
 import * as Levels from '../levels/levels.js';
 
+// --- Variables para la Galería de Créditos ---
+// Puedes agregar más imágenes aquí si tienes más archivos (ej: 'img/imgcreditos/dulce2.jpg')
+const a_creditos_imagenes = [
+    'img/imgcreditos/dulce.jpg',
+    'img/imgcreditos/dulce1.jpg',
+    'img/imgcreditos/dulce2.jpg',
+    'img/imgcreditos/dulce3.jpg',
+    'img/imgcreditos/dulce4.jpg'
+];
+let a_creditos_intervalo = null;
+let a_creditos_imagen_actual = 0;
+
 // --- Funciones Matemáticas y de Utilidad ---
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -135,9 +147,12 @@ const PLAYLIST = [
 ];
 export const S = (function () {
     let creado = false;
-    const a = {};
+    const a = {}; // Almacenará { element: AudioElement, source: MediaElementAudioSourceNode | null }
     let _silenciado = false;
     let musicaActual = null;
+    let audioCtx = null;
+    let analyser = null;
+    let dataArray = null;
 
     const mapaFuentes = {
         theme_main: 'canciones/dulcehermosa.wav',
@@ -166,26 +181,62 @@ export const S = (function () {
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
-    function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k.startsWith('music_') || k === 'theme_main') { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = el; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
+
+    function initAudioContext() {
+        if (audioCtx) return;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 128; // Potencia de 2, 32-32768. 128 es suficiente y eficiente.
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+            analyser.connect(audioCtx.destination);
+        } catch (e) {
+            console.error("Web Audio API no es soportada en este navegador.", e);
+            audioCtx = null; // Asegurarse de que es null si falla
+        }
+    }
+
+    function init() { if (creado) return; creado = true; initAudioContext(); for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.crossOrigin = "anonymous"; el.preload = 'auto'; if (k.startsWith('music_') || k === 'theme_main') { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = { element: el, source: null }; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
     function reproducir(k) {
-        const el = a[k];
-        if (!el) {
+        const audioObj = a[k];
+        if (!audioObj) {
             console.warn(`Se intentó reproducir un sonido no cargado: '${k}'`);
             return;
         }
+        const el = audioObj.element;
+
+        // Conectar al analizador si es la música del menú y el contexto de audio existe
+        if (k === 'theme_main' && audioCtx && !audioObj.source) {
+            try {
+                audioObj.source = audioCtx.createMediaElementSource(el);
+                audioObj.source.connect(analyser);
+            } catch (e) {
+                console.error(`No se pudo conectar el audio '${k}' al analizador:`, e);
+            }
+        }
+
+        // Resumir el contexto de audio si está suspendido (política de autoplay de los navegadores)
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(e => console.error("Error al resumir el AudioContext:", e));
+        }
+
         try {
             el.currentTime = 0;
             const promise = el.play();
             if (promise !== undefined) {
                 promise.catch(error => {
                     if (error.name !== 'AbortError') {
-                        console.error(`Error al reproducir el sonido '${k}':`, error);
+                        // No mostrar error si es por interacción del usuario, es normal.
+                        if (error.name !== 'NotAllowedError') {
+                            console.error(`Error al reproducir el sonido '${k}':`, error);
+                        }
                     }
                 });
             }
         } catch (e) { console.error(`Error inesperado al intentar reproducir el sonido '${k}':`, e); }
     }
-    function detener(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; try { el.pause(); el.currentTime = 0; } catch (e) { } }
+    function detener(k) { if (k === 'music' && musicaActual) k = musicaActual; const audioObj = a[k]; if (!audioObj) return; try { audioObj.element.pause(); audioObj.element.currentTime = 0; } catch (e) { } }
     function playRandomMusic() {
         if (musicaActual) { detener(musicaActual); }
         let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual);
@@ -198,11 +249,11 @@ export const S = (function () {
         const songToPlay = whaleSongs[Math.floor(Math.random() * whaleSongs.length)];
         reproducir(songToPlay);
     }
-    function pausar(k) { if (k === 'music' && musicaActual) k = musicaActual; const el = a[k]; if (!el) return; try { el.pause(); } catch (e) { } }
+    function pausar(k) { if (k === 'music' && musicaActual) k = musicaActual; const audioObj = a[k]; if (!audioObj) return; try { audioObj.element.pause(); } catch (e) { } }
     function bucle(k) {
         if (k === 'music' && musicaActual) k = musicaActual;
-        const el = a[k];
-        if (!el || !el.paused) return;
+        const audioObj = a[k];
+        if (!audioObj || !audioObj.element.paused) return; const el = audioObj.element;
         try {
             const promise = el.play();
             if (promise !== undefined) {
@@ -210,10 +261,21 @@ export const S = (function () {
             }
         } catch (e) { }
     }
-    function setSilenciado(m) { for (const k in a) { try { a[k].muted = !!m; } catch (e) { } } _silenciado = !!m; }
+    function getAudioData() {
+        if (!analyser || !dataArray) return 0;
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        // Promedio de las frecuencias bajas (graves) para detectar el "pulso"
+        const bassBins = Math.floor(dataArray.length * 0.1); // Usar el 10% de las frecuencias más bajas
+        for (let i = 0; i < bassBins; i++) {
+            sum += dataArray[i];
+        }
+        return bassBins > 0 ? sum / bassBins : 0;
+    }
+    function setSilenciado(m) { for (const k in a) { try { a[k].element.muted = !!m; } catch (e) { } } _silenciado = !!m; }
     function estaSilenciado() { return _silenciado; }
     function alternarSilenciado() { setSilenciado(!estaSilenciado()); } 
-    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic, playRandomWhaleSong };
+    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, playRandomMusic, playRandomWhaleSong, getAudioData };
 })();
 
 // =================================================================================
@@ -2227,6 +2289,19 @@ function renderizarSubmarinoBailarin(t) {
     const dh = spriteAlto * 2.5;
     infoAnimCtx.drawImage(robotImg, -dw / 2, -dh / 2, dw, dh);
     infoAnimCtx.restore();
+
+    // --- NUEVO: Animar foto de perfil con la música ---
+    const creatorPicContainer = document.querySelector('.profile-pic-container');
+    if (creatorPicContainer && S.getAudioData) { // Comprobar que la función exista
+        const audioLevel = S.getAudioData();
+        if (typeof audioLevel === 'number') {
+            // Normalizar el nivel de audio (0-255) a un factor de escala
+            const scale = 1 + (audioLevel / 255) * 0.08; // Reacción sutil de hasta 8%
+            const rotation = Math.sin(tiempo * 0.5) * 1.5; // Un bamboleo lento
+
+            creatorPicContainer.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+        }
+    }
 }
 
 // =================================================================================
@@ -2243,6 +2318,9 @@ export function init() {
     addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
     addEventListener('keyup', function (e) { teclas[e.key] = false; });
     window.addEventListener('pointerdown', (e) => {
+        // Resumir el contexto de audio en la primera interacción del usuario
+        S.init(); // Asegura que el audio context se cree
+
         if (estaSobreUI(e.clientX, e.clientY)) return;
         const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
         if (isLevel5) {
@@ -2311,6 +2389,30 @@ export function init() {
             if (infoOverlay) infoOverlay.style.display = 'grid';
             if (gameplayHints) gameplayHints.style.display = 'none';
             animarSubmarino = true;
+
+            // Iniciar slideshow de créditos
+            const creatorPic = document.getElementById('creator-pic');
+            if (creatorPic) {
+                creatorPic.style.transition = 'opacity 0.5s ease-in-out';
+                // Iniciar con una imagen aleatoria
+                a_creditos_imagen_actual = Math.floor(Math.random() * a_creditos_imagenes.length);
+                creatorPic.src = a_creditos_imagenes[a_creditos_imagen_actual];
+                creatorPic.style.opacity = 1;
+
+                a_creditos_intervalo = setInterval(() => {
+                    let randomIndex;
+                    do {
+                        randomIndex = Math.floor(Math.random() * a_creditos_imagenes.length);
+                    } while (randomIndex === a_creditos_imagen_actual && a_creditos_imagenes.length > 1);
+                    a_creditos_imagen_actual = randomIndex;
+                    
+                    creatorPic.style.opacity = 0;
+                    setTimeout(() => {
+                        creatorPic.src = a_creditos_imagenes[a_creditos_imagen_actual];
+                        creatorPic.style.opacity = 1;
+                    }, 500); // Coincide con la transición CSS
+                }, 4000); // Cambiar imagen cada 4 segundos
+            }
         };
     }
     if (githubBtn) { githubBtn.onclick = () => window.open('https://github.com/HectorDanielAyarachiFuentes', '_blank'); }
@@ -2340,6 +2442,16 @@ export function init() {
                 if (gameplayHints) gameplayHints.style.display = 'flex';
             }
             animarSubmarino = false;
+
+            // Detener slideshow y resetear estilos
+            if (a_creditos_intervalo) {
+                clearInterval(a_creditos_intervalo);
+                a_creditos_intervalo = null;
+            }
+            const creatorPicContainer = document.querySelector('.profile-pic-container');
+            if (creatorPicContainer) {
+                creatorPicContainer.style.transform = 'scale(1) rotate(0deg)';
+            }
         };
     }
     if (overlay) {
