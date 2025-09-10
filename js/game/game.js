@@ -927,6 +927,7 @@ function actualizarCriaturasMenu(dt) {
     for (let i = animales.length - 1; i >= 0; i--) {
         const a = animales[i];
         
+        if (a.isChaser) continue; // Los tiburones perseguidores se actualizan en `actualizarAnimacionMenu`
         // Usar un movimiento sinusoidal simple para que se sientan más naturales
         a.x += a.vx * dt;
         a.y += Math.sin(estadoJuego.tiempoTranscurrido * 2 + a.semillaFase) * 40 * dt;
@@ -965,6 +966,48 @@ function actualizarAnimacionMenu(dt) {
             generarBurbujaPropulsion(bubbleX, menuFlyBy.y, false);
         }
 
+        // Lógica de disparo defensivo
+        menuFlyBy.fireCooldown -= dt;
+        if (menuFlyBy.fireCooldown <= 0) {
+            menuFlyBy.fireCooldown = 0.4 + Math.random() * 0.5; // Resetear cooldown
+
+            // Disparar hacia atrás
+            const fireDirection = -Math.sign(menuFlyBy.vx);
+            const px = menuFlyBy.x + (fireDirection * 50); // Desde la parte trasera del submarino
+            const py = menuFlyBy.y;
+
+            S.reproducir('shotgun');
+            generarRafagaBurbujasDisparo(px, py, false);
+
+            // Crear proyectiles solo visuales
+            for (let i = 0; i < 8; i++) {
+                const angle = (fireDirection > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.8;
+                const speed = 800 + Math.random() * 400;
+                proyectiles.push({
+                    x: px, y: py,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    w: 8, h: 3,
+                    color: '#ffb733',
+                    vida: 0.5 + Math.random() * 0.3,
+                    isMenuEffect: true // Bandera para evitar colisiones
+                });
+            }
+        }
+
+        // Actualizar tiburones perseguidores
+        for (const shark of menuFlyBy.chasingSharks) {
+            shark.x += shark.vx * dt;
+            shark.y = lerp(shark.y, menuFlyBy.y, dt * 2.0); // Seguir suavemente en el eje Y
+            shark.timerFrame += dt;
+            if (shark.timerFrame >= SHARK_ANIMATION_SPEED) {
+                shark.timerFrame -= SHARK_ANIMATION_SPEED;
+                if (SHARK_SPRITE_DATA) {
+                    shark.frame = (shark.frame + 1) % SHARK_SPRITE_DATA.frames.length;
+                }
+            }
+        }
+
         // Asustar a las criaturas cercanas
         for (const a of animales) {
             const dist = Math.hypot(a.x - menuFlyBy.x, a.y - menuFlyBy.y);
@@ -980,6 +1023,15 @@ function actualizarAnimacionMenu(dt) {
         if ((menuFlyBy.vx > 0 && menuFlyBy.x > W + 200) || (menuFlyBy.vx < 0 && menuFlyBy.x < -200)) {
             menuFlyBy.active = false;
             menuFlyBy.cooldown = 8.0 + Math.random() * 10; // Enfriamiento de 8 a 18 segundos
+
+            // Limpiar los tiburones perseguidores que queden
+            for (const shark of menuFlyBy.chasingSharks) {
+                const indexInAnimales = animales.indexOf(shark);
+                if (indexInAnimales > -1) {
+                    animales.splice(indexInAnimales, 1);
+                }
+            }
+            menuFlyBy.chasingSharks = [];
         }
     } else {
         menuFlyBy.cooldown -= dt;
@@ -991,6 +1043,29 @@ function actualizarAnimacionMenu(dt) {
             menuFlyBy.y = H * 0.2 + Math.random() * H * 0.6; // Altura aleatoria
             menuFlyBy.rotation = (Math.random() - 0.5) * 0.25; // Inclinación aleatoria
             S.reproducir('torpedo'); // Sonido de "whoosh"
+
+            // --- ¡NUEVO! Generar tiburones perseguidores ---
+            menuFlyBy.chasingSharks = [];
+            menuFlyBy.fireCooldown = 0.1; // Disparar casi de inmediato
+            if (sharkListo) {
+                const numSharks = 2 + Math.floor(Math.random() * 2); // 2 o 3 tiburones
+                for (let i = 0; i < numSharks; i++) {
+                    const sharkX = menuFlyBy.x - (Math.sign(menuFlyBy.vx) * (150 + i * 80 + Math.random() * 50));
+                    const sharkY = menuFlyBy.y + (Math.random() - 0.5) * 200;
+                    
+                    const shark = {
+                        x: sharkX, y: sharkY,
+                        vx: menuFlyBy.vx * (0.85 + Math.random() * 0.1), // Un poco más lentos
+                        vy: 0, r: 50, w: 128, h: 128,
+                        capturado: false, frame: 0, timerFrame: 0,
+                        semillaFase: Math.random() * Math.PI * 2,
+                        tipo: 'shark',
+                        isChaser: true // Bandera para identificarlos
+                    };
+                    animales.push(shark); // Añadir al array principal para que se dibujen
+                    menuFlyBy.chasingSharks.push(shark);
+                }
+            }
         }
     }
 }
@@ -1538,6 +1613,14 @@ function actualizar(dt) {
                 vida: 0.4 + Math.random() * 0.4,
                 color: '' // Stroke de burbuja por defecto
             });
+        }
+
+        // Si es un proyectil del efecto del menú, solo se actualiza su vida, no colisiona.
+        if (p.isMenuEffect) {
+            if (p.vida <= 0) {
+                proyectiles.splice(i, 1);
+            }
+            continue;
         }
 
         if (p.vida <= 0 || p.x > W + 20 || p.x < -20 || p.y < -20 || p.y > H + 20) {
@@ -2509,7 +2592,9 @@ export function init() {
         y: H / 2,
         vx: 0,
         cooldown: 5.0, // El primer "fly-by" ocurrirá después de 5 segundos
-        rotation: 0
+        rotation: 0,
+        chasingSharks: [],
+        fireCooldown: 0
     };
 
     addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
