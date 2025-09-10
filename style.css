@@ -257,6 +257,26 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     box-shadow: 0 5px 25px rgba(0,0,0,0.5);
 }
 
+/* Estilos para el nuevo mensaje de bienvenida */
+#welcomeMessage {
+    margin: 1.5rem 0;
+    line-height: 1.5;
+}
+
+#welcomeTitle {
+    color: var(--accent-yellow);
+    font-size: clamp(1.4rem, 4vw, 1.8rem);
+    margin: 0 0 0.5rem;
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+}
+
+#welcomeSubtitle {
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    opacity: 0.9;
+    margin: 0;
+    font-family: monospace;
+}
+
 /* Estilos para el logo del menú principal para centrarlo */
 #mainMenuHeader {
     text-align: center; /* Asegura centrado para elementos inline */
@@ -292,6 +312,17 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     border-top: 1px solid var(--hud-border-color);
     border-bottom: 1px solid var(--hud-border-color);
     padding: 1rem 0;
+}
+
+.blinking-text {
+    color: var(--accent-yellow);
+    font-size: clamp(1rem, 3vw, 1.2rem);
+    margin-top: 2rem;
+    animation: blink-animation 1.5s steps(2, start) infinite;
+}
+
+@keyframes blink-animation {
+    to { visibility: hidden; }
 }
 
 .menubtn {

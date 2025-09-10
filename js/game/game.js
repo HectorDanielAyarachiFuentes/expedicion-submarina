@@ -90,7 +90,8 @@ const startBtn = document.getElementById('start');
 const restartBtn = document.getElementById('restart');
 const titleEl = document.getElementById('gameOverTitle');
 const brandLogo = document.getElementById('brandLogo');
-const finalP = document.getElementById('final');
+const welcomeMessage = document.getElementById('welcomeMessage');
+const promptEl = document.getElementById('prompt');
 const finalStats = document.getElementById('finalStats');
 const statScore = document.getElementById('statScore');
 const statDepth = document.getElementById('statDepth');
@@ -721,7 +722,10 @@ function reiniciar(nivelDeInicio = 1) {
     if (gameplayHints) gameplayHints.style.display = 'none';
 }
 
-function velocidadActual() { return Levels.getLevelSpeed(); }
+function velocidadActual() {
+    if (!estadoJuego || !estadoJuego.enEjecucion) return 120; // Velocidad lenta y constante para el menú
+    return Levels.getLevelSpeed();
+}
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
 // --- Generación de Enemigos ---
@@ -911,6 +915,34 @@ function lanzarTorpedo() {
 // =================================================================================
 //  8. BUCLE PRINCIPAL DE ACTUALIZACIÓN (UPDATE)
 // =================================================================================
+
+/**
+ * Actualiza las criaturas decorativas del menú principal.
+ * @param {number} dt - Delta Time.
+ */
+function actualizarCriaturasMenu(dt) {
+    if (!estadoJuego) return;
+    // Mover criaturas del menú (que están en el array 'animales')
+    for (let i = animales.length - 1; i >= 0; i--) {
+        const a = animales[i];
+        
+        // Usar un movimiento sinusoidal simple para que se sientan más naturales
+        a.x += a.vx * dt;
+        a.y += Math.sin(estadoJuego.tiempoTranscurrido * 2 + a.semillaFase) * 40 * dt;
+
+        // Animación de frame
+        a.timerFrame += dt;
+        if (a.timerFrame >= 0.25) { a.timerFrame -= 0.25; a.frame ^= 1; }
+
+        // Reciclar si sale de la pantalla para mantener el ambiente vivo
+        if (a.x < -a.w) {
+            animales.splice(i, 1);
+            if (modoSuperposicion === 'menu') {
+                generarAnimal(false, 'normal');
+            }
+        }
+    }
+}
 // Esta es la función más importante. Se ejecuta en cada frame y actualiza el estado de todo el juego.
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
@@ -1471,9 +1503,6 @@ function actualizar(dt) {
 
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dtAjustado);
     
-    actualizarParticulas(dtAjustado);
-    actualizarPolvoMarino(dtAjustado);
-
     // Actualizar trozos de ballena
     for (let i = whaleDebris.length - 1; i >= 0; i--) {
         const d = whaleDebris[i];
@@ -2157,7 +2186,18 @@ function iniciarJuego(nivel = 1) {
     setTimeout(function () { __iniciando = false; }, 200);
 }
 
-export function perderJuego() { if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return; estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion = false; S.detener('music'); S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500); if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); } if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none'; if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; } if (finalP) finalP.textContent = 'Gracias por ser parte.'; if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados; if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none'; if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block'; modoSuperposicion = 'gameover'; if (overlay) overlay.style.display = 'grid'; if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none'; }
+export function perderJuego() {
+    if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
+    estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion = false; S.detener('music'); S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500);
+    if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
+    if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none';
+    if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none';
+    if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; }
+    if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
+    if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none';
+    if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block';
+    modoSuperposicion = 'gameover'; if (overlay) overlay.style.display = 'grid'; if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none';
+}
 function ganarJuego() {
     if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
     nivelMaximoAlcanzado = Levels.CONFIG_NIVELES.length;
@@ -2168,10 +2208,11 @@ function ganarJuego() {
     S.reproducir('victory'); setTimeout(() => S.reproducir('theme_main'), 2000);
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block';
-    if (levelTransition) levelTransition.style.display = 'none';
+    if (levelTransition) levelTransition.style.display = 'none'; if (welcomeMessage) welcomeMessage.style.display = 'none';
+    if (promptEl) promptEl.style.display = 'none';
     if (brandLogo) brandLogo.style.display = 'none';
     if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = '¡VICTORIA!'; titleEl.style.color = '#ffdd77'; }
-    if (finalP) finalP.textContent = '¡Has conquistado las profundidades!';
+    // if (finalP) finalP.textContent = '¡Has conquistado las profundidades!'; // Elemento 'finalP' no existe
     if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion;
     if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m';
     if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
@@ -2211,13 +2252,22 @@ function mostrarVistaMenuPrincipal(desdePausa) {
     S.reproducir('theme_main');
 
     if (brandLogo) brandLogo.style.display = 'block';
-    if (finalP) finalP.innerHTML = 'Captura tantos especímenes<br/>como puedas, o matalos.';
+    if (welcomeMessage) welcomeMessage.style.display = 'block';
+    if (promptEl) promptEl.style.display = 'block';
     if (titleEl) titleEl.style.display = 'none';
     if (finalStats) finalStats.style.display = 'none';
     if (startBtn) startBtn.style.display = 'inline-block';
     if (restartBtn) restartBtn.style.display = 'none';
     modoSuperposicion = desdePausa ? 'pause' : 'menu';
     if (mainMenu) mainMenu.style.display = 'block';
+
+    // Generar criaturas de fondo si es el menú inicial (no en pausa)
+    if (!desdePausa) {
+        animales.length = 0; // Limpiar cualquier animal de una partida anterior
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => generarAnimal(false, 'normal'), i * 1200);
+        }
+    }
     if (levelTransition) levelTransition.style.display = 'none';
     if (overlay) overlay.style.display = 'grid';
     if (mainMenuContent) mainMenuContent.style.display = 'block';
@@ -2260,9 +2310,24 @@ export function gameLoop(t) {
     const dt = Math.min(0.033, (t - ultimo) / 1000 || 0);
     ultimo = t;
 
+    let dtAjustado = dt;
+    if (estadoJuego) {
+        // El tiempo transcurrido ahora avanza siempre para animar el menú
+        estadoJuego.tiempoTranscurrido += dt;
+        if (estadoJuego.slowMoTimer > 0) {
+            estadoJuego.slowMoTimer -= dt;
+            if (estadoJuego.slowMoTimer <= 0) estadoJuego.velocidadJuego = 1.0;
+        }
+        dtAjustado = dt * estadoJuego.velocidadJuego;
+    }
+
     try {
-        if (estadoJuego && estadoJuego.faseJuego === 'playing') {
-            actualizar(dt);
+        actualizarParticulas(dtAjustado);
+        actualizarPolvoMarino(dtAjustado);
+        if (estadoJuego && estadoJuego.enEjecucion) {
+            actualizar(dtAjustado);
+        } else {
+            actualizarCriaturasMenu(dtAjustado);
         }
         renderizar(dt);
 
