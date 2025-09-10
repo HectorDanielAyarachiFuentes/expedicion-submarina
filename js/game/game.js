@@ -128,7 +128,10 @@ function actualizarIconos() {
 // Carga todos los sonidos al inicio y proporciona métodos para reproducir, detener, etc.
 const PLAYLIST = [
     'canciones/Abismo_de_Acero.mp3',
-    'canciones/Batalla_de_las_Profundidades.mp3'
+    'canciones/Batalla_de_las_Profundidades.mp3',
+    'canciones/Beneath the Waves.mp3',
+    'canciones/Ocean\'s Code.mp3',
+    'canciones/Pixel Pandemonium.mp3'
 ];
 export const S = (function () {
     let creado = false;
@@ -137,6 +140,7 @@ export const S = (function () {
     let musicaActual = null;
 
     const mapaFuentes = {
+        theme_main: 'canciones/dulcehermosa.wav',
         arpon: 'sonidos/submarino/arpon.wav',
         choque: 'sonidos/choque.wav',
         gameover: 'sonidos/gameover.wav',
@@ -162,7 +166,7 @@ export const S = (function () {
     };
 
     PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
-    function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k.startsWith('music_')) { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = el; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
+    function init() { if (creado) return; creado = true; for (const k in mapaFuentes) { try { const el = new Audio(mapaFuentes[k]); el.preload = 'auto'; if (k.startsWith('music_') || k === 'theme_main') { el.loop = true; el.volume = 0.35; } else { el.volume = 0.5; } el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = el; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
     function reproducir(k) {
         const el = a[k];
         if (!el) {
@@ -2054,6 +2058,7 @@ function iniciarJuego(nivel = 1) {
     estadoJuego.enEjecucion = true;
     estadoJuego.luzVisible = true;
     S.init();
+    S.detener('theme_main');
     S.playRandomMusic();
     if (overlay) overlay.style.display = 'none';
     if (gameplayHints) {
@@ -2063,7 +2068,7 @@ function iniciarJuego(nivel = 1) {
     setTimeout(function () { __iniciando = false; }, 200);
 }
 
-export function perderJuego() { if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return; estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion = false; S.detener('music'); S.reproducir('gameover'); if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); } if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none'; if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; } if (finalP) finalP.textContent = 'Gracias por ser parte.'; if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados; if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none'; if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block'; modoSuperposicion = 'gameover'; if (overlay) overlay.style.display = 'grid'; if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none'; }
+export function perderJuego() { if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return; estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion = false; S.detener('music'); S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500); if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); } if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none'; if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; } if (finalP) finalP.textContent = 'Gracias por ser parte.'; if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados; if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none'; if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block'; modoSuperposicion = 'gameover'; if (overlay) overlay.style.display = 'grid'; if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none'; }
 function ganarJuego() {
     if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
     nivelMaximoAlcanzado = Levels.CONFIG_NIVELES.length;
@@ -2071,7 +2076,7 @@ function ganarJuego() {
     estadoJuego.faseJuego = 'gameover';
     estadoJuego.enEjecucion = false;
     S.detener('music');
-    S.reproducir('victory');
+    S.reproducir('victory'); setTimeout(() => S.reproducir('theme_main'), 2000);
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block';
     if (levelTransition) levelTransition.style.display = 'none';
@@ -2265,6 +2270,7 @@ export function init() {
         startBtn.onclick = function (e) {
             e.stopPropagation();
             if (modoSuperposicion === 'pause') {
+                S.detener('theme_main');
                 if (overlay) overlay.style.display = 'none';
                 if (estadoJuego) {
                     estadoJuego.enEjecucion = true;
@@ -2301,6 +2307,7 @@ export function init() {
             estabaCorriendoAntesCreditos = !!(estadoJuego && estadoJuego.enEjecucion);
             if (estadoJuego) estadoJuego.enEjecucion = false;
             S.pausar('music');
+            S.reproducir('theme_main');
             if (infoOverlay) infoOverlay.style.display = 'grid';
             if (gameplayHints) gameplayHints.style.display = 'none';
             animarSubmarino = true;
@@ -2325,6 +2332,7 @@ export function init() {
     if (logoHUD) { logoHUD.addEventListener('click', abrirMenuPrincipal); }
     if (closeInfo) {
         closeInfo.onclick = function () {
+            S.detener('theme_main');
             if (infoOverlay) infoOverlay.style.display = 'none';
             if (estabaCorriendoAntesCreditos && (!overlay || overlay.style.display === 'none')) {
                 if (estadoJuego) { estadoJuego.enEjecucion = true; }
@@ -2338,6 +2346,7 @@ export function init() {
         overlay.addEventListener('click', function (e) {
             if (e.target === overlay && overlay.style.display !== 'none' && (!restartBtn || restartBtn.style.display === 'none') && estadoJuego && estadoJuego.faseJuego !== 'transition' && levelSelectContent.style.display === 'none') {
                 if (modoSuperposicion === 'pause') {
+                    S.detener('theme_main');
                     overlay.style.display = 'none';
                     if (estadoJuego) {
                         estadoJuego.enEjecucion = true;
