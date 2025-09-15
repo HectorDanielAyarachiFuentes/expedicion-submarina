@@ -1,7 +1,10 @@
 // js/level9.js
 'use strict';
 
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles, generarAnimal, limpiarTodosLosAnimales, agregarPuntos, whaleImg, whaleListo, WHALE_SPRITE_DATA, generarTrozoBallena, generarGotasSangre, generarBurbujasDeSangre } from '../game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarAnimal, limpiarTodosLosAnimales, agregarPuntos, whaleImg, whaleListo, WHALE_SPRITE_DATA, generarTrozoBallena, generarGotasSangre, generarBurbujasDeSangre } from '../game/game.js';
+import { 
+    torpedos, proyectiles 
+} from '../game/armas/weapons.js';
 
 // --- ESTADO DEL NIVEL 9 ---
 let levelState = {};

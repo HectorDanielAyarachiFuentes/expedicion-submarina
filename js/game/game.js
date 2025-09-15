@@ -21,6 +21,7 @@ window.onerror = function (message, source, lineno, colno, error) {
 
 // --- Módulos ---
 import * as Levels from '../levels/levels.js';
+import * as Weapons from './armas/weapons.js';
 
 // --- Variables para la Galería de Créditos ---
 // Puedes agregar más imágenes aquí si tienes más archivos (ej: 'img/imgcreditos/dulce2.jpg')
@@ -431,8 +432,6 @@ function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY =
 // --- Sistema de Partículas ---
 // Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
 export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [], particulasPolvoMarino = [];
-export let minas = [];
-export let proyectiles = [];
 
 // --- Funciones de Partículas ---
 // Funciones para crear, actualizar y dibujar las partículas.
@@ -643,43 +642,7 @@ let menuFlyBy = null; // Para la animación del submarino en el menú
 let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = Math.PI / 24;
 const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
-export let torpedos = []; // prettier-ignore
-const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta', 'laser', 'mina'];
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
-
-// --- CONFIGURACIÓN CENTRALIZADA DE ARMAS ---
-const WEAPON_CONFIG = {
-    garra: { velocidad: 1400, alcance: 0.7 }, // Alcance como % del ancho de pantalla
-    shotgun: {
-        enfriamiento: 2.5,
-        balas: 25,
-        dispersion: 1.5,
-        velocidadProyectil: { min: 700, max: 1100 },
-        vidaProyectil: { min: 0.5, max: 0.8 }
-    },
-    metralleta: {
-        enfriamiento: 3.0,
-        balas: 30,
-        dispersion: 0.2,
-        velocidadProyectil: 1600,
-        vidaProyectil: 0.8
-    },
-    laser: {
-        consumoEnergia: 30, // por segundo
-        regeneracionEnergia: 20, // por segundo
-        danoPorTick: 2,
-        cooldownTick: 0.1
-    },
-    mina: {
-        enfriamiento: 2.0,
-        velocidadCaida: 50,
-        radioProximidad: 150,
-        radioExplosion: 200,
-        dano: 10
-    },
-    torpedo: { enfriamiento: 1.5, velocidad: 1200, dano: 5 },
-    boost: { fuerza: 400, consumo: 35, regeneracion: 15, enfriamiento: 2.0 }
-};
 
 const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
@@ -719,9 +682,7 @@ function reiniciar(nivelDeInicio = 1) {
     Levels.initLevel(nivelDeInicio);
     
     animales = [];
-    torpedos = [];
-    proyectiles = [];
-    minas = [];
+    Weapons.initWeapons();
     whaleDebris = [];
     particulasTinta = [];
     particulasPolvoMarino = [];
@@ -733,7 +694,7 @@ function reiniciar(nivelDeInicio = 1) {
 }
 
 function velocidadActual() {
-    if (!estadoJuego || !estadoJuego.enEjecucion) return 120; // Velocidad lenta y constante para el menú
+    if (!estadoJuego || !estadoJuego.enEjecucion) return 120;
     return Levels.getLevelSpeed();
 }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
@@ -840,103 +801,25 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
 }
 
 // --- Acciones del Jugador (Disparos) ---
-function dispararGarfio() {
-    if (!jugador || jugador.garra || !estadoJuego || estadoJuego.bloqueoEntrada > 0) return;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const baseX = jugador.x;
-    const baseY = isLevel5 ? jugador.y : jugador.y;
-    const cannonX = isLevel5 ? baseX : baseX + 45;
-    const cannonY = isLevel5 ? baseY - 45 : baseY;
-    generarRafagaBurbujasDisparo(cannonX, cannonY, isLevel5);
-    const dx = isLevel5 ? 0 : 1;
-    const dy = isLevel5 ? -1 : 0; // prettier-ignore
-    jugador.garra = { x: baseX, y: baseY, dx, dy, velocidad: WEAPON_CONFIG.garra.velocidad, fase: 'ida', golpeado: null, alcance: W * WEAPON_CONFIG.garra.alcance, recorrido: 0 };
-    S.reproducir('arpon');
-}
-
-function dispararShotgun() {
-    if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : jugador.x + 40;
-    const py = isLevel5 ? jugador.y - 40 : jugador.y;
-    generarRafagaBurbujasDisparo(px, py, isLevel5);
-    const config = WEAPON_CONFIG.shotgun;
-    for (let i = 0; i < config.balas; i++) {
-        const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
-        const angulo = anguloBase + (Math.random() - 0.5) * config.dispersion;
-        const velocidad = config.velocidadProyectil.min + Math.random() * (config.velocidadProyectil.max - config.velocidadProyectil.min);
-        const vida = config.vidaProyectil.min + Math.random() * (config.vidaProyectil.max - config.vidaProyectil.min);
-        proyectiles.push({ x: px, y: py, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 8, h: 3, color: '#ffb733', vida: vida });
-    }
-    estadoJuego.enfriamientoArma = config.enfriamiento;
-    S.reproducir('shotgun');
-    setTimeout(() => S.reproducir('reload'), 500);
-}
-
-function dispararMetralleta() {
-    if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
-    const config = WEAPON_CONFIG.metralleta;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : jugador.x + 40;
-    const py = isLevel5 ? jugador.y - 40 : jugador.y;
-    generarRafagaBurbujasDisparo(px, py, isLevel5);
-    const numBalas = 30;
-    for (let i = 0; i < numBalas; i++) {
-        const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
-        const angulo = anguloBase + (Math.random() - 0.5) * config.dispersion;
-        const velocidad = config.velocidadProyectil;
-        const offset = (i / numBalas) * velocidad * 0.05; // Efecto de ráfaga
-        const offsetX = isLevel5 ? Math.cos(angulo + Math.PI / 2) * offset : offset;
-        const offsetY = isLevel5 ? Math.sin(angulo + Math.PI / 2) * offset : 0;
-        proyectiles.push({ x: px + offsetX, y: py + offsetY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 12, h: 2, color: '#ff6363', vida: config.vidaProyectil });
-    }
-    estadoJuego.enfriamientoArma = config.enfriamiento;
-    let soundCount = 0;
-    const soundInterval = setInterval(() => { S.reproducir('machinegun'); soundCount++; if (soundCount >= 5) clearInterval(soundInterval); }, 60);
-    setTimeout(() => S.reproducir('reload'), 800);
-}
-
-function lanzarMina() {
-    if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : jugador.x + 40;
-    const py = isLevel5 ? jugador.y - 40 : jugador.y;
-
-    minas.push({
-        x: px,
-        y: py,
-        r: 12, // Radio visual de la mina
-        vida: 15, // La mina desaparece después de 15 segundos si no se activa
-    });
-
-    estadoJuego.enfriamientoArma = WEAPON_CONFIG.mina.enfriamiento;
-    S.reproducir('torpedo'); // Reutilizamos el sonido del torpedo por ahora
-}
 function disparar() {
-    if (!estadoJuego) return;
-    switch (estadoJuego.armaActual) {
-        case 'garra': if (!jugador.garra) dispararGarfio(); else if (jugador.garra.fase === 'ida') { jugador.garra.fase = 'retorno'; Levels.onFallo(); } break;
-        case 'shotgun': dispararShotgun(); break;
-        case 'metralleta': dispararMetralleta(); break;
-        // El láser se maneja de forma continua en el bucle de actualización,
-        // no como un evento de un solo disparo.
-        case 'laser': break; 
-        case 'mina': lanzarMina(); break;
-    }
+    const fireContext = {
+        estadoJuego,
+        jugador,
+        S,
+        W,
+        generarRafagaBurbujasDisparo,
+        Levels
+    };
+    Weapons.disparar(fireContext);
 }
 
 function lanzarTorpedo() {
-    if (!estadoJuego || !estadoJuego.enEjecucion || estadoJuego.enfriamientoTorpedo > 0) return;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : jugador.x;
-    const py = isLevel5 ? jugador.y : jugador.y;
-    if (isLevel5) {
-        torpedos.push({ x: px, y: py, w: 6, h: 20, isVertical: true });
-    } else {
-        torpedos.push({ x: px, y: py, w: 20, h: 6, isVertical: false });
-    }
-    estadoJuego.enfriamientoTorpedo = WEAPON_CONFIG.torpedo.enfriamiento;
-    S.reproducir('torpedo');
+    const torpedoContext = {
+        estadoJuego,
+        jugador,
+        S
+    };
+    Weapons.lanzarTorpedo(torpedoContext);
 }
 
 // =================================================================================
@@ -1009,7 +892,7 @@ function actualizarAnimacionMenu(dt) {
             for (let i = 0; i < 8; i++) {
                 const angle = (fireDirection > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.8;
                 const speed = 800 + Math.random() * 400;
-                proyectiles.push({
+                Weapons.proyectiles.push({
                     x: px, y: py,
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
@@ -1175,9 +1058,9 @@ function actualizar(dt) {
     if (teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
     if (teclas['4']) { estadoJuego.armaActual = 'laser'; }
     if ((teclas['c'] || teclas['C']) && estadoJuego.bloqueoEntrada === 0) {
-        const currentIndex = WEAPON_ORDER.indexOf(estadoJuego.armaActual);
-        const nextIndex = (currentIndex + 1) % WEAPON_ORDER.length;
-        estadoJuego.armaActual = WEAPON_ORDER[nextIndex];
+        const currentIndex = Weapons.WEAPON_ORDER.indexOf(estadoJuego.armaActual);
+        const nextIndex = (currentIndex + 1) % Weapons.WEAPON_ORDER.length;
+        estadoJuego.armaActual = Weapons.WEAPON_ORDER[nextIndex];
         teclas['c'] = teclas['C'] = false;
         S.reproducir('reload');
         estadoJuego.armaCambiandoTimer = 0.3;
@@ -1192,7 +1075,7 @@ function actualizar(dt) {
     estadoJuego.boostActivo = teclas['b'] && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
 
     if (estadoJuego.boostActivo) {
-        estadoJuego.boostEnergia -= WEAPON_CONFIG.boost.consumo * dtAjustado;
+        estadoJuego.boostEnergia -= Weapons.WEAPON_CONFIG.boost.consumo * dtAjustado;
 
         // El impulso ahora empuja en la dirección del movimiento, o hacia adelante si está quieto.
         let boostVx = 1, boostVy = 0;
@@ -1200,15 +1083,15 @@ function actualizar(dt) {
             boostVx = vx / JUGADOR_VELOCIDAD; // Normalizar el vector de velocidad
             boostVy = vy / JUGADOR_VELOCIDAD;
         }
-        jugador.x += boostVx * WEAPON_CONFIG.boost.fuerza * dtAjustado;
-        jugador.y += boostVy * WEAPON_CONFIG.boost.fuerza * dtAjustado;
+        jugador.x += boostVx * Weapons.WEAPON_CONFIG.boost.fuerza * dtAjustado;
+        jugador.y += boostVy * Weapons.WEAPON_CONFIG.boost.fuerza * dtAjustado;
 
         for(let i = 0; i < 5; i++) { // Generar burbujas intensas
             generarBurbujaPropulsion(jugador.x - 40, jugador.y + (Math.random() - 0.5) * 30, false);
         }
     } else {
         if (estadoJuego.boostEnfriamiento <= 0) {
-            estadoJuego.boostEnergia += WEAPON_CONFIG.boost.regeneracion * dtAjustado; // Regeneración de energía
+            estadoJuego.boostEnergia += Weapons.WEAPON_CONFIG.boost.regeneracion * dtAjustado; // Regeneración de energía
             estadoJuego.boostEnergia = Math.min(estadoJuego.boostEnergia, estadoJuego.boostMaxEnergia);
         }
     }
@@ -1228,7 +1111,7 @@ function actualizar(dt) {
     if (estadoJuego.armaActual === 'laser') {
         if (teclas[' '] && estadoJuego.laserEnergia > 0) {
             estadoJuego.laserActivo = true;
-            estadoJuego.laserEnergia = Math.max(0, estadoJuego.laserEnergia - WEAPON_CONFIG.laser.consumoEnergia * dtAjustado);
+            estadoJuego.laserEnergia = Math.max(0, estadoJuego.laserEnergia - Weapons.WEAPON_CONFIG.laser.consumoEnergia * dtAjustado);
             S.bucle('laser_beam');
         } else {
             estadoJuego.laserActivo = false;
@@ -1242,7 +1125,7 @@ function actualizar(dt) {
     }
     // Regeneración de energía del láser
     if (!estadoJuego.laserActivo && estadoJuego.laserEnergia < estadoJuego.laserMaxEnergia) {
-        estadoJuego.laserEnergia += WEAPON_CONFIG.laser.regeneracionEnergia * dtAjustado;
+        estadoJuego.laserEnergia += Weapons.WEAPON_CONFIG.laser.regeneracionEnergia * dtAjustado;
         estadoJuego.laserEnergia = Math.min(estadoJuego.laserEnergia, estadoJuego.laserMaxEnergia);
     }
 
@@ -1453,268 +1336,12 @@ function actualizar(dt) {
         } 
     }
     
-    // --- Lógica del Garfio ---
-    if (jugador.garra) { 
-        const g = jugador.garra;
-        const spd = g.velocidad * dtAjustado;
-        if (g.fase === 'ida') {
-            g.x += g.dx * spd;
-            g.y += g.dy * spd;
-            g.recorrido += spd;
-            if (estadoJuego.nivel !== 5) {
-                for (let j = 0; j < animales.length; j++) {
-                    const a = animales[j];
-                    if (!g.golpeado && !a.capturado && Math.hypot(a.x - g.x, a.y - g.y) < a.r) {
-                        // Si el enemigo tiene vida (es grande), arranca un trozo.
-                        if (a.hp !== undefined) {
-                            a.hp -= 15; // La garra hace mucho daño
-                            generarTrozoBallena(g.x, g.y, 5, 200); // Genera un efecto sangriento
-                            S.reproducir('boss_hit');
-                            if (a.hp <= 0) {
-                                generarExplosion(a.x, a.y, '#aaffff', a.w);
-                                Levels.onKill(a.tipo);
-                                animales.splice(j, 1);
-                                estadoJuego.asesinatos++;
-                                estadoJuego.puntuacion += 500;
-                            }
-                            g.golpeado = 'chunk'; // Marca que golpeó algo, pero no lo lleva
-                            g.fase = 'retorno';
-                            break;
-                        } else { // Si no tiene vida, lo captura.
-                            g.golpeado = a;
-                            a.capturado = true;
-                            g.fase = 'retorno';
-                            break;
-                        }
-                    }
-                }
-            }
-            if (g.recorrido >= g.alcance) g.fase = 'retorno';
-        } else {
-            g.recorrido -= spd;
-            const targetX = jugador.x, targetY = jugador.y;
-            g.x += (targetX - g.x) * 0.1;
-            g.y += (targetY - g.y) * 0.1;
-            if (g.golpeado && g.golpeado !== 'chunk') {
-                g.golpeado.x = g.x;
-                g.golpeado.y = g.y;
-            }
-            if (g.recorrido <= 0) {
-                if (g.golpeado && g.golpeado !== 'chunk') {
-                    estadoJuego.rescatados++;
-                    const puntos = g.golpeado.tipo === 'mierdei' ? 1000 : puntosPorRescate();
-                    estadoJuego.puntuacion += puntos;
-                    Levels.onAnimalCazado(g.golpeado.tipo);
-                    const idx = animales.indexOf(g.golpeado);
-                    if (idx !== -1) animales.splice(idx, 1);
-                } else if (!g.golpeado) {
-                    Levels.onFallo();
-                }
-                jugador.garra = null;
-            }
-        }
-    }
-    
-    // --- Lógica de Daño del Láser ---
-    if (estadoJuego.laserActivo) {
-        const isLevel5 = estadoJuego.nivel === 5;
-        let laserHitbox;
-
-        if (isLevel5) {
-            const laserStartX = jugador.x;
-            const laserStartY = jugador.y - 40; // Desde la "punta" del submarino
-            const laserLength = laserStartY; // Hacia arriba hasta el borde
-            const laserWidth = 10;
-            laserHitbox = { x: laserStartX - laserWidth / 2, y: 0, w: laserWidth, h: laserLength };
-        } else {
-            const laserStartX = jugador.x + 40;
-            const laserStartY = jugador.y;
-            const laserLength = W;
-            const laserWidth = 10;
-            laserHitbox = { x: laserStartX, y: laserStartY - laserWidth / 2, w: laserLength, h: laserWidth };
-        }
-
-        for (let j = animales.length - 1; j >= 0; j--) {
-            const a = animales[j];
-            if (!a.capturado && laserHitbox.x < a.x + a.w / 2 && laserHitbox.x + laserHitbox.w > a.x - a.w / 2 && laserHitbox.y < a.y + a.h / 2 && laserHitbox.y + laserHitbox.h > a.y - a.h / 2) {
-                if (a.hp !== undefined) {
-                    if (!a.laserHitTimer || a.laserHitTimer <= 0) {
-                        a.hp -= WEAPON_CONFIG.laser.danoPorTick; // Daño por tick
-                        a.laserHitTimer = WEAPON_CONFIG.laser.cooldownTick; // Cooldown entre ticks de daño
-                        if (a.tipo === 'whale') generarGotasSangre(a.x, a.y);
-                        generarExplosion(a.x, a.y, '#ff5555', 5);
-                    }
-                    if (a.hp <= 0) {
-                        generarExplosion(a.x, a.y, '#aaffff', a.w);
-                        Levels.onKill(a.tipo);
-                        animales.splice(j, 1);
-                        estadoJuego.asesinatos++;
-                        estadoJuego.puntuacion += 500;
-                    }
-                } else {
-                    generarExplosion(a.x, a.y, '#ff5555');
-                    Levels.onKill(a.tipo);
-                    animales.splice(j, 1);
-                    estadoJuego.asesinatos++;
-                }
-            }
-        }
-    }
-
-    // --- Lógica de Colisión de Proyectiles ---
-    function chequearColisionProyectil(proyectil) {
-        for (let j = animales.length - 1; j >= 0; j--) {
-            const a = animales[j];
-            if (!a.capturado && proyectil.x < a.x + a.w / 2 && proyectil.x + (proyectil.w || 0) > a.x - a.w / 2 && proyectil.y < a.y + a.h / 2 && proyectil.y + (proyectil.h || 0) > a.y - a.h / 2) {
-                // Enemigos con HP (como la ballena)
-                if (a.hp !== undefined) {
-                    const damage = proyectil.isVertical !== undefined ? WEAPON_CONFIG.torpedo.dano : 1; // Torpedos hacen más daño
-                    a.hp -= damage;
-                    if (a.tipo === 'whale' || a.tipo === 'shark') {
-                        generarTrozoBallena(proyectil.x, proyectil.y);
-                        generarGotasSangre(proyectil.x, proyectil.y);
-                    }
-                    generarExplosion(proyectil.x, proyectil.y, '#dddddd'); // Efecto de impacto
-                    if (a.hp <= 0) {
-                        generarExplosion(a.x, a.y, '#aaffff', a.w); // Gran explosión al morir
-                        Levels.onKill(a.tipo);
-                        animales.splice(j, 1);
-                        estadoJuego.asesinatos++;
-                        estadoJuego.puntuacion += 500; // Bonus por matar a la ballena
-                    }
-                    return true; // El proyectil se consume
-                }
-                // Enemigos normales
-                generarExplosion(a.x, a.y, proyectil.color || '#ff8833');
-                Levels.onKill(a.tipo);
-                animales.splice(j, 1);
-                estadoJuego.asesinatos++;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // --- Actualización de Proyectiles (Torpedos y Balas) ---
-    for (let i = torpedos.length - 1; i >= 0; i--) {
-        const t = torpedos[i];
-        t.x += (t.isVertical ? 0 : WEAPON_CONFIG.torpedo.velocidad) * dtAjustado;
-        t.y -= (t.isVertical ? WEAPON_CONFIG.torpedo.velocidad : 0) * dtAjustado;
-
-        // >>> NUEVO: Estela de burbujas para torpedos <<<
-        if (Math.random() < 0.9) { // Más denso para los torpedos
-            const bubbleX = t.x - (t.isVertical ? 0 : t.w / 2);
-            const bubbleY = t.y + (t.isVertical ? t.h / 2 : 0);
-            generarParticula(particulasBurbujas, {
-                x: bubbleX,
-                y: bubbleY,
-                vx: (Math.random() - 0.5) * 30,
-                vy: (Math.random() - 0.5) * 30 + 20, // Burbujas van hacia atrás/arriba
-                r: Math.random() * 2.5 + 1,
-                vida: 0.8 + Math.random() * 0.8,
-                color: ''
-            });
-        }
-        if (t.y < -t.h || t.x > W + t.w) { 
-            torpedos.splice(i, 1); 
-            continue; 
-        }
-        if (chequearColisionProyectil(t)) {
-            torpedos.splice(i, 1);
-        }
-    }
-
-    for (let i = proyectiles.length - 1; i >= 0; i--) {
-        const p = proyectiles[i];
-        p.x += p.vx * dtAjustado; p.y += p.vy * dtAjustado; p.vida -= dtAjustado; 
-        // >>> NUEVO: Estela de burbujas para proyectiles <<<
-        if (Math.random() < 0.4) { // 40% de probabilidad por frame
-            generarParticula(particulasBurbujas, {
-                x: p.x,
-                y: p.y,
-                // Las burbujas se quedan atrás y flotan
-                vx: p.vx * 0.05 + (Math.random() - 0.5) * 20,
-                vy: p.vy * 0.05 - 20 - Math.random() * 20,
-                r: Math.random() * 1.5 + 0.5, // Burbujas pequeñas
-                vida: 0.4 + Math.random() * 0.4,
-                color: '' // Stroke de burbuja por defecto
-            });
-        }
-
-        // Si es un proyectil del efecto del menú, solo se actualiza su vida, no colisiona.
-        if (p.isMenuEffect) {
-            if (p.vida <= 0) {
-                proyectiles.splice(i, 1);
-            }
-            continue;
-        }
-
-        if (p.vida <= 0 || p.x > W + 20 || p.x < -20 || p.y < -20 || p.y > H + 20) {
-            proyectiles.splice(i, 1);
-            continue;
-        }
-        if (chequearColisionProyectil(p)) {
-            proyectiles.splice(i, 1);
-        }
-    }
-    
-    // --- Actualización de Minas de Proximidad ---
-    for (let i = minas.length - 1; i >= 0; i--) {
-        const m = minas[i];
-        m.y += WEAPON_CONFIG.mina.velocidadCaida * dtAjustado; // Cae lentamente
-        m.vida -= dtAjustado;
-
-        let explotar = false;
-
-        // Comprobar proximidad con los enemigos
-        for (const a of animales) {
-            if (Math.hypot(a.x - m.x, a.y - m.y) < WEAPON_CONFIG.mina.radioProximidad) {
-                explotar = true;
-                break;
-            }
-        }
-
-        // Eliminar si expira su vida o sale de la pantalla
-        if (m.vida <= 0 || m.y > H + m.r) {
-            minas.splice(i, 1);
-            continue;
-        }
-
-        if (explotar) {
-            // Crear explosión visual
-            generarExplosion(m.x, m.y, '#ff9933', WEAPON_CONFIG.mina.radioExplosion / 2);
-            S.reproducir('explosion_grande');
-
-            // --- NUEVO: Generar una onda de burbujas impactante ---
-            const numBurbujas = 35 + Math.floor(Math.random() * 15); // Entre 35 y 49 burbujas
-            for (let k = 0; k < numBurbujas; k++) {
-                const angulo = Math.random() * Math.PI * 2;
-                const velocidad = 80 + Math.random() * 200; // Velocidad de expansión de la onda
-                const vida = 1.8 + Math.random() * 1.2;
-                const radio = 3 + Math.random() * 6;
-
-                generarParticula(particulasBurbujas, {
-                    x: m.x, y: m.y,
-                    vx: Math.cos(angulo) * velocidad,
-                    vy: Math.sin(angulo) * velocidad - 60, // Ligero impulso ascendente
-                    r: radio, vida: vida, color: ''
-                });
-            }
-
-            // Dañar enemigos en el radio de la explosión
-            for (let j = animales.length - 1; j >= 0; j--) {
-                const a = animales[j];
-                if (Math.hypot(a.x - m.x, a.y - m.y) < WEAPON_CONFIG.mina.radioExplosion) {
-                    // El daño se maneja dentro de chequearColisionProyectil, pero aquí lo hacemos directo
-                    generarExplosion(a.x, a.y, '#ff8833');
-                    Levels.onKill(a.tipo);
-                    animales.splice(j, 1);
-                    estadoJuego.asesinatos++;
-                }
-            }
-            minas.splice(i, 1);
-        }
-    }
+    const weaponUpdateContext = {
+        dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels,
+        generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas,
+        puntosPorRescate
+    };
+    Weapons.updateWeapons(weaponUpdateContext);
     
     // --- Actualización de Otros Proyectiles y Efectos ---
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dtAjustado; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
@@ -1745,9 +1372,6 @@ function actualizar(dt) {
             whaleDebris.splice(i, 1);
         }
     }
-
-    // Animar el patrón del propulsor
-    thrusterPatternOffsetX = (thrusterPatternOffsetX - dtAjustado * 800) % 512;
 
     // Limpieza de pantalla diferida (solicitada por los niveles para evitar errores)
     // Esto se ejecuta después de todos los bucles de actualización de entidades.
@@ -1936,7 +1560,7 @@ function renderizar(dt) {
             ctx.restore();
 
             // --- Dibuja el Propulsor ---
-            if (thrusterPatternReady && thrusterPattern && propellerCurrentSpeed > 6) { // Se dibuja si se mueve, no solo en ralentí
+            if (Weapons.thrusterPatternReady && Weapons.thrusterPattern && propellerCurrentSpeed > 6) { // Se dibuja si se mueve, no solo en ralentí
                 const isBoosting = estadoJuego.boostActivo;
                 const moveIntensity = clamp((propellerCurrentSpeed - 5) / 20, 0, 1); // 0 en ralentí, 1 a velocidad normal
 
@@ -1968,9 +1592,9 @@ function renderizar(dt) {
 
                 // 2. Llama principal con el patrón SVG
                 ctx.save();
-                ctx.translate(thrusterPatternOffsetX, 0); // Animar el patrón
+                ctx.translate(Weapons.thrusterPatternOffsetX, 0); // Animar el patrón
                 ctx.globalCompositeOperation = 'lighter';
-                ctx.fillStyle = thrusterPattern;
+                ctx.fillStyle = Weapons.thrusterPattern;
                 const mainFlameAlpha = isBoosting ? 0.9 : 0.7;
                 ctx.globalAlpha = mainFlameAlpha * moveIntensity;
                 ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength, -baseWidth / 2); ctx.lineTo(-baseLength, baseWidth / 2); ctx.closePath(); ctx.fill();
@@ -1988,205 +1612,11 @@ function renderizar(dt) {
                 ctx.restore();
             }
 
-            // --- Dibuja el Láser (NUEVO EFECTO MEJORADO) ---
-            if (estadoJuego.laserActivo) {
-                const isLevel5 = estadoJuego.nivel === 5;
-                const energyRatio = estadoJuego.laserEnergia / estadoJuego.laserMaxEnergia;
-                const time = estadoJuego.tiempoTranscurrido;
-
-                // Parámetros del láser
-                const baseWidth = 20;
-                const pulse = Math.sin(time * 60) * 3; // Pulso más rápido y sutil
-                const beamWidth = (baseWidth + pulse) * energyRatio;
-
-                // Posición y ángulo
-                const laserStartX = isLevel5 ? px : px + 40;
-                const laserStartY = isLevel5 ? py - 40 : py;
-                const angle = isLevel5 ? -Math.PI / 2 : 0;
-                const length = isLevel5 ? laserStartY : W - laserStartX;
-
-                ctx.save();
-                ctx.translate(laserStartX, laserStartY);
-                ctx.rotate(angle);
-
-                // 1. Resplandor exterior (ancho y suave)
-                const glowWidth = beamWidth * 2.5;
-                const glowGrad = ctx.createLinearGradient(0, -glowWidth / 2, 0, glowWidth / 2);
-                glowGrad.addColorStop(0, 'rgba(255, 100, 100, 0)');
-                glowGrad.addColorStop(0.5, `rgba(255, 100, 100, ${energyRatio * 0.4})`);
-                glowGrad.addColorStop(1, 'rgba(255, 100, 100, 0)');
-                ctx.fillStyle = glowGrad;
-                ctx.fillRect(0, -glowWidth / 2, length, glowWidth);
-
-                // 2. Patrón de energía (usando el del propulsor)
-                if (thrusterPatternReady && thrusterPattern) {
-                    ctx.save();
-                    // El patrón se mueve para dar sensación de flujo
-                    ctx.translate(thrusterPatternOffsetX, 0);
-                    ctx.globalCompositeOperation = 'lighter';
-                    ctx.fillStyle = thrusterPattern;
-                    ctx.globalAlpha = 0.6 * energyRatio;
-                    ctx.fillRect(-thrusterPatternOffsetX, -beamWidth / 2, length + thrusterPatternOffsetX, beamWidth);
-                    ctx.restore();
-                }
-
-                // 3. Núcleo interior (delgado y brillante)
-                const coreWidth = beamWidth * 0.25;
-                const coreGrad = ctx.createLinearGradient(0, -coreWidth / 2, 0, coreWidth / 2);
-                coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-                coreGrad.addColorStop(0.5, `rgba(255, 255, 220, ${energyRatio})`);
-                coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                ctx.fillStyle = coreGrad;
-                ctx.fillRect(0, -coreWidth / 2, length, coreWidth);
-
-                // 4. "Lens flare" en el origen
-                ctx.globalCompositeOperation = 'lighter';
-                const flareRadius = beamWidth * 0.8;
-                const flareGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, flareRadius);
-                flareGrad.addColorStop(0, `rgba(255, 255, 255, ${energyRatio * 0.9})`);
-                flareGrad.addColorStop(0.3, `rgba(255, 255, 200, ${energyRatio * 0.7})`);
-                flareGrad.addColorStop(1, 'rgba(255, 100, 100, 0)');
-                ctx.fillStyle = flareGrad;
-                ctx.beginPath();
-                ctx.arc(0, 0, flareRadius, 0, Math.PI * 2);
-                ctx.fill();
-
-                // 5. Partículas crepitantes a lo largo del rayo
-                const numParticles = 10;
-                for (let i = 0; i < numParticles; i++) {
-                    const pLife = Math.random();
-                    if (pLife > energyRatio) continue; // Menos partículas con menos energía
-
-                    const pX = Math.random() * length;
-                    const pY = (Math.random() - 0.5) * beamWidth;
-                    const pSize = Math.random() * 2 + 1;
-                    ctx.fillStyle = `rgba(255, 255, 220, ${Math.random() * 0.8})`;
-                    ctx.beginPath();
-                    ctx.arc(pX, pY, pSize, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                ctx.restore();
-            }
+            const drawContext = { ctx, estadoJuego, jugador, W, H, inclinacionRobot };
+            Weapons.drawWeapons(drawContext);
         }
 
         // --- Dibuja los Proyectiles ---
-        if (jugador && jugador.garra) {
-            const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
-            const hx0 = jugador.x;
-            const hy0 = jugador.y;
-            ctx.save();
-            ctx.strokeStyle = '#8ff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(hx0, hy0);
-            ctx.lineTo(jugador.garra.x, jugador.garra.y);
-            ctx.stroke();
-            ctx.restore();
-            ctx.save();
-            ctx.translate(jugador.garra.x, jugador.garra.y);
-            if (isLevel5) ctx.rotate(-Math.PI / 2);
-            ctx.fillStyle = '#8ff';
-            ctx.beginPath();
-            ctx.moveTo(0, -6); ctx.lineTo(6, 0); ctx.lineTo(0, 6); ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-        }
-        // --- Dibuja Torpedos (Mejorado) ---
-        for (const t of torpedos) {
-            ctx.save();
-            ctx.translate(t.x, t.y);
-            const angle = t.isVertical ? -Math.PI / 2 : 0;
-            ctx.rotate(angle);
-            // Cuerpo del torpedo
-            const grad = ctx.createLinearGradient(-t.w / 2, 0, t.w / 2, 0);
-            grad.addColorStop(0, '#ffdd99');
-            grad.addColorStop(0.5, '#ffcc00');
-            grad.addColorStop(1, '#ffaa00');
-            ctx.fillStyle = grad;
-            // Forma de torpedo (rectángulo con punta redondeada)
-            ctx.beginPath();
-            ctx.moveTo(-t.w / 2, -t.h / 2);
-            ctx.lineTo(t.w / 2 - t.h, -t.h / 2);
-            ctx.arc(t.w / 2 - t.h, 0, t.h / 2, -Math.PI / 2, Math.PI / 2);
-            ctx.lineTo(-t.w / 2, t.h / 2);
-            ctx.closePath();
-            ctx.fill();
-            // Pequeño resplandor de propulsión
-            ctx.fillStyle = 'rgba(255, 200, 100, 0.7)';
-            ctx.beginPath();
-            ctx.arc(-t.w / 2, 0, t.h / 1.5, -Math.PI / 2, Math.PI / 2);
-            ctx.fill();
-            ctx.restore();
-        }
-        // --- Dibuja Proyectiles (Mejorado) ---
-        for (const p of proyectiles) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            const angle = Math.atan2(p.vy, p.vx);
-            ctx.rotate(angle);
-            // Resplandor
-            ctx.shadowColor = p.color;
-            ctx.shadowBlur = 8;
-            // Cuerpo principal de la bala con gradiente para efecto de trazadora
-            const grad = ctx.createLinearGradient(-p.w / 2, 0, p.w / 2, 0);
-            grad.addColorStop(0, p.color); // Cola del color del proyectil
-            grad.addColorStop(0.8, p.color);
-            grad.addColorStop(1, 'white'); // Punta blanca brillante
-            ctx.fillStyle = grad;
-            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-            ctx.restore();
-        }
-        // --- Dibuja las Minas ---
-        for (const m of minas) {
-            ctx.save();
-            ctx.translate(m.x, m.y);
-
-            // Efecto de pulso para mostrar que está activa
-            const pulso = 1 + Math.sin(estadoJuego.tiempoTranscurrido * 10) * 0.15;
-            ctx.scale(pulso, pulso);
-
-            // Púas (se dibujan detrás del cuerpo y rotan lentamente)
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 3;
-            for (let i = 0; i < 8; i++) {
-                const angulo = (i / 8) * Math.PI * 2 + estadoJuego.tiempoTranscurrido * 0.2; // Rotación lenta
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(Math.cos(angulo) * m.r * 1.6, Math.sin(angulo) * m.r * 1.6);
-                ctx.stroke();
-            }
-
-            // Cuerpo de la mina con gradiente para efecto 3D
-            const grad = ctx.createRadialGradient(-m.r * 0.3, -m.r * 0.3, 0, 0, 0, m.r * 1.5);
-            grad.addColorStop(0, '#777'); // Brillo
-            grad.addColorStop(0.5, '#555');
-            grad.addColorStop(1, '#2a2a2a'); // Sombra
-
-            ctx.fillStyle = grad;
-            ctx.strokeStyle = '#111';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(0, 0, m.r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Luz parpadeante con resplandor
-            const luzActiva = Math.floor(estadoJuego.tiempoTranscurrido * 3) % 2 === 0;
-            if (luzActiva) {
-                // Resplandor
-                const glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, m.r * 0.6);
-                glowGrad.addColorStop(0, 'rgba(255, 100, 100, 0.8)');
-                glowGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
-                ctx.fillStyle = glowGrad;
-                ctx.beginPath(); ctx.arc(0, 0, m.r * 0.6, 0, Math.PI * 2); ctx.fill();
-                // Núcleo de la luz
-                ctx.fillStyle = '#ff4444';
-                ctx.beginPath(); ctx.arc(0, 0, m.r * 0.3, 0, Math.PI * 2); ctx.fill();
-            }
-
-            ctx.restore();
-        }
         ctx.fillStyle = '#101010';
         for (const ink of estadoJuego.proyectilesTinta) { ctx.beginPath(); ctx.arc(ink.x, ink.y, ink.r, 0, Math.PI * 2); ctx.fill(); }
 
@@ -2385,12 +1815,12 @@ function dibujarHUD() {
     hud.fillText('TORPEDO', padX, currentY);
     const torpedoListo = s.enfriamientoTorpedo <= 0;
     hud.fillStyle = torpedoListo ? '#66ff66' : '#ff6666';
-    hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO...', valueX, currentY);
+    hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO', valueX, currentY);
     currentY += lh;
     hud.fillStyle = '#ffffff';
     hud.fillText('ARMA', padX, currentY); // prettier-ignore
     let armaTexto = s.armaActual.toUpperCase(), armaColor = '#aaddff';
-    if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta' || s.armaActual === 'mina') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; armaColor = '#ff6666'; } else { armaTexto += " (LISTA)"; armaColor = '#ffdd77'; } }
+    if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta' || s.armaActual === 'mina') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGA)"; armaColor = '#ff6666'; } else { armaTexto += " (LISTA)"; armaColor = '#ffdd77'; } }
     
     if (s.armaCambiandoTimer > 0) {
         const scale = 1 + Math.sin((1 - (s.armaCambiandoTimer / 0.3)) * Math.PI) * 0.5;
@@ -2421,7 +1851,7 @@ function dibujarHUD() {
     const barH = 10;
     const barY = currentY - barH;
     hud.fillStyle = '#333';
-    hud.fillRect(barX, barY, barW, barH);
+    hud.fillRect(barX, barY, barW, barH); // prettier-ignore
     const boostRatio = s.boostEnergia / s.boostMaxEnergia;
     const boostColor = s.boostEnfriamiento > 0 ? '#ff6666' : '#7ecbff';
     hud.fillStyle = boostColor;
@@ -2534,7 +1964,7 @@ function comprobarCompletadoNivel() {
     }
 }
 function activarTransicionNivel(proximoNivel) { estadoJuego.faseJuego = 'transition'; estadoJuego.enEjecucion = false; const config = Levels.CONFIG_NIVELES[proximoNivel - 1]; if (mainMenu) mainMenu.style.display = 'none'; if (levelTitle) levelTitle.textContent = config.nombre; if (levelDesc) levelDesc.textContent = config.objetivo; if (levelTransition) levelTransition.style.display = 'block'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } setTimeout(() => { iniciarSiguienteNivel(proximoNivel); }, 4000); }
-function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; torpedos = []; proyectiles = []; estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) { gameplayHints.querySelectorAll('.hint[data-hint-type]').forEach(h => { h.style.display = 'flex'; }); } }
+function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; Weapons.initWeapons(); estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) { gameplayHints.querySelectorAll('.hint[data-hint-type]').forEach(h => { h.style.display = 'flex'; }); } }
 function mostrarVistaMenuPrincipal(desdePausa) {    
     if (!mainMenu) return;
 
@@ -2898,21 +2328,12 @@ export function init() {
     mostrarVistaMenuPrincipal(false);
 
     // --- Carga de Recursos SVG (desde archivos) ---
-    cargarImagen('js/svg/thruster.svg', function(img) {
-        if (!img) return;
-        const patternCanvas = document.createElement('canvas');
-        patternCanvas.width = img.width;
-        patternCanvas.height = img.height;
-        const patternCtx = patternCanvas.getContext('2d');
-        if (!patternCtx) return;
-        patternCtx.drawImage(img, 0, 0);
-        thrusterPattern = ctx.createPattern(patternCanvas, 'repeat-x');
-        thrusterPatternReady = true;
-    });
-
     cargarImagen('js/svg/propeller.svg', function(img) {
         if (!img) return;
         propellerImg = img;
         propellerReady = true;
     });
+
+    // Cargar assets de armas
+    Weapons.loadWeaponAssets(cargarImagen, ctx);
 }

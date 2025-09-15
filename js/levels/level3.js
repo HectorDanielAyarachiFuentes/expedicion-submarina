@@ -3,8 +3,11 @@
 // 1. IMPORTAMOS LAS DEPENDENCIAS DESDE EL MOTOR DEL JUEGO
 import { 
     estadoJuego, jugador, W, H, carriles, ctx, generarAnimal, S, clamp, 
-    perderJuego, NUM_CARRILES, proyectiles, torpedos, generarExplosion, generarNubeDeTinta
+    perderJuego, NUM_CARRILES, generarExplosion, generarNubeDeTinta
 } from '../game/game.js';
+import { 
+    proyectiles, torpedos
+} from '../game/armas/weapons.js';
 
 // 2. FUNCIONES EXPORTADAS (LA "API" DEL NIVEL)
 

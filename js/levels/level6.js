@@ -1,7 +1,10 @@
 // js/level6.js
 'use strict';
 
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, torpedos, proyectiles, generarNubeDeTinta } from '../game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarNubeDeTinta } from '../game/game.js';
+import { 
+    torpedos, proyectiles 
+} from '../game/armas/weapons.js';
 
 // --- CONSTANTES ÉPICAS ---
 let VORTEX_RADIUS = 250;
