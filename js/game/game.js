@@ -1336,13 +1336,6 @@ function actualizar(dt) {
         } 
     }
     
-    const weaponUpdateContext = {
-        dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels,
-        generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas,
-        puntosPorRescate
-    };
-    Weapons.updateWeapons(weaponUpdateContext);
-    
     // --- Actualización de Otros Proyectiles y Efectos ---
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dtAjustado; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
 
@@ -2058,6 +2051,15 @@ export function gameLoop(t) {
     try {
         actualizarParticulas(dtAjustado);
         actualizarPolvoMarino(dtAjustado);
+
+        // Actualiza las armas siempre, para efectos de menú y de juego.
+        const weaponUpdateContext = {
+            dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels,
+            generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas,
+            puntosPorRescate
+        };
+        Weapons.updateWeapons(weaponUpdateContext);
+
         if (estadoJuego && estadoJuego.enEjecucion) {
             actualizar(dtAjustado);
         } else {
