@@ -245,6 +245,7 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     font-size: clamp(0.9rem, 2.5vw, 1.1rem);
     line-height: 1.6;
     animation: fadeInHud 0.5s ease-out forwards;
+    transition: background-color 0.5s ease, backdrop-filter 0.5s ease;
 }
 
 .menu-card {
@@ -255,6 +256,13 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     max-width: 600px;
     width: 90%;
     box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+}
+
+/* Estilo especial para el menú inicial, sin desenfoque */
+#overlay.initial-menu {
+    background: rgba(6, 19, 31, 0.4); /* Un fondo más sutil para ver la acción detrás */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 /* Estilos para el nuevo mensaje de bienvenida */

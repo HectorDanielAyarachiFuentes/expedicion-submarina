@@ -2338,8 +2338,7 @@ function iniciarJuego(nivel = 1) {
     estadoJuego.luzVisible = true;
     S.init();
     S.detener('theme_main'); // prettier-ignore
-    S.startPlaylist();
-    if (overlay) overlay.style.display = 'none';
+    S.startPlaylist(); if (overlay) { overlay.style.display = 'none'; overlay.classList.remove('initial-menu'); }
     if (gameplayHints) {
         gameplayHints.style.display = 'flex';
         gameplayHints.querySelectorAll('[data-hint-type]').forEach(h => h.style.display = 'flex');
@@ -2353,11 +2352,11 @@ export function perderJuego() {
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none';
     if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none';
-    if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; }
+    if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; } // prettier-ignore
     if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
     if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none';
     if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block';
-    modoSuperposicion = 'gameover'; if (overlay) overlay.style.display = 'grid'; if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none';
+    modoSuperposicion = 'gameover'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none';
 }
 function ganarJuego() {
     if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
@@ -2381,9 +2380,9 @@ function ganarJuego() {
     if (mainMenuContent) mainMenuContent.style.display = 'block';
     if (levelSelectContent) levelSelectContent.style.display = 'none';
     if (startBtn) startBtn.style.display = 'none';
-    if (restartBtn) restartBtn.style.display = 'inline-block';
+    if (restartBtn) restartBtn.style.display = 'inline-block'; // prettier-ignore
     modoSuperposicion = 'gameover';
-    if (overlay) overlay.style.display = 'grid';
+    if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); }
     if (bossHealthContainer) bossHealthContainer.style.display = 'none';
     if (gameplayHints) gameplayHints.style.display = 'none';
 }
@@ -2400,7 +2399,7 @@ function comprobarCompletadoNivel() {
         }
     }
 }
-function activarTransicionNivel(proximoNivel) { estadoJuego.faseJuego = 'transition'; estadoJuego.enEjecucion = false; const config = Levels.CONFIG_NIVELES[proximoNivel - 1]; if (mainMenu) mainMenu.style.display = 'none'; if (levelTitle) levelTitle.textContent = config.nombre; if (levelDesc) levelDesc.textContent = config.objetivo; if (levelTransition) levelTransition.style.display = 'block'; if (overlay) overlay.style.display = 'grid'; setTimeout(() => { iniciarSiguienteNivel(proximoNivel); }, 4000); }
+function activarTransicionNivel(proximoNivel) { estadoJuego.faseJuego = 'transition'; estadoJuego.enEjecucion = false; const config = Levels.CONFIG_NIVELES[proximoNivel - 1]; if (mainMenu) mainMenu.style.display = 'none'; if (levelTitle) levelTitle.textContent = config.nombre; if (levelDesc) levelDesc.textContent = config.objetivo; if (levelTransition) levelTransition.style.display = 'block'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } setTimeout(() => { iniciarSiguienteNivel(proximoNivel); }, 4000); }
 function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; torpedos = []; proyectiles = []; estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) { gameplayHints.querySelectorAll('.hint[data-hint-type]').forEach(h => { h.style.display = 'flex'; }); } }
 function mostrarVistaMenuPrincipal(desdePausa) {    
     if (!mainMenu) return;
@@ -2410,6 +2409,8 @@ function mostrarVistaMenuPrincipal(desdePausa) {
     } else {
         S.detener('music'); // Detiene cualquier música de juego que pudiera haber quedado
     }
+    // Tanto el menú inicial como el de pausa ahora tendrán el fondo claro, sin desenfoque.
+    if (overlay) overlay.classList.add('initial-menu');
     S.reproducir('theme_main');
 
     if (brandLogo) brandLogo.style.display = 'block';
