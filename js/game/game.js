@@ -431,6 +431,7 @@ function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY =
 // --- Sistema de Partículas ---
 // Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
 export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [], particulasPolvoMarino = [];
+export let minas = [];
 export let proyectiles = [];
 
 // --- Funciones de Partículas ---
@@ -643,7 +644,7 @@ let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = 
 const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
 export let torpedos = []; // prettier-ignore
-const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta', 'laser'];
+const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta', 'laser', 'mina'];
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
 
 // --- CONFIGURACIÓN CENTRALIZADA DE ARMAS ---
@@ -668,6 +669,13 @@ const WEAPON_CONFIG = {
         regeneracionEnergia: 20, // por segundo
         danoPorTick: 2,
         cooldownTick: 0.1
+    },
+    mina: {
+        enfriamiento: 2.0,
+        velocidadCaida: 50,
+        radioProximidad: 150,
+        radioExplosion: 200,
+        dano: 10
     },
     torpedo: { enfriamiento: 1.5, velocidad: 1200, dano: 5 },
     boost: { fuerza: 400, consumo: 35, regeneracion: 15, enfriamiento: 2.0 }
@@ -713,6 +721,7 @@ function reiniciar(nivelDeInicio = 1) {
     animales = [];
     torpedos = [];
     proyectiles = [];
+    minas = [];
     whaleDebris = [];
     particulasTinta = [];
     particulasPolvoMarino = [];
@@ -887,6 +896,22 @@ function dispararMetralleta() {
     setTimeout(() => S.reproducir('reload'), 800);
 }
 
+function lanzarMina() {
+    if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
+    const isLevel5 = estadoJuego.nivel === 5;
+    const px = isLevel5 ? jugador.x : jugador.x + 40;
+    const py = isLevel5 ? jugador.y - 40 : jugador.y;
+
+    minas.push({
+        x: px,
+        y: py,
+        r: 12, // Radio visual de la mina
+        vida: 15, // La mina desaparece después de 15 segundos si no se activa
+    });
+
+    estadoJuego.enfriamientoArma = WEAPON_CONFIG.mina.enfriamiento;
+    S.reproducir('torpedo'); // Reutilizamos el sonido del torpedo por ahora
+}
 function disparar() {
     if (!estadoJuego) return;
     switch (estadoJuego.armaActual) {
@@ -896,6 +921,7 @@ function disparar() {
         // El láser se maneja de forma continua en el bucle de actualización,
         // no como un evento de un solo disparo.
         case 'laser': break; 
+        case 'mina': lanzarMina(); break;
     }
 }
 
@@ -1632,6 +1658,64 @@ function actualizar(dt) {
         }
     }
     
+    // --- Actualización de Minas de Proximidad ---
+    for (let i = minas.length - 1; i >= 0; i--) {
+        const m = minas[i];
+        m.y += WEAPON_CONFIG.mina.velocidadCaida * dtAjustado; // Cae lentamente
+        m.vida -= dtAjustado;
+
+        let explotar = false;
+
+        // Comprobar proximidad con los enemigos
+        for (const a of animales) {
+            if (Math.hypot(a.x - m.x, a.y - m.y) < WEAPON_CONFIG.mina.radioProximidad) {
+                explotar = true;
+                break;
+            }
+        }
+
+        // Eliminar si expira su vida o sale de la pantalla
+        if (m.vida <= 0 || m.y > H + m.r) {
+            minas.splice(i, 1);
+            continue;
+        }
+
+        if (explotar) {
+            // Crear explosión visual
+            generarExplosion(m.x, m.y, '#ff9933', WEAPON_CONFIG.mina.radioExplosion / 2);
+            S.reproducir('explosion_grande');
+
+            // --- NUEVO: Generar una onda de burbujas impactante ---
+            const numBurbujas = 35 + Math.floor(Math.random() * 15); // Entre 35 y 49 burbujas
+            for (let k = 0; k < numBurbujas; k++) {
+                const angulo = Math.random() * Math.PI * 2;
+                const velocidad = 80 + Math.random() * 200; // Velocidad de expansión de la onda
+                const vida = 1.8 + Math.random() * 1.2;
+                const radio = 3 + Math.random() * 6;
+
+                generarParticula(particulasBurbujas, {
+                    x: m.x, y: m.y,
+                    vx: Math.cos(angulo) * velocidad,
+                    vy: Math.sin(angulo) * velocidad - 60, // Ligero impulso ascendente
+                    r: radio, vida: vida, color: ''
+                });
+            }
+
+            // Dañar enemigos en el radio de la explosión
+            for (let j = animales.length - 1; j >= 0; j--) {
+                const a = animales[j];
+                if (Math.hypot(a.x - m.x, a.y - m.y) < WEAPON_CONFIG.mina.radioExplosion) {
+                    // El daño se maneja dentro de chequearColisionProyectil, pero aquí lo hacemos directo
+                    generarExplosion(a.x, a.y, '#ff8833');
+                    Levels.onKill(a.tipo);
+                    animales.splice(j, 1);
+                    estadoJuego.asesinatos++;
+                }
+            }
+            minas.splice(i, 1);
+        }
+    }
+    
     // --- Actualización de Otros Proyectiles y Efectos ---
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dtAjustado; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
 
@@ -2053,6 +2137,56 @@ function renderizar(dt) {
             ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
             ctx.restore();
         }
+        // --- Dibuja las Minas ---
+        for (const m of minas) {
+            ctx.save();
+            ctx.translate(m.x, m.y);
+
+            // Efecto de pulso para mostrar que está activa
+            const pulso = 1 + Math.sin(estadoJuego.tiempoTranscurrido * 10) * 0.15;
+            ctx.scale(pulso, pulso);
+
+            // Púas (se dibujan detrás del cuerpo y rotan lentamente)
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 8; i++) {
+                const angulo = (i / 8) * Math.PI * 2 + estadoJuego.tiempoTranscurrido * 0.2; // Rotación lenta
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(angulo) * m.r * 1.6, Math.sin(angulo) * m.r * 1.6);
+                ctx.stroke();
+            }
+
+            // Cuerpo de la mina con gradiente para efecto 3D
+            const grad = ctx.createRadialGradient(-m.r * 0.3, -m.r * 0.3, 0, 0, 0, m.r * 1.5);
+            grad.addColorStop(0, '#777'); // Brillo
+            grad.addColorStop(0.5, '#555');
+            grad.addColorStop(1, '#2a2a2a'); // Sombra
+
+            ctx.fillStyle = grad;
+            ctx.strokeStyle = '#111';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, m.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Luz parpadeante con resplandor
+            const luzActiva = Math.floor(estadoJuego.tiempoTranscurrido * 3) % 2 === 0;
+            if (luzActiva) {
+                // Resplandor
+                const glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, m.r * 0.6);
+                glowGrad.addColorStop(0, 'rgba(255, 100, 100, 0.8)');
+                glowGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                ctx.fillStyle = glowGrad;
+                ctx.beginPath(); ctx.arc(0, 0, m.r * 0.6, 0, Math.PI * 2); ctx.fill();
+                // Núcleo de la luz
+                ctx.fillStyle = '#ff4444';
+                ctx.beginPath(); ctx.arc(0, 0, m.r * 0.3, 0, Math.PI * 2); ctx.fill();
+            }
+
+            ctx.restore();
+        }
         ctx.fillStyle = '#101010';
         for (const ink of estadoJuego.proyectilesTinta) { ctx.beginPath(); ctx.arc(ink.x, ink.y, ink.r, 0, Math.PI * 2); ctx.fill(); }
 
@@ -2256,7 +2390,7 @@ function dibujarHUD() {
     hud.fillStyle = '#ffffff';
     hud.fillText('ARMA', padX, currentY); // prettier-ignore
     let armaTexto = s.armaActual.toUpperCase(), armaColor = '#aaddff';
-    if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; armaColor = '#ff6666'; } else { armaTexto += " (LISTA)"; armaColor = '#ffdd77'; } }
+    if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta' || s.armaActual === 'mina') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGANDO)"; armaColor = '#ff6666'; } else { armaTexto += " (LISTA)"; armaColor = '#ffdd77'; } }
     
     if (s.armaCambiandoTimer > 0) {
         const scale = 1 + Math.sin((1 - (s.armaCambiandoTimer / 0.3)) * Math.PI) * 0.5;
