@@ -79,6 +79,7 @@ const bgCanvas = document.getElementById('bgCanvas'), bgCtx = bgCanvas.getContex
 export const cvs = document.getElementById('gameCanvas'), ctx = cvs.getContext('2d');
 const fxCanvas = document.getElementById('fxCanvas'), fx = fxCanvas.getContext('2d');
 const hudCanvas = document.getElementById('hudCanvas'), hud = hudCanvas.getContext('2d');
+const sonarCanvas = document.getElementById('sonarCanvas'), sonarCtx = sonarCanvas.getContext('2d');
 
 // --- Referencias a Elementos del DOM ---
 // Obtenemos todas las referencias a los elementos HTML para manipular la UI.
@@ -2035,6 +2036,7 @@ function renderizar(dt) {
     ctx.restore();
 
     // --- Dibuja Efectos de Pantalla (fuera de la cámara) ---
+    dibujarSonar();
     dibujarMascaraLuz();
     dibujarPolvoMarino(); // Dibuja el polvo/plancton en el canvas de efectos
     dibujarHUD();
@@ -2080,6 +2082,131 @@ function dibujarFondoParallax() {
             bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto);
         }
     }
+}
+
+/**
+ * Dibuja la superposición del efecto de sonar en su propio canvas.
+ */
+function dibujarSonar() {
+    if (!sonarCtx || !estadoJuego || !estadoJuego.enEjecucion) {
+        if (sonarCtx) sonarCtx.clearRect(0, 0, W, H);
+        return;
+    }
+
+    const SONAR_COLOR_FAINT = 'rgba(100, 255, 150, 0.3)';
+    const SONAR_COLOR_BORDER = 'rgba(126, 203, 255, 0.4)';
+    const SWEEP_SPEED = 3.0; // Radianes por segundo
+
+    sonarCtx.clearRect(0, 0, W, H);
+    sonarCtx.save();
+
+    // --- 1. Definir el centro y radio del sonar (MINIMAPA) ---
+    const SONAR_RADIUS = 90; // Radio en píxeles del minimapa
+    const SONAR_WORLD_RADIUS = 2800; // Radio en unidades del juego que cubre el sonar
+    const PADDING = 20;
+    const centerX = W - SONAR_RADIUS - PADDING;
+    const centerY = H - SONAR_RADIUS - PADDING;
+
+    // --- 2. Dibujar el fondo y la retícula ---
+    // Fondo oscuro semitransparente
+    sonarCtx.fillStyle = 'rgba(6, 19, 31, 0.75)';
+    sonarCtx.beginPath();
+    sonarCtx.arc(centerX, centerY, SONAR_RADIUS, 0, Math.PI * 2);
+    sonarCtx.fill();
+
+    // Retícula (círculos y líneas)
+    sonarCtx.strokeStyle = SONAR_COLOR_FAINT;
+    sonarCtx.lineWidth = 1;
+    for (let i = 1; i <= 3; i++) { // 3 círculos concéntricos
+        sonarCtx.beginPath();
+        sonarCtx.arc(centerX, centerY, SONAR_RADIUS * (i / 3), 0, Math.PI * 2);
+        sonarCtx.stroke();
+    }
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        sonarCtx.beginPath();
+        sonarCtx.moveTo(centerX, centerY);
+        sonarCtx.lineTo(centerX + Math.cos(angle) * SONAR_RADIUS, centerY + Math.sin(angle) * SONAR_RADIUS);
+        sonarCtx.stroke();
+    }
+
+    // --- 3. Dibujar el barrido (sweep) ---
+    const sweepAngle = (estadoJuego.tiempoTranscurrido * SWEEP_SPEED) % (Math.PI * 2);
+    const grad = sonarCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, SONAR_RADIUS);
+    grad.addColorStop(0, 'rgba(120, 255, 170, 0.4)');
+    grad.addColorStop(0.8, 'rgba(100, 255, 150, 0.05)');
+    grad.addColorStop(1, 'rgba(100, 255, 150, 0)');
+    sonarCtx.fillStyle = grad;
+    sonarCtx.beginPath();
+    sonarCtx.moveTo(centerX, centerY);
+    sonarCtx.arc(centerX, centerY, SONAR_RADIUS, sweepAngle - Math.PI / 2, sweepAngle);
+    sonarCtx.closePath();
+    sonarCtx.fill();
+
+    // --- 4. Dibujar los "pings" de los enemigos y el jugador ---
+    // El jugador está siempre en el centro del minimapa.
+    sonarCtx.fillStyle = '#87CEEB'; // Color del jugador
+    sonarCtx.fillRect(centerX - 5, centerY - 1, 10, 2); // Cruz horizontal
+    sonarCtx.fillRect(centerX - 1, centerY - 5, 2, 10); // Cruz vertical
+
+    for (const a of animales) {
+        const dx = a.x - jugador.x;
+        const dy = a.y - jugador.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < SONAR_WORLD_RADIUS) {
+            // Convertir coordenadas del mundo relativas al jugador a coordenadas del minimapa
+            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+
+            // Asegurarse de que el ping no se salga del círculo
+            const distFromCenter = Math.hypot(pingX - centerX, pingY - centerY);
+            if (distFromCenter > SONAR_RADIUS) continue;
+
+            const isHostile = a.hp !== undefined || a.tipo === 'shark' || a.tipo === 'mega_whale' || a.tipo === 'mierdei';
+            const isBoss = a.tipo === 'mega_whale' || (estadoJuego.jefe && a === estadoJuego.jefe);
+
+            sonarCtx.fillStyle = isHostile ? 'rgba(255, 80, 80, 0.9)' : 'rgba(100, 255, 150, 0.9)';
+            sonarCtx.beginPath();
+            sonarCtx.arc(pingX, pingY, isBoss ? 6 : (isHostile ? 4 : 3), 0, Math.PI * 2);
+            sonarCtx.fill();
+        }
+    }
+    
+    // Si hay un jefe, marcarlo de forma especial
+    if (estadoJuego.jefe) {
+        const dx = estadoJuego.jefe.x - jugador.x;
+        const dy = estadoJuego.jefe.y - jugador.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < SONAR_WORLD_RADIUS) {
+            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const distFromCenter = Math.hypot(pingX - centerX, pingY - centerY);
+            if (distFromCenter <= SONAR_RADIUS) {
+                sonarCtx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+                sonarCtx.lineWidth = 2;
+                sonarCtx.strokeRect(pingX - 7, pingY - 7, 14, 14);
+            }
+        }
+    }
+
+    // --- 5. Máscara circular y borde ---
+    // Máscara para que nada se salga del círculo
+    sonarCtx.globalCompositeOperation = 'destination-in';
+    sonarCtx.beginPath();
+    sonarCtx.arc(centerX, centerY, SONAR_RADIUS, 0, Math.PI * 2);
+    sonarCtx.fillStyle = 'black'; // El color no importa, solo la forma
+    sonarCtx.fill();
+    sonarCtx.globalCompositeOperation = 'source-over';
+
+    // Borde exterior
+    sonarCtx.strokeStyle = SONAR_COLOR_BORDER;
+    sonarCtx.lineWidth = 2;
+    sonarCtx.beginPath();
+    sonarCtx.arc(centerX, centerY, SONAR_RADIUS, 0, Math.PI * 2);
+    sonarCtx.stroke();
+
+    sonarCtx.restore();
 }
 
 // --- NUEVO: Función para dibujar el polvo marino ---
@@ -2436,8 +2563,8 @@ function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { es
 function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
 function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { document.body.classList.toggle('immersive'); return; } const el = document.documentElement; try { if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) { if (el.requestFullscreen) return el.requestFullscreen(); if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen(); } else { if (document.exitFullscreen) return document.exitFullscreen(); if (document.webkitExitFullscreen) return document.webkitExitFullscreen(); } } catch (err) { console.warn('Pantalla completa no disponible', err); } }
 
-function autoSize() { const topHud = document.getElementById('top-hud'); const alturaTotalHud = topHud ? topHud.offsetHeight : 70; const v = { w: innerWidth, h: innerHeight - alturaTotalHud }; [bgCanvas, cvs, fxCanvas, hudCanvas].forEach(c => { if (c) { c.width = v.w; c.height = v.h; } }); W = v.w; H = v.h; calcularCarriles(); if (!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); } }
 
+function autoSize() { const topHud = document.getElementById('top-hud'); const alturaTotalHud = topHud ? topHud.offsetHeight : 70; const v = { w: innerWidth, h: innerHeight - alturaTotalHud }; [bgCanvas, cvs, fxCanvas, sonarCanvas, hudCanvas].forEach(c => { if (c) { c.width = v.w; c.height = v.h; } }); W = v.w; H = v.h; calcularCarriles(); if (!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); } }
 // ========= Función de Bucle de Juego (se exporta a main.js) =========
 // Este es el corazón del juego, el bucle que se ejecuta continuamente.
 let ultimo = 0;
