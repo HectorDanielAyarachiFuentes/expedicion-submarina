@@ -1211,7 +1211,7 @@ function actualizar(dt) {
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dtAjustado, configNivel.meta);
     
     // --- Lógica de Habilidades: Impulso (Boost) ---
-    estadoJuego.boostActivo = teclas['b'] && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
+    estadoJuego.boostActivo = (teclas['b'] || teclas['B']) && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
 
     if (estadoJuego.boostActivo) {
         estadoJuego.boostEnergia -= Weapons.WEAPON_CONFIG.boost.consumo * dtAjustado;
