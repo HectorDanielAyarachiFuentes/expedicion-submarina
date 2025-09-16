@@ -2447,20 +2447,10 @@ function dibujarSonar() {
 }
 
 // --- NUEVO: Función para dibujar el polvo marino ---
-function dibujarPolvoMarino() {
-    // Dibuja en el canvas de efectos (fx) para que aparezca por encima del juego
-    if (!fx || !estadoJuego || !estadoJuego.enEjecucion) return;
-    fx.save();
-    fx.globalCompositeOperation = 'lighter'; // Un modo de mezcla que queda bien para partículas de luz/polvo
-
-    for (const p of particulasPolvoMarino) {
-        // La opacidad ya está calculada en la partícula
-        fx.fillStyle = `rgba(207, 233, 255, ${p.opacidad})`;
-        fx.beginPath();
-        fx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        fx.fill();
-    }
-    fx.restore();
+function dibujarPolvoMarino() {    
+    // Esta función ahora está vacía porque su lógica se ha movido a `dibujarMascaraLuz`
+    // para que las partículas de polvo solo aparezcan dentro del cono de luz del submarino,
+    // creando un efecto volumétrico mucho más realista.
 }
 
 /**
@@ -2501,14 +2491,84 @@ function dibujarMascaraLuz() {
     fx.globalCompositeOperation = 'source-over';
     fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
     fx.fillRect(0, 0, W, H);
-    if (estadoJuego.luzVisible && jugador && estadoJuego.enEjecucion) { // prettier-ignore
-        // --- CORRECCIÓN: Convertir coordenadas del mundo a coordenadas de pantalla ---
-        // La luz se dibuja en el canvas 'fx', que no se mueve con la cámara.
-        // Por lo tanto, debemos restar la posición de la cámara a la del jugador.
+    if (estadoJuego.luzVisible && jugador && estadoJuego.enEjecucion) {
         const screenPx = jugador.x - Math.round(estadoJuego.cameraX);
         const screenPy = jugador.y - Math.round(estadoJuego.cameraY);
 
-        const px = screenPx; const py = screenPy; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + jugador.inclinacion; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11)); const L = isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560); const theta = Math.PI / 9; const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half; let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)'); fx.globalCompositeOperation = 'destination-out'; fx.fillStyle = g; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)'); fx.fillStyle = rg; fx.beginPath(); fx.arc(ax, ay, 54, 0, Math.PI * 2); fx.fill(); fx.globalCompositeOperation = 'lighter'; const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60, 'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(255,255,255,0.00)'); fx.fillStyle = gGlow; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over';
+        const px = screenPx; const py = screenPy; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + jugador.inclinacion; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11));
+
+        // --- MEJORAS GRÁFICAS ---
+        const time = estadoJuego.tiempoTranscurrido;
+        const flicker = 1.0 + Math.sin(time * 20) * 0.02; // Parpadeo sutil
+        const L = (isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560)) * flicker;
+        const theta = (Math.PI / 9) * (1.0 + Math.sin(time * 2) * 0.05); // El cono "respira"
+        const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half;
+
+        const conePath = new Path2D(); conePath.moveTo(ax, ay); conePath.lineTo(pTopX, pTopY); conePath.lineTo(pBotX, pBotY); conePath.closePath();
+
+        // 1. Dibujar el cono principal para cortar la oscuridad
+        fx.globalCompositeOperation = 'destination-out';
+        let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)');
+        fx.fillStyle = g;
+        fx.fill(conePath);
+
+        // 2. Dibujar el halo en la base
+        const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54 * flicker); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)');
+        fx.fillStyle = rg;
+        fx.beginPath();
+        fx.arc(ax, ay, 54 * flicker, 0, Math.PI * 2);
+        fx.fill();
+
+        // 3. Dibujar efectos adicionales (resplandor, rayos, partículas)
+        fx.globalCompositeOperation = 'lighter';
+
+        // Resplandor suave general
+        const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(200,220,255,0.15)'); gGlow.addColorStop(0.60, 'rgba(200,220,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(200,220,255,0.00)');
+        fx.fillStyle = gGlow;
+        fx.fill(conePath);
+
+        // Lens Flare en el origen
+        const flareRadius = 25 * flicker;
+        const flareGradient = fx.createRadialGradient(ax, ay, 0, ax, ay, flareRadius);
+        flareGradient.addColorStop(0, 'rgba(255, 255, 230, 0.4)'); flareGradient.addColorStop(0.3, 'rgba(255, 255, 230, 0.1)'); flareGradient.addColorStop(1, 'rgba(255, 255, 230, 0)');
+        fx.fillStyle = flareGradient;
+        fx.beginPath();
+        fx.arc(ax, ay, flareRadius, 0, Math.PI * 2);
+        fx.fill();
+
+        // Rayos volumétricos (God Rays)
+        const numRays = 5;
+        for (let i = 0; i < numRays; i++) {
+            const rayAngleOffset = (Math.sin(time * 0.5 + i * 2) * 0.5 + 0.5) * (theta * 2) - theta;
+            const rayAngle = ang + rayAngleOffset;
+            const rayL = L * (1.0 + Math.random() * 0.2);
+            const rayW = 1 + Math.random() * 2;
+            const rayEndX = ax + Math.cos(rayAngle) * rayL;
+            const rayEndY = ay + Math.sin(rayAngle) * rayL;
+            const rayGrad = fx.createLinearGradient(ax, ay, rayEndX, rayEndY);
+            rayGrad.addColorStop(0, `rgba(200, 220, 255, ${0.05 + Math.random() * 0.05})`);
+            rayGrad.addColorStop(1, 'rgba(200, 220, 255, 0)');
+            fx.strokeStyle = rayGrad;
+            fx.lineWidth = rayW;
+            fx.beginPath();
+            fx.moveTo(ax, ay);
+            fx.lineTo(rayEndX, rayEndY);
+            fx.stroke();
+        }
+
+        // 4. Dibujar partículas de polvo solo dentro del cono de luz
+        fx.save();
+        fx.clip(conePath); // ¡Magia! Solo se dibujará dentro del cono.
+        for (const p of particulasPolvoMarino) {
+            const particleAlpha = p.opacidad * (0.5 + p.profundidad * 0.5);
+            fx.fillStyle = `rgba(207, 233, 255, ${particleAlpha})`;
+            fx.beginPath();
+            fx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            fx.fill();
+        }
+        fx.restore();
+
+        fx.globalCompositeOperation = 'source-over';
     }
 }
 
