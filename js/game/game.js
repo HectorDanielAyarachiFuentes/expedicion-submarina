@@ -2728,7 +2728,19 @@ function mostrarPantallaGameOver() {
     if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
     if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none';
     if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block';
-    modoSuperposicion = 'gameover'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none'; estadoJuego.faseJuego = 'gameover'; S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500);
+    modoSuperposicion = 'gameover';
+    // --- CAMBIO CLAVE: Añadir 'initial-menu' para un fondo claro y animado ---
+    if (overlay) { overlay.style.display = 'grid'; overlay.classList.add('initial-menu'); }
+    if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none'; estadoJuego.faseJuego = 'gameover'; S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500);
+
+    // --- NUEVO: Activar las animaciones de fondo del menú ---
+    if (menuFlyBy) {
+        menuFlyBy.active = false;
+        menuFlyBy.cooldown = 4.0 + Math.random() * 4;
+    }
+    animales.length = 0; // Limpiar animales del juego
+    const tiposMenu = ['normal', 'normal', 'normal', sharkListo ? 'shark' : 'normal', whaleListo ? 'whale' : 'normal'];
+    for (let i = 0; i < 7; i++) { const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)]; setTimeout(() => generarAnimal(false, tipoAleatorio), i * 1800); }
 }
 function ganarJuego() {
     if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
