@@ -113,6 +113,20 @@ const gameplayHints = document.getElementById('gameplay-hints');
 const hudLevelText = document.getElementById('hud-level-text');
 const hudObjectiveText = document.getElementById('hud-objective-text');
 
+// --- Referencias a Elementos del HUD dinámico (NUEVOS) ---
+const statScoreValue = document.getElementById('statScoreValue');
+const statDepthValue = document.getElementById('statDepthValue');
+const statRecordValue = document.getElementById('statRecordValue');
+const statLivesContainer = document.getElementById('statLivesContainer');
+const statWeaponValue = document.getElementById('statWeaponValue');
+const statTorpedoValue = document.getElementById('statTorpedoValue');
+const statAssassinValue = document.getElementById('statAssassinValue');
+const boostProgressBar = document.getElementById('boostProgressBar');
+const laserProgressBar = document.getElementById('laserProgressBar');
+const shieldProgressBar = document.getElementById('shieldProgressBar');
+
+
+
 const mainMenuContent = document.getElementById('mainMenuContent');
 const levelSelectContent = document.getElementById('levelSelectContent');
 const levelSelectBtn = document.getElementById('levelSelectBtn');
@@ -1493,7 +1507,7 @@ function actualizar(dt) {
     // --- Procesamiento de la Entrada del Jugador (Acciones) ---
     if (estadoJuego.sonarToggleCooldown > 0) estadoJuego.sonarToggleCooldown -= dtAjustado;
     if ((teclas['m'] || teclas['M']) && estadoJuego.sonarToggleCooldown <= 0) {
-        estadoJuego.sonarActivo = !estadoJuego.sonarActivo;
+        estadoJuego.sonarActivo = !estadoJuego.sonarActivo; // prettier-ignore
         estadoJuego.sonarToggleCooldown = 0.3;
         teclas['m'] = teclas['M'] = false;
     }
@@ -1501,7 +1515,7 @@ function actualizar(dt) {
     if (teclas[' '] && estadoJuego.bloqueoEntrada === 0 && estadoJuego.armaActual !== 'laser') { disparar(); teclas[' '] = false; }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
     if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
-    if (teclas['2']) { estadoJuego.armaActual = 'shotgun'; }
+    if (teclas['2']) { estadoJuego.armaActual = 'escopeta'; }
     if (teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
     if (teclas['4']) { estadoJuego.armaActual = 'laser'; }
     if ((teclas['c'] || teclas['C']) && estadoJuego.bloqueoEntrada === 0) {
@@ -2826,25 +2840,16 @@ function dibujarMascaraLuz() {
 
 function dibujarHUD() {
     // Esta función es compleja. Se encarga de actualizar todo el texto y las barras de la UI.
-    if (!estadoJuego || !hudLevelText || !hudObjectiveText) return;
+    if (!estadoJuego || !hudLevelText || !hudObjectiveText || !statScoreValue) return; // Comprobación mínima
 
     if (estadoJuego.enEjecucion) {
         hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`;
 
         const mision = Levels.getEstadoMision();
         if (mision) {
-            // --- REFACTORIZACIÓN DE SEGURIDAD (CSP) ---
-            // Se evita usar innerHTML para construir elementos. En su lugar, se crean
-            // y añaden de forma segura, lo que es una mejor práctica y evita problemas
-            // con políticas de seguridad de contenido (CSP) estrictas.
-            hudObjectiveText.innerHTML = ''; // Limpiar contenido anterior
-            const titleSpan = document.createElement('span');
-            titleSpan.className = 'mission-title';
-            titleSpan.textContent = mision.texto;
-            hudObjectiveText.appendChild(titleSpan);
-            hudObjectiveText.appendChild(document.createTextNode(mision.progreso));
+            // Actualizar el contenido del objetivo de la misión
+            hudObjectiveText.innerHTML = `<span class="mission-title">${mision.texto}</span> ${mision.progreso}`;
         } else {
-            hudObjectiveText.innerHTML = '';
             const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
             let textoObjetivo = '';
             if (configNivel.tipo === 'capture') { textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; } 
@@ -2852,122 +2857,103 @@ function dibujarHUD() {
             else if (configNivel.tipo === 'boss') { textoObjetivo = configNivel.objetivo.toUpperCase(); }
             hudObjectiveText.textContent = textoObjetivo;
         }
-    }
-
-    if (!hud) return;
-    hud.clearRect(0, 0, W, H);
-    if (!estadoJuego.enEjecucion) return;
-
-    const s = estadoJuego, valorPuntuacion = s.puntuacion || 0, valorVidas = s.vidas || 3, valorProfundidad = Math.floor(s.profundidad_m || 0);
-    const padX = 18, padY = 18, lh = 22;
-    hud.save();
-    hud.fillStyle = '#ffffff';
-    hud.font = '18px "Press Start 2P", monospace';
-    hud.textAlign = 'left';
-    hud.textBaseline = 'alphabetic';
-    hud.shadowColor = 'rgba(0,0,0,0.7)';
-    hud.shadowBlur = 4;
-    const filas = [{ label: 'SCORE', value: String(valorPuntuacion) }, { label: 'DEPTH', value: valorProfundidad + ' m' }, { label: 'RECORD', value: String(puntuacionMaxima) }];
-    const totalFilas = filas.length + 7; // Aumentado para el escudo
-    const y0 = H - padY - lh * totalFilas;
-    let maxAnchoEtiqueta = 0;
-    const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO', 'IMPULSO', 'LASER', 'ESCUDO'];
-    for (const label of todasLasEtiquetas) { maxAnchoEtiqueta = Math.max(maxAnchoEtiqueta, hud.measureText(label).width); }
-    const gap = 16;
-    const valueX = padX + maxAnchoEtiqueta + gap;
-    let currentY = y0;
-    for (let i = 0; i < filas.length; i++) { hud.fillText(filas[i].label, padX, currentY); hud.fillText(filas[i].value, valueX, currentY); currentY += lh; }
-    hud.fillText('VIDAS', padX, currentY);
-    hud.fillStyle = '#ff4d4d';
-
-    // Dibuja el corazón más grande y luego el número
-    const originalFont = hud.font;
-    hud.font = '22px "Press Start 2P", monospace'; // Un poco más grande para el corazón
-    hud.fillText('♥', valueX, currentY);
-    const heartWidth = hud.measureText('♥ ').width; // Medir el ancho del corazón con un espacio
-    hud.font = originalFont; // Volver a la fuente original para el número
-    hud.fillText(String(valorVidas), valueX + heartWidth, currentY);
-
-    hud.fillStyle = '#ffffff';
-    currentY += lh;
-    hud.fillText('TORPEDO', padX, currentY);
-    const torpedoListo = s.enfriamientoTorpedo <= 0;
-    hud.fillStyle = torpedoListo ? '#66ff66' : '#ff6666';
-    hud.fillText(torpedoListo ? 'LISTO' : 'RECARGANDO', valueX, currentY);
-    currentY += lh;
-    hud.fillStyle = '#ffffff';
-    hud.fillText('ARMA', padX, currentY); // prettier-ignore
-    let armaTexto = s.armaActual.toUpperCase(), armaColor = '#aaddff';
-    if (s.armaActual === 'shotgun' || s.armaActual === 'metralleta' || s.armaActual === 'mina') { if (s.enfriamientoArma > 0) { armaTexto += " (RECARGA)"; armaColor = '#ff6666'; } else { armaTexto += " (LISTA)"; armaColor = '#ffdd77'; } }
-    
-    if (s.armaCambiandoTimer > 0) {
-        const scale = 1 + Math.sin((1 - (s.armaCambiandoTimer / 0.3)) * Math.PI) * 0.5;
-        const alpha = s.armaCambiandoTimer / 0.3;
-        hud.save();
-        const textWidth = hud.measureText(armaTexto).width;
-        hud.translate(valueX + textWidth / 2, currentY - 5);
-        hud.scale(scale, scale);
-        hud.globalAlpha = alpha;
-        hud.fillStyle = '#FFFFFF';
-        hud.fillText(armaTexto, -textWidth / 2, 0);
-        hud.restore();
     } else {
-        hud.fillStyle = armaColor;
-        hud.fillText(armaTexto, valueX, currentY);
+        hudObjectiveText.textContent = ''; // Limpiar si no está en ejecución
     }
-    currentY += lh;
-    hud.fillStyle = '#ffffff';
-    hud.fillText('ASESINO', padX, currentY);
-    const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0];
-    hud.fillStyle = '#ff5e5e';
-    hud.fillText(rango.titulo, valueX, currentY);
-    currentY += lh;
-    hud.fillStyle = '#ffffff';
-    hud.fillText('IMPULSO', padX, currentY);
-    const barX = valueX;
-    const barW = 150;
-    const barH = 10;
-    const barY = currentY - barH;
-    hud.fillStyle = '#333';
-    hud.fillRect(barX, barY, barW, barH); // prettier-ignore
-    const boostRatio = s.boostEnergia / s.boostMaxEnergia;
-    const boostColor = s.boostEnfriamiento > 0 ? '#ff6666' : '#7ecbff';
-    hud.fillStyle = boostColor;
-    hud.fillRect(barX, barY, barW * boostRatio, barH);
-    hud.strokeStyle = '#fff';
-    hud.lineWidth = 2;
-    hud.strokeRect(barX, barY, barW, barH);
-    currentY += lh;
-    hud.fillStyle = '#ffffff';
-    hud.fillText('LASER', padX, currentY);
-    const laserBarX = valueX;
-    const laserBarW = 150;
-    const laserBarH = 10;
-    const laserBarY = currentY - laserBarH;
-    hud.fillStyle = '#333';
-    hud.fillRect(laserBarX, laserBarY, laserBarW, laserBarH);
-    const laserRatio = s.laserEnergia / s.laserMaxEnergia; hud.fillStyle = '#ff4d4d'; hud.fillRect(laserBarX, laserBarY, laserBarW * laserRatio, laserBarH); hud.strokeStyle = '#fff'; hud.lineWidth = 2; hud.strokeRect(laserBarX, laserBarY, laserBarW, laserBarH);
-    currentY += lh;
-    hud.fillStyle = '#ffffff';
-    hud.fillText('ESCUDO', padX, currentY);
-    const shieldBarX = valueX;
-    const shieldBarW = 150;
-    const shieldBarH = 10;
-    const shieldBarY = currentY - shieldBarH;
-    hud.fillStyle = '#333';
-    hud.fillRect(shieldBarX, shieldBarY, shieldBarW, shieldBarH);
-    const shieldRatio = s.shieldEnergia / s.shieldMaxEnergia;
-    const shieldColor = s.shieldEnfriamiento > 0 ? '#ff6666' : '#add8e6'; // Rojo en cooldown, azul claro normal
-    hud.fillStyle = shieldColor;
-    hud.fillRect(shieldBarX, shieldBarY, shieldBarW * shieldRatio, shieldBarH);
-    hud.strokeStyle = '#fff'; hud.lineWidth = 2; hud.strokeRect(shieldBarX, shieldBarY, shieldBarW, shieldBarH);
-    hud.restore();
+
+    // Clear the hudCanvas as we are moving drawing logic to HTML
+    if (hud) hud.clearRect(0, 0, W, H);
+
+    if (!estadoJuego.enEjecucion) return; // No actualizar stats si el juego no está en ejecución
+
+    const s = estadoJuego;
+
+    // Actualizar estadísticas de texto
+    if (statScoreValue) statScoreValue.textContent = String(s.puntuacion || 0);
+    if (statDepthValue) statDepthValue.textContent = `${Math.floor(s.profundidad_m || 0)} m`;
+    if (statRecordValue) statRecordValue.textContent = String(puntuacionMaxima);
+
+    // Actualizar vidas (corazones)
+    if (statLivesContainer) {
+        statLivesContainer.innerHTML = ''; // Limpiar corazones anteriores
+        const maxHearts = 5; // Número máximo de corazones a mostrar
+        const currentLives = Math.min(s.vidas, maxHearts); // Limitar a maxHearts para visualización
+
+        for (let i = 0; i < maxHearts; i++) {
+            const heart = document.createElement('span');
+            heart.classList.add('heart-icon');
+            if (i < currentLives) {
+                heart.classList.add('filled');
+            }
+            statLivesContainer.appendChild(heart);
+        }
+        // Si hay más vidas de las que se muestran, añadir un indicador numérico
+        if (s.vidas > maxHearts) {
+            const extraLives = document.createElement('span');
+            extraLives.classList.add('extra-lives');
+            extraLives.textContent = `+${s.vidas - maxHearts}`;
+            statLivesContainer.appendChild(extraLives);
+        }
+    }
+
+    // Actualizar estado del arma
+    if (statWeaponValue) {
+        let armaTexto = s.armaActual.toUpperCase();
+        let weaponStatusClass = '';
+
+        if (s.armaActual === 'escopeta' || s.armaActual === 'metralleta' || s.armaActual === 'mina') {
+            if (s.enfriamientoArma > 0) {
+                armaTexto += " (RECARGA)";
+                weaponStatusClass = 'reloading';
+            } else {
+                armaTexto += " (LISTA)";
+                weaponStatusClass = 'ready';
+            }
+        } else {
+            weaponStatusClass = 'ready'; // Garra y láser siempre "listos" en este contexto
+        }
+        statWeaponValue.textContent = armaTexto;
+        statWeaponValue.className = `stat-value weapon-status ${weaponStatusClass}`;
+
+        // Animación de cambio de arma
+        if (s.armaCambiandoTimer > 0) {
+            statWeaponValue.style.animation = 'weaponChangeAnim 0.3s forwards';
+        } else {
+            statWeaponValue.style.animation = 'none';
+        }
+    }
+
+    // Actualizar estado del torpedo
+    if (statTorpedoValue) {
+        const torpedoListo = s.enfriamientoTorpedo <= 0;
+        statTorpedoValue.textContent = torpedoListo ? 'LISTO' : 'RECARGANDO';
+        statTorpedoValue.className = `stat-value weapon-status ${torpedoListo ? 'ready' : 'reloading'}`;
+    }
+
+    // Actualizar rango de asesino
+    if (statAssassinValue) {
+        const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0];
+        statAssassinValue.textContent = rango.titulo;
+    }
+
+    // Actualizar barras de progreso
+    if (boostProgressBar) {
+        boostProgressBar.style.width = `${(s.boostEnergia / s.boostMaxEnergia) * 100}%`;
+        boostProgressBar.classList.toggle('reloading', s.boostEnfriamiento > 0);
+    }
+    if (laserProgressBar) {
+        laserProgressBar.style.width = `${(s.laserEnergia / s.laserMaxEnergia) * 100}%`;
+        laserProgressBar.classList.toggle('active', s.laserActivo);
+    }
+    if (shieldProgressBar) {
+        shieldProgressBar.style.width = `${(s.shieldEnergia / s.shieldMaxEnergia) * 100}%`;
+        shieldProgressBar.classList.toggle('reloading', s.shieldEnfriamiento > 0);
+        shieldProgressBar.classList.toggle('active', s.shieldActivo);
+        shieldProgressBar.classList.toggle('hit', s.shieldHitTimer > 0);
+    }
     
-    // >>> CAMBIO CLAVE <<<
-    // Esta lógica se mantiene, pero ahora es más genérica. No comprueba el nivel,
-    // solo si existe un jefe en el estado del juego. Como solo level3.js crea un jefe,
-    // esta barra solo aparecerá en el nivel 3.
-    if (s.jefe) {
+    // Lógica de la barra de vida del jefe (se mantiene en HTML)
+    if (s.jefe && s.jefe.hp !== undefined && s.jefe.maxHp !== undefined) {
         if (bossHealthContainer) bossHealthContainer.style.display = 'block';
         const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1);
         if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%';
@@ -2975,7 +2961,6 @@ function dibujarHUD() {
         if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none';
     }
 }
-
 // =================================================================================
 //  10. CONTROL DEL FLUJO DEL JUEGO
 // =================================================================================
@@ -3685,7 +3670,7 @@ export function init() {
     actualizarIconos();
     reiniciar();
     mostrarVistaMenuPrincipal(false);
-
+    
     // --- Carga de Recursos SVG (desde archivos) ---
     cargarImagen('js/svg/propeller.svg', function(img) {
         if (!img) return;

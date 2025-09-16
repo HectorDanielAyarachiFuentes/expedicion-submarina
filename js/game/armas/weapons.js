@@ -7,11 +7,11 @@ export let proyectiles = [];
 export let torpedos = [];
 export let minas = [];
 
-export const WEAPON_ORDER = ['garra', 'shotgun', 'metralleta', 'laser', 'mina'];
+export const WEAPON_ORDER = ['garra', 'escopeta', 'metralleta', 'laser', 'mina'];
 
 export const WEAPON_CONFIG = {
     garra: { velocidad: 1400, alcance: 0.7 }, // Alcance como % del ancho de pantalla
-    shotgun: {
+    escopeta: {
         enfriamiento: 2.5,
         balas: 25,
         dispersion: 1.5,
@@ -138,7 +138,7 @@ function dispararGarfio(ctx) {
 
 function dispararShotgun(ctx) {
     const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo, generarCasquillo } = ctx;
-    if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
+    if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return; // prettier-ignore
 
     const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
     generarRafagaBurbujasDisparo(cannon.x, cannon.y, estadoJuego.nivel === 5);
@@ -149,7 +149,7 @@ function dispararShotgun(ctx) {
         generarCasquillo(port.x, port.y, estadoJuego.nivel === 5);
     }
 
-    const config = WEAPON_CONFIG.shotgun;
+    const config = WEAPON_CONFIG.escopeta;
     for (let i = 0; i < config.balas; i++) {
         const angulo = cannon.angle + (Math.random() - 0.5) * config.dispersion;
         const velocidad = config.velocidadProyectil.min + Math.random() * (config.velocidadProyectil.max - config.velocidadProyectil.min);
@@ -216,7 +216,7 @@ export function disparar(ctx) {
     if (!estadoJuego) return;
     switch (estadoJuego.armaActual) {
         case 'garra': if (!jugador.garra) dispararGarfio(ctx); else if (jugador.garra.fase === 'ida') { jugador.garra.fase = 'retorno'; Levels.onFallo(); } break;
-        case 'shotgun': dispararShotgun(ctx); break;
+        case 'escopeta': dispararShotgun(ctx); break;
         case 'metralleta': dispararMetralleta(ctx); break;
         case 'laser': break; 
         case 'mina': lanzarMina(ctx); break;

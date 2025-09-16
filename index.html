@@ -111,6 +111,61 @@
         </div>
     </div>
 
+    <!-- ===== NUEVO: HUD DINÁMICO DE ESTADÍSTICAS (HTML) ===== -->
+    <div id="game-stats-overlay">
+        <!-- Grupo 1: Estadísticas principales -->
+        <div class="stat-item">
+            <span class="stat-label">PUNTOS</span>
+            <span id="statScoreValue" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">PROFUNDIDAD</span>
+            <span id="statDepthValue" class="stat-value">0 m</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">RÉCORD</span>
+            <span id="statRecordValue" class="stat-value">0</span>
+        </div>
+
+        <hr class="stat-divider">
+
+        <!-- Grupo 2: Estado del jugador y armas -->
+        <div class="stat-item">
+            <span class="stat-label">VIDAS</span>
+            <div id="statLivesContainer" class="lives-container">
+                <!-- Corazones se añadirán dinámicamente aquí -->
+            </div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">ARMA</span>
+            <span id="statWeaponValue" class="stat-value weapon-status">GARRA</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">TORPEDO</span>
+            <span id="statTorpedoValue" class="stat-value weapon-status">READY</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">RANGO</span>
+            <span id="statAssassinValue" class="stat-value">NOVATO</span>
+        </div>
+
+        <hr class="stat-divider">
+
+        <!-- Grupo 3: Barras de habilidad -->
+        <div class="stat-item bar-item">
+            <span class="stat-label">IMPULSO</span>
+            <div class="progress-bar-container"><div id="boostProgressBar" class="progress-bar boost-bar"></div></div>
+        </div>
+        <div class="stat-item bar-item">
+            <span class="stat-label">LÁSER</span>
+            <div class="progress-bar-container"><div id="laserProgressBar" class="progress-bar laser-bar"></div></div>
+        </div>
+        <div class="stat-item bar-item">
+            <span class="stat-label">ESCUDO</span>
+            <div class="progress-bar-container"><div id="shieldProgressBar" class="progress-bar shield-bar"></div></div>
+        </div>
+    </div>
+
     <!-- ===== OVERLAYS Y MENÚS ===== -->
     <div id="overlay">
         <!-- Menú Principal / Pausa / Game Over -->

@@ -13,7 +13,7 @@
     --hud-blur: 8px;
     --hud-border-color: rgba(126, 203, 255, 0.4);
 
-    --status-bar-height: 70px;
+    --status-bar-height: 60px; /* Reducido para un look más moderno */
     --total-hud-height: var(--status-bar-height);
 }
 
@@ -29,9 +29,8 @@ html, body {
 canvas { 
     position: fixed; 
     left: 0;
-    top: var(--total-hud-height);
-    width: 100vw; 
-    height: calc(100vh - var(--total-hud-height));
+    top: var(--total-hud-height); /* Ajustado para el nuevo top-hud */
+    width: 100vw; height: calc(100vh - var(--total-hud-height));
     display: block; 
 }
 /* ... (El resto de estilos de canvas permanece igual) ... */
@@ -44,9 +43,8 @@ canvas {
 #top-hud {
     position: fixed;
     top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 6;
+    left: 0; /* Asegura que ocupe todo el ancho */
+    width: 100%; z-index: 6;
     image-rendering: pixelated;
     background-color: var(--hud-bg-color);
     backdrop-filter: blur(var(--hud-blur));
@@ -64,46 +62,42 @@ canvas {
     justify-content: space-between;
     align-items: center;
     height: var(--status-bar-height);
-    padding: 0 clamp(10px, 3vw, 20px);
+    padding: 0 clamp(10px, 2vw, 15px); /* Padding ligeramente reducido */
     box-sizing: border-box;
     border-bottom: 1px solid var(--hud-border-color);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-#status-left { 
+#status-left {
     display: flex; 
     align-items: center; 
-    gap: clamp(10px, 3vw, 20px); 
-    flex-shrink: 0;
+    gap: clamp(10px, 3vw, 20px);
 }
 #logoHUD { height: clamp(40px, 7vh, 50px); }
 #status-text {
     color: var(--text-light);
-    font-size: clamp(0.8rem, 2.2vw, 1rem);
+    font-size: clamp(0.7rem, 1.8vw, 0.9rem); /* Fuente ligeramente más pequeña */
     line-height: 1.4;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
 #hud-objective-text { color: var(--accent-yellow); }
 
-#gameplay-hints {
-    display: flex;
+    /* display: flex; */ /* Controlado por JS */
     justify-content: center;
     align-items: center;
     gap: 2rem;
     color: var(--text-light);
     flex-grow: 1;
 }
-
-.hint {
+.hint { 
     display: flex;
     align-items: center;
-    gap: 0.8rem;
+    gap: 0.6rem; /* Espacio reducido */
     font-size: clamp(0.6rem, 1.3vw, 0.8rem);
     text-transform: uppercase;
     opacity: 0.8;
 }
-
-.hint-grid {
+.hint-grid { 
     display: grid;
     grid-template-areas: "title up" "left down" "right .";
     grid-template-columns: auto auto;
@@ -119,15 +113,14 @@ canvas {
 
 kbd.key-icon {
     display: inline-flex;
-    justify-content: center;
+    justify-content: center; /* Centrado para iconos */
     align-items: center;
     background: #334155;
     color: var(--text-light);
     border: 1px solid #64748b;
     border-bottom: 3px solid #475569;
     font-family: 'Press Start 2P', monospace;
-    height: 28px;
-    border-radius: 4px;
+    height: 28px;Bordes ligeramente más suaves */
     transition: all 0.1s ease-out;
 }
 kbd.key-icon:active { transform: translateY(2px); border-bottom-width: 1px; }
@@ -136,11 +129,10 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 .key-arrow-up::before { content: ''; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 9px solid var(--accent-blue-light); }
 .key-arrow-down::before { content: ''; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid var(--accent-blue-light); }
 .key-arrow-left::before { content: ''; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 9px solid var(--accent-blue-light); }
-.key-arrow-right::before { content: ''; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 9px solid var(--accent-blue-light); }
-kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-blue-light); }
+.key-arrow-right::before { content: ''; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 9px solid var(--accent-blue-light); } kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-blue-light); }
 
 
-#status-right { 
+#status-right {
     display: flex; 
     gap: 10px;
     flex-shrink: 0; 
@@ -149,9 +141,8 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
 
 /* ===== NUEVO Y MEJORADO ESTILO PARA LOS BOTONES DEL HUD ===== */
 .spritebtn {
-    /* Reseteo y dimensiones */
-    padding: 0;
-    width: clamp(38px, 6vh, 44px);
+
+    width: clamp(38px, 6vh, 44px); /* Tamaño consistente */
     height: clamp(38px, 6vh, 44px);
     
     /* Apariencia */
@@ -162,7 +153,6 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
     border-radius: 8px;
     box-shadow: inset 0 0 0 2px var(--accent-blue-dark);
     
-    /* Contenido (el SVG) */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -208,6 +198,126 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
 
 /* (El resto del CSS para overlays, menús, etc., permanece igual) */
 
+/* ===== NUEVO: HUD DINÁMICO DE ESTADÍSTICAS (HTML) ===== */
+#game-stats-overlay {
+    position: fixed;
+    bottom: 15px;
+    left: 15px;
+    z-index: 5; /* Por debajo del top-hud, por encima del canvas */
+    pointer-events: none; /* No debe interferir con el juego */
+    
+    width: 280px; /* Ancho del panel */
+    
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Espacio entre todos los items */
+
+    background-color: rgba(6, 19, 31, 0.5); /* Más transparente */
+    backdrop-filter: blur(12px); /* Más desenfoque */
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--hud-border-color);
+    border-radius: 10px;
+    padding: 12px 16px;
+
+    color: var(--text-light);
+    font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.7); /* Sombra más oscura para legibilidad */
+    
+    /* Animación de entrada */
+    transform: translateX(-120%);
+    opacity: 0;
+    animation: slideInHud 0.6s 0.5s ease-out forwards;
+}
+
+@keyframes slideInHud {
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+#game-stats-overlay .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#game-stats-overlay .stat-label {
+    opacity: 0.8;
+    text-transform: uppercase;
+    margin-right: 15px; /* Asegura espacio entre etiqueta y valor */
+}
+
+#game-stats-overlay .stat-value {
+    color: var(--accent-yellow);
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    text-align: right; /* Alinea los valores a la derecha */
+}
+
+.stat-divider {
+    border: none;
+    height: 1px;
+    background-color: var(--hud-border-color);
+    opacity: 0.4;
+    margin: 4px 0;
+}
+
+.lives-container {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+.heart-icon {
+    width: 16px;
+    height: 16px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23444" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>');
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+.heart-icon.filled {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23ff4d4d" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>');
+}
+.extra-lives {
+    color: var(--accent-red);
+    margin-left: 4px;
+}
+
+.weapon-status.reloading { color: var(--accent-red); }
+.weapon-status.ready { color: var(--accent-blue-light); }
+@keyframes weaponChangeAnim {
+    0% { transform: scale(1); opacity: 1; color: var(--text-light); }
+    50% { transform: scale(1.2); opacity: 0.5; color: var(--accent-yellow); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.progress-bar-container {
+    width: 120px; /* Un poco más anchas */
+    height: 10px; /* Un poco más altas */
+    background-color: #222; /* Fondo más oscuro */
+    border: 1px solid #555;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    transition: width 0.1s ease-out, background-color 0.2s ease;
+    border-radius: 4px;
+}
+.boost-bar { background: linear-gradient(to right, #007bff, #7ecbff); }
+.boost-bar.reloading { background: linear-gradient(to right, #ff6666, #ff0000); }
+.laser-bar { background: linear-gradient(to right, #ff4d4d, #b22222); }
+.laser-bar.active { box-shadow: 0 0 8px #ff4d4d; }
+.shield-bar { background: linear-gradient(to right, #add8e6, #00bfff); }
+.shield-bar.reloading { background: linear-gradient(to right, #ff6666, #ff0000); }
+.shield-bar.active { box-shadow: 0 0 8px #add8e6; }
+.shield-bar.hit { animation: shieldHitFlash 0.4s forwards; }
+@keyframes shieldHitFlash {
+    0% { background-color: #fff; }
+    50% { background-color: #add8e6; }
+    100% { background-color: #add8e6; }
+}
+
 /* ========= Media Queries para Responsividad ========= */
 @media (max-width: 820px) {
     .hint > span { display: none; }
@@ -218,6 +328,19 @@ kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-bl
 @media (max-width: 600px) { 
     #gameplay-hints { display: none; }
     #fsBtn, #shareBtn, #githubBtn { display: none; }
+    #game-stats-overlay {
+        width: calc(100% - 20px); /* Ocupa casi todo el ancho */
+        left: 10px;
+        bottom: 10px;
+        transform: translateY(120%); /* Animación desde abajo */
+        animation: slideUpHud 0.6s 0.5s ease-out forwards;
+    }
+    @keyframes slideUpHud {
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
 }
 
 @media (pointer: coarse) {
