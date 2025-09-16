@@ -161,7 +161,9 @@ export function update(dt) {
 
         if (!jefe.isCharging) {
             jefe.x += jefe.vx * dt;
-            jefe.y = H / 2 + Math.sin(levelState.tiempoDeJuego * 0.4) * (H * 0.25);
+            // --- CORRECCIÓN: Suavizar el retorno a la ruta de patrulla ---
+            const patrolY = H / 2 + Math.sin(levelState.tiempoDeJuego * 0.4) * (H * 0.25);
+            jefe.y = lerp(jefe.y, patrolY, dt * 3.0); // El 3.0 es la velocidad de retorno
             
             // --- CORRECCIÓN: La ballena debe rebotar en los bordes, no hacer wrap ---
             if ((jefe.x < jefe.w / 2 && jefe.vx < 0) || (jefe.x > W - jefe.w / 2 && jefe.vx > 0)) {
