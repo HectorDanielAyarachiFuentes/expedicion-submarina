@@ -1080,9 +1080,8 @@ function actualizar(dt) {
     // --- LÓGICA DE CÁMARA Y POSICIÓN DEL JUGADOR ---
     if (usaCamera) {
         // En niveles con scroll, el jugador se mantiene en el centro y el mundo se mueve.
-        // El jugador puede salirse verticalmente y aparecer por el otro lado (wrap).
-        if (jugador.y < -jugador.r) jugador.y = H + jugador.r;
-        if (jugador.y > H + jugador.r) jugador.y = -jugador.r;
+        // El jugador ahora está confinado a los límites verticales de la pantalla.
+        jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
 
         // --- NUEVA LÓGICA DE CÁMARA CON "ZONA MUERTA" ---
         // La cámara solo se mueve si el jugador sale de una zona central,
