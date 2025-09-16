@@ -404,7 +404,9 @@ export function update(dt) {
             }
         }
         
-        if (jefe.lasers.length === 0) {
+        // CORRECCIÓN: Solo cambiar a 'idle' si el estado actual es 'laser' y ya no hay láseres.
+        // Esto evita que se interrumpan otros estados como 'bombard' o 'muriendo'.
+        if (jefe.estado === 'laser' && jefe.lasers.length === 0) {
             jefe.estado = 'idle';
         }
 
