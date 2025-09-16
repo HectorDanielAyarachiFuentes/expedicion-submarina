@@ -37,7 +37,7 @@ let a_creditos_imagen_actual = 0;
 
 // --- Funciones Matemáticas y de Utilidad ---
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-function lerp(a, b, t) { return a + (b - a) * t; }
+export function lerp(a, b, t) { return a + (b - a) * t; }
 export function dificultadBase() { 
     if (!estadoJuego || !estadoJuego.enEjecucion) return 0;
     return estadoJuego.tiempoTranscurrido / 150;

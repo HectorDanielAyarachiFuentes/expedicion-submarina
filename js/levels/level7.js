@@ -643,6 +643,9 @@ function completarSubnivel() {
         levelState.jefe.lasers = [];
         levelState.jefe.bombas = [];
         levelState.jefe.estado = 'idle';
+
+        // Cambiar a modo de lucha en arena estática
+        estadoJuego.levelFlags.scrollBackground = false;
         
         estadoJuego.jefe = levelState.jefe;
         const bossHealthContainer = document.getElementById('bossHealthContainer');

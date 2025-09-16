@@ -1,7 +1,7 @@
 // js/level9.js
 'use strict';
 
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarAnimal, limpiarTodosLosAnimales, agregarPuntos, whaleImg, whaleListo, WHALE_SPRITE_DATA, generarTrozoBallena, generarGotasSangre, generarBurbujasDeSangre } from '../game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarAnimal, limpiarTodosLosAnimales, agregarPuntos, whaleImg, whaleListo, WHALE_SPRITE_DATA, generarTrozoBallena, generarGotasSangre, generarBurbujasDeSangre, lerp } from '../game/game.js';
 import { 
     torpedos, proyectiles 
 } from '../game/armas/weapons.js';
@@ -44,7 +44,7 @@ function spawnShark() {
 
 function spawnMegaWhale() {
     levelState.jefe = {
-        x: W + 200,
+        x: estadoJuego.cameraX + W + 200,
         y: H / 2,
         w: 350,
         h: 180,
@@ -61,6 +61,7 @@ function spawnMegaWhale() {
         isCharging: false,
         estado: 'alive', // 'alive', 'muriendo'
         timerMuerte: 0,
+        chargeDuration: 0,
     };
     // Sincronizar con el estado global para la barra de vida
     estadoJuego.jefe = levelState.jefe;
@@ -161,25 +162,38 @@ export function update(dt) {
         if (!jefe.isCharging) {
             jefe.x += jefe.vx * dt;
             jefe.y = H / 2 + Math.sin(levelState.tiempoDeJuego * 0.4) * (H * 0.25);
-            if (jefe.x < -jefe.w) jefe.x = W + jefe.w;
+            
+            // --- CORRECCIÓN: La ballena debe rebotar en los bordes, no hacer wrap ---
+            if ((jefe.x < jefe.w / 2 && jefe.vx < 0) || (jefe.x > W - jefe.w / 2 && jefe.vx > 0)) {
+                jefe.vx *= -1;
+            }
 
             jefe.chargeTimer -= dt;
             if (jefe.chargeTimer <= 0) {
                 jefe.isCharging = true;
-                const angle = Math.atan2(jugador.y - jefe.y, jugador.x - jefe.x);
-                jefe.vx = Math.cos(angle) * 450;
-                jefe.vy = Math.sin(angle) * 450;
+                jefe.chargeDuration = 3.0; // La carga dura 3 segundos
                 S.reproducir('boss_hit');
             }
         } else {
+            // --- LÓGICA DE PERSECUCIÓN MEJORADA ---
+            const angulo = Math.atan2(jugador.y - jefe.y, jugador.x - jefe.x);
+            const velocidadCarga = 450;
+            // Suavizar el giro para que no sea instantáneo
+            const targetVx = Math.cos(angulo) * velocidadCarga;
+            const targetVy = Math.sin(angulo) * velocidadCarga;
+            jefe.vx = lerp(jefe.vx, targetVx, dt * 2.0); // El 2.0 es la velocidad de giro
+            jefe.vy = lerp(jefe.vy, targetVy, dt * 2.0);
+
             jefe.x += jefe.vx * dt;
             jefe.y += jefe.vy * dt;
             generarGotasSangre(jefe.x, jefe.y);
-            if (jefe.x < -jefe.w || jefe.x > W + jefe.w || jefe.y < -jefe.h || jefe.y > H + jefe.h) {
+
+            jefe.chargeDuration -= dt;
+            if (jefe.chargeDuration <= 0) {
                 jefe.isCharging = false;
-                jefe.vx = -50;
+                jefe.vx = -50; // Vuelve a patrullar
                 jefe.vy = 0;
-                jefe.chargeTimer = 5.0 + Math.random() * 3;
+                jefe.chargeTimer = 4.0 + Math.random() * 2; // Cooldown para la próxima carga
             }
         }
 
@@ -348,6 +362,7 @@ function completarSubnivel() {
     } else if (nuevoSub.tipo === 'kill_boss_whale') {
         levelState.spawnTimer = 999;
         spawnMegaWhale();
+        estadoJuego.levelFlags.scrollBackground = false; // ¡Lucha en arena estática!
         const bossHealthContainer = document.getElementById('bossHealthContainer');
         if (bossHealthContainer) bossHealthContainer.style.display = 'block';
     }
