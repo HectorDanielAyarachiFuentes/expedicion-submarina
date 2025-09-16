@@ -478,7 +478,7 @@ function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY =
 
 // --- Sistema de Partículas ---
 // Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
-export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [], particulasPolvoMarino = [], pilotos = [];
+export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], particulasCasquillos = [], whaleDebris = [], particulasPolvoMarino = [], pilotos = [];
 let trozosHumanos = [];
 let escombrosSubmarino = [];
 const SUBMARINE_DEBRIS_PATHS = [
@@ -518,6 +518,38 @@ const PILOT_DEBRIS_PATHS = [
 // --- Funciones de Partículas ---
 // Funciones para crear, actualizar y dibujar las partículas.
 export function generarParticula(arr, opts) { arr.push({ x: opts.x, y: opts.y, vx: opts.vx, vy: opts.vy, r: opts.r, vida: opts.vida, vidaMax: opts.vida, color: opts.color, tw: Math.random() * Math.PI * 2, baseA: opts.baseA || 1, ...opts }); }
+
+/**
+ * Genera un casquillo de bala expulsado desde el submarino.
+ * @param {number} x - Posición X de expulsión.
+ * @param {number} y - Posición Y de expulsión.
+ * @param {boolean} isLevel5 - Si el nivel es vertical.
+ */
+export function generarCasquillo(x, y, isLevel5 = false) {
+    let angulo;
+    let velocidad;
+
+    if (isLevel5) {
+        // Nivel vertical, el submarino apunta hacia arriba. Expulsar hacia un lado (derecha).
+        angulo = 0 + (Math.random() - 0.5) * 0.8; // Ángulo 0 es derecha.
+        velocidad = 180 + Math.random() * 80;
+    } else {
+        // Nivel horizontal, el submarino apunta a la derecha. Expulsar hacia arriba y atrás.
+        angulo = -Math.PI / 2 - 0.5 + Math.random(); // Ángulo -PI/2 es arriba.
+        velocidad = 150 + Math.random() * 100;
+    }
+
+    const vRot = (Math.random() - 0.5) * 15;
+
+    particulasCasquillos.push({
+        x, y,
+        vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad,
+        vida: 2.0 + Math.random() * 1.0, vidaMax: 3.0,
+        rotacion: Math.random() * Math.PI * 2, vRot: vRot,
+        gravedad: 250, w: 8, h: 4, color: '#d4a14e', // Color latón
+        smokeTimer: 0, dropletTimer: 0,
+    });
+}
 
 /**
  * Genera un chorro de burbujas dañinas desde una posición.
@@ -626,6 +658,55 @@ function actualizarParticulas(dt) {
         if (p.vida <= 0) { particulasBurbujas.splice(i, 1); }
     }
 }
+
+function actualizarCasquillos(dt) {
+    for (let i = particulasCasquillos.length - 1; i >= 0; i--) {
+        const c = particulasCasquillos[i];
+        c.vida -= dt;
+        if (c.vida <= 0) {
+            particulasCasquillos.splice(i, 1);
+            continue;
+        }
+
+        // Física del casquillo
+        c.vy += c.gravedad * dt; // Gravedad
+        c.vx *= 0.98; // Fricción del agua
+        c.vy *= 0.98;
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        c.rotacion += c.vRot * dt;
+
+        // Efecto de humo
+        c.smokeTimer -= dt;
+        if (c.smokeTimer <= 0) {
+            c.smokeTimer = 0.05 + Math.random() * 0.05;
+            const alpha = (c.vida / c.vidaMax) * 0.4;
+            if (alpha > 0) {
+                generarParticula(particulasTinta, { // Reutilizamos el array de tinta para el humo
+                    x: c.x, y: c.y,
+                    vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10 - 15,
+                    r: 2 + Math.random() * 4, vida: 0.8 + Math.random() * 0.5,
+                    color: `rgba(200, 200, 200, ${alpha})` // Humo grisáceo
+                });
+            }
+        }
+
+        // Efecto de gotas oscuras
+        c.dropletTimer -= dt;
+        if (c.dropletTimer <= 0) {
+            c.dropletTimer = 0.1 + Math.random() * 0.1;
+            const alpha = (c.vida / c.vidaMax) * 0.7;
+            if (alpha > 0) {
+                generarParticula(particulasExplosion, { // Reutilizamos explosiones para las gotas
+                    x: c.x, y: c.y, vx: c.vx * 0.1, vy: c.vy * 0.1 + 30,
+                    r: 1 + Math.random() * 1.5, vida: 0.5 + Math.random() * 0.3,
+                    color: `rgba(20, 15, 10, ${alpha})` // Color oscuro, como aceite
+                });
+            }
+        }
+    }
+}
+
 function dibujarParticulas() { if (!ctx) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.strokeStyle = '#aae2ff'; ctx.lineWidth = 1.5; for (const p of particulasBurbujas) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.7; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); }
 function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 0.6) { const velocidadBaseX = isLevel5 ? 0 : 60; const velocidadBaseY = isLevel5 ? 60 : 0; const dispersion = 25; generarParticula(particulasBurbujas, { x: x, y: y, vx: velocidadBaseX + (Math.random() - 0.5) * dispersion, vy: velocidadBaseY + (Math.random() - 0.5) * dispersion - 20, r: Math.random() * 2 + 1, vida: 1 + Math.random() * 1.5, color: '' }); } }
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
@@ -834,6 +915,7 @@ function reiniciar(nivelDeInicio = 1) {
     Levels.initLevel(nivelDeInicio);
     
     animales = [];
+    particulasCasquillos = [];
     Weapons.initWeapons();
     whaleDebris = [];
     particulasTinta = [];
@@ -993,6 +1075,7 @@ function disparar() {
         S,
         W,
         generarRafagaBurbujasDisparo,
+        generarCasquillo,
         Levels
     };
     Weapons.disparar(fireContext);
@@ -2213,6 +2296,7 @@ function renderizar(dt) {
 
     // --- Dibuja Partículas y Efectos de Mundo (dentro de la cámara) ---
     dibujarParticulas();
+    dibujarCasquillos();
 
     for (const d of whaleDebris) {
         ctx.save();
@@ -2475,6 +2559,33 @@ function dibujarAnimacionMenu() {
 
     ctx.restore();
 }
+
+function dibujarCasquillos() {
+    if (!ctx) return;
+    ctx.save();
+    for (const c of particulasCasquillos) {
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rotacion);
+
+        const alpha = Math.min(1, c.vida / (c.vidaMax * 0.5)); // Se desvanecen
+        ctx.globalAlpha = alpha;
+
+        // Dibujar un rectángulo simple para el casquillo
+        ctx.fillStyle = c.color;
+        ctx.strokeStyle = '#a17b3a'; // Contorno más oscuro
+        ctx.lineWidth = 1;
+        ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+        ctx.strokeRect(-c.w / 2, -c.h / 2, c.w, c.h);
+
+        // Pequeño círculo oscuro para la apertura
+        ctx.fillStyle = '#3b2e1e';
+        ctx.beginPath(); ctx.arc(c.w / 2 - 1, 0, c.h / 3, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+    ctx.restore();
+}
+
 function dibujarMascaraLuz() {
     if (!estadoJuego || !fx) return;
     fx.clearRect(0, 0, W, H);
@@ -2811,6 +2922,7 @@ function iniciarAnimacionMuerte() {
     pilotos.length = 0;
     trozosHumanos.length = 0;
     escombrosSubmarino.length = 0;
+    particulasCasquillos = [];
     Weapons.initWeapons(); // Limpiar proyectiles, etc.
 
     // Explosión del submarino
@@ -3022,6 +3134,7 @@ export function gameLoop(t) {
 
     try {
         actualizarParticulas(dtAjustado);
+        actualizarCasquillos(dtAjustado);
 
         // Actualiza las armas siempre, para efectos de menú y de juego.
         const weaponUpdateContext = {

@@ -95,6 +95,30 @@ function getCannonTransform(baseX, baseY, jugador, estadoJuego) {
     };
 }
 
+/**
+ * Calcula la posición y el ángulo del puerto de eyección de casquillos.
+ * @param {number} baseX - La coordenada X base del submarino (mundo).
+ * @param {number} baseY - La coordenada Y base del submarino (mundo).
+ * @param {object} jugador - El objeto del jugador (para la inclinación).
+ * @param {object} estadoJuego - El estado actual del juego.
+ * @returns {{x: number, y: number, angle: number}} - Posición y ángulo del puerto.
+ */
+function getEjectionPortTransform(baseX, baseY, jugador, estadoJuego) {
+    const isLevel5 = estadoJuego.nivel === 5;
+    const finalAngle = (isLevel5 ? -Math.PI / 2 : 0) + jugador.inclinacion;
+
+    // El puerto de eyección está en la parte superior del submarino.
+    // Coordenadas locales: (0, -25) -> 0 en X, 25 píxeles hacia arriba.
+    const portOffsetX = 0;
+    const portOffsetY = -25;
+
+    // Rotamos este offset para encontrar la posición mundial.
+    const portX = baseX + portOffsetX * Math.cos(finalAngle) - portOffsetY * Math.sin(finalAngle);
+    const portY = baseY + portOffsetX * Math.sin(finalAngle) + portOffsetY * Math.cos(finalAngle);
+
+    return { x: portX, y: portY, angle: finalAngle };
+}
+
 // --- Funciones de Disparo ---
 
 function dispararGarfio(ctx) {
@@ -112,11 +136,17 @@ function dispararGarfio(ctx) {
 }
 
 function dispararShotgun(ctx) {
-    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo } = ctx;
+    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo, generarCasquillo } = ctx;
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
 
     const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
     generarRafagaBurbujasDisparo(cannon.x, cannon.y, estadoJuego.nivel === 5);
+
+    // Expulsar un casquillo
+    if (generarCasquillo) {
+        const port = getEjectionPortTransform(jugador.x, jugador.y, jugador, estadoJuego);
+        generarCasquillo(port.x, port.y, estadoJuego.nivel === 5);
+    }
 
     const config = WEAPON_CONFIG.shotgun;
     for (let i = 0; i < config.balas; i++) {
@@ -131,11 +161,24 @@ function dispararShotgun(ctx) {
 }
 
 function dispararMetralleta(ctx) {
-    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo } = ctx;
+    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo, generarCasquillo } = ctx;
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
     const config = WEAPON_CONFIG.metralleta;
     const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
     generarRafagaBurbujasDisparo(cannon.x, cannon.y, estadoJuego.nivel === 5);
+
+    // Expulsar una ráfaga de casquillos
+    if (generarCasquillo) {
+        const numCasquillos = 8;
+        for (let i = 0; i < numCasquillos; i++) {
+            setTimeout(() => {
+                // Recalcular la posición del puerto en cada frame del timeout por si el jugador se mueve
+                const currentPort = getEjectionPortTransform(jugador.x, jugador.y, jugador, estadoJuego);
+                generarCasquillo(currentPort.x, currentPort.y, estadoJuego.nivel === 5);
+            }, i * 40); // Un casquillo cada 40ms
+        }
+    }
+
     const numBalas = 30;
     for (let i = 0; i < numBalas; i++) {
         const angulo = cannon.angle + (Math.random() - 0.5) * config.dispersion;
