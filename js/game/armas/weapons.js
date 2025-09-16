@@ -224,8 +224,15 @@ export function disparar(ctx) {
 }
 
 export function lanzarTorpedo(ctx) {
-    const { estadoJuego, jugador, S } = ctx;
+    const { estadoJuego, jugador, S, generarCasquillo } = ctx;
     if (!estadoJuego || !estadoJuego.enEjecucion || estadoJuego.enfriamientoTorpedo > 0) return;
+
+    // --- NUEVO: Expulsar un casquillo al lanzar un torpedo ---
+    // Para consistencia visual, los torpedos también expulsan un casquillo desde el puerto superior.
+    if (generarCasquillo) {
+        const port = getEjectionPortTransform(jugador.x, jugador.y, jugador, estadoJuego);
+        generarCasquillo(port.x, port.y, estadoJuego.nivel === 5);
+    }
 
     // Los torpedos salen de la parte inferior del submarino.
     const isLevel5 = estadoJuego.nivel === 5;

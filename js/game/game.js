@@ -1129,7 +1129,8 @@ function lanzarTorpedo() {
     const torpedoContext = {
         estadoJuego,
         jugador,
-        S
+        S,
+        generarCasquillo
     };
     Weapons.lanzarTorpedo(torpedoContext);
 }
