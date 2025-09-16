@@ -12,7 +12,7 @@ import * as Level8 from './level8.js';
 import * as Level9 from './level9.js';
 
 // Importamos dependencias de game.js
-import { estadoJuego, dificultadBase } from '../game/game.js';
+import { estadoJuego, dificultadBase, animales, S, generarGotasSangre } from '../game/game.js';
 
 // 2. CONFIGURACIÓN CENTRALIZADA DE NIVELES
 // He movido el multiplicador de velocidad aquí para que toda la configuración esté en un solo lugar.
@@ -145,6 +145,21 @@ export function onFallo() {
  * @param {string} tipoAnimal
  */
 export function onKill(tipoAnimal) {
+    // --- LÓGICA GLOBAL AL MATAR UNA CRIATURA ---
+    // Si se mata una cría de ballena, todas las ballenas adultas en pantalla se enfurecen.
+    if (tipoAnimal === 'baby_whale') {
+        S.reproducir('boss_hit'); // Sonido de furia
+        for (const animal of animales) {
+            if (animal.tipo === 'whale' && !animal.isEnraged) {
+                animal.isEnraged = true;
+                animal.vx *= 2.5; // Aumenta su velocidad drásticamente
+                // Efecto visual de furia
+                generarGotasSangre(animal.x, animal.y);
+            }
+        }
+    }
+    // --- FIN DE LA LÓGICA GLOBAL ---
+
     if (activeLevelModule && typeof activeLevelModule.onKill === 'function') {
         try {
             activeLevelModule.onKill(tipoAnimal);

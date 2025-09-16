@@ -297,7 +297,7 @@ export function updateWeapons(ctx) {
                     if (!a.laserHitTimer || a.laserHitTimer <= 0) {
                         a.hp -= WEAPON_CONFIG.laser.danoPorTick;
                         a.laserHitTimer = WEAPON_CONFIG.laser.cooldownTick;
-                        if (a.tipo === 'whale') generarGotasSangre(a.x, a.y);
+                        if (a.tipo === 'whale' || a.tipo === 'baby_whale') generarGotasSangre(a.x, a.y);
                         generarExplosion(a.x, a.y, '#ff5555', 5);
                     }
                     if (a.hp <= 0) {
@@ -325,7 +325,7 @@ export function updateWeapons(ctx) {
                 if (a.hp !== undefined) {
                     const damage = proyectil.isVertical !== undefined ? WEAPON_CONFIG.torpedo.dano : 1;
                     a.hp -= damage;
-                    if (a.tipo === 'whale' || a.tipo === 'shark') {
+                    if (a.tipo === 'whale' || a.tipo === 'shark' || a.tipo === 'baby_whale') {
                         generarTrozoBallena(proyectil.x, proyectil.y);
                         generarGotasSangre(proyectil.x, proyectil.y);
                     }

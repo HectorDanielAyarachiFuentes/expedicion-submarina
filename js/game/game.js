@@ -426,6 +426,30 @@ cargarJson('js/json_sprites/whale.json', function(data) {
     }
 });
 
+export let BABYWHALE_SPRITE_DATA = null;
+export let babyWhaleImg = null, babyWhaleListo = false;
+let babyWhaleImgCargada = false;
+let babyWhaleJsonCargado = false;
+function comprobarBabyWhaleListo() {
+    if (babyWhaleImgCargada && babyWhaleJsonCargado) {
+        babyWhaleListo = true;
+    }
+}
+cargarImagen('img/sprites/ballenabebe.png', function (img) { 
+    if (img) { 
+        babyWhaleImg = img; 
+        babyWhaleImgCargada = true;
+        comprobarBabyWhaleListo();
+    } 
+});
+cargarJson('js/json_sprites/ballenabebe.json', function(data) {
+    if (data) {
+        BABYWHALE_SPRITE_DATA = data;
+        babyWhaleJsonCargado = true;
+        comprobarBabyWhaleListo();
+    }
+});
+
 let thrusterPattern = null;
 let thrusterPatternReady = false;
 let thrusterPatternOffsetX = 0;
@@ -674,6 +698,7 @@ const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "AP
 const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
 const MIERDEi_ANIMATION_SPEED = 0.06;
+const BABYWHALE_ANIMATION_SPEED = 0.07;
 
 // --- Funciones de Control del Juego ---
 function reiniciar(nivelDeInicio = 1) {
@@ -749,7 +774,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
     if (puedeSerEspecial) {
         const r = Math.random();
         // La ballena y el tiburón ahora tienen probabilidades independientes y no se bloquean entre sí.
-        if (whaleListo && r < 0.12) { // 12% de probabilidad de que sea una ballena.
+        if (whaleListo && r < 0.15) { // 15% de probabilidad de que aparezca una familia de ballenas
             tipo = 'whale';
         } else if (sharkListo && r > 0.85) { // 15% de probabilidad de que sea un tiburón.
             tipo = 'shark';
@@ -786,8 +811,8 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         });
     } else if (tipo === 'whale') {
         const tamano = overrides.ancho || 250;
-        velocidad *= 0.5; // Muy lentas
-        animales.push({
+        velocidad *= 0.5; // Muy lentas        
+        const adultWhale = {
             x: spawnX, y, vx: -velocidad, vy: 0, r: 100, w: tamano, h: tamano,
             capturado: false, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, 
@@ -800,8 +825,29 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             isTailSwiping: false,
             tailSwipeProgress: 0,
             songCooldown: 2.0 + Math.random() * 2, // Cooldown para el canto ambiental (REDUCIDO PARA PRUEBAS)
-            // --- FIN SUGERENCIA ---
-        });
+        };
+        animales.push(adultWhale);
+
+        // --- NUEVO: Generar crías de ballena junto a la adulta ---
+        if (babyWhaleListo) {
+            const numBabies = 1 + Math.floor(Math.random() * 2); // 1 o 2 crías
+            for (let i = 0; i < numBabies; i++) {
+                const babyTamano = 140; // Un poco más grande que antes
+                const babyVelocidad = velocidad * 1.4; // Ligeramente más rápidas que la madre
+                const babyY = y + (i === 0 ? -80 : 80) + (Math.random() - 0.5) * 40;
+                const babyX = spawnX + 120 + Math.random() * 80;
+
+                animales.push({
+                    x: babyX, y: babyY, vx: -babyVelocidad, vy: 0, r: 55, w: babyTamano, h: babyTamano,
+                    capturado: false, frame: 0, timerFrame: 0,
+                    semillaFase: Math.random() * Math.PI * 2, 
+                    tipo: 'baby_whale',
+                    hp: 40, // Ahora tiene vida y puede ser eliminada
+                    maxHp: 40,
+                    mother: adultWhale, // Referencia a su madre
+                });
+            }
+        }
     } else {
         if (esEsbirroJefe) {
             tipo = 'aggressive';
@@ -1221,8 +1267,31 @@ function actualizar(dt) {
         const a = animales[i]; 
         if (a.laserHitTimer > 0) a.laserHitTimer -= dtAjustado;
         
-        // --- IA y Movimiento Específico por Tipo de Enemigo ---
-        if (a.tipo === 'shark') {
+        // --- IA y Movimiento Específico por Tipo de Enemigo ---        
+        if (a.tipo === 'baby_whale') {
+            // La cría intenta seguir a su madre si existe y está viva
+            if (a.mother && animales.includes(a.mother)) {
+                const targetX = a.mother.x + 150;
+                const targetY = a.mother.y;
+                // Usa lerp para un seguimiento suave
+                a.x = lerp(a.x, targetX, dtAjustado * 0.8);
+                a.y = lerp(a.y, targetY, dtAjustado * 0.8);
+            } else {
+                // Si no hay madre, se mueve por su cuenta
+                a.x += a.vx * dtAjustado;
+            }
+
+            // Movimiento sinusoidal para que sea más natural
+            a.y += Math.sin(estadoJuego.tiempoTranscurrido * 2.5 + a.semillaFase) * 60 * dtAjustado;
+
+            a.timerFrame += dtAjustado;
+            if (a.timerFrame >= BABYWHALE_ANIMATION_SPEED) {
+                a.timerFrame -= BABYWHALE_ANIMATION_SPEED;
+                if (BABYWHALE_SPRITE_DATA) {
+                    a.frame = (a.frame + 1) % BABYWHALE_SPRITE_DATA.frames.length;
+                }
+            }
+        } else if (a.tipo === 'shark') {
             if (a.isHunting) {
                 // El tiburón está cazando, se mueve en su vector de ataque
                 a.x += a.vx * dtAjustado;
@@ -1428,6 +1497,8 @@ function actualizar(dt) {
             generarTrozoBallena(collisionX, collisionY, 4, 120);
             generarGotasSangre(collisionX, collisionY);
 
+            Levels.onKill(a.tipo); // Notificar al sistema de niveles sobre la muerte
+
             animales.splice(i, 1);
             const antes = estadoJuego.vidas;
             if (estadoJuego.vidas > 0) {
@@ -1516,7 +1587,42 @@ function renderizar(dt) {
             const offsetFlotante = Math.sin(Math.PI * estadoJuego.tiempoTranscurrido * 0.8 + a.semillaFase) * 8;
             ctx.save();
             
-            if (a.tipo === 'mierdei') {
+            if (a.tipo === 'baby_whale') {
+                // --- Dibuja la Ballena Bebé ---
+                ctx.translate(a.x, a.y + offsetFlotante);
+                if (babyWhaleListo && BABYWHALE_SPRITE_DATA) {
+                    // Si está herida, mostrar un tinte rojo
+                    if (a.hp < a.maxHp) {
+                        const damageRatio = a.hp / a.maxHp;
+                        if (damageRatio < 0.5) {
+                            ctx.filter = 'hue-rotate(-15deg) brightness(1.2) saturate(2)';
+                        }
+                    }
+
+                    // Barra de vida para la cría (solo si está dañada)
+                    if (a.hp < a.maxHp) {
+                        const barW = 60;
+                        const barH = 5;
+                        const barY = -a.h / 2.5 - 15;
+                        ctx.fillStyle = '#555';
+                        ctx.fillRect(-barW / 2, barY, barW, barH);
+                        ctx.fillStyle = '#ff5c5c';
+                        ctx.fillRect(-barW / 2, barY, barW * (a.hp / a.maxHp), barH);
+                    }
+
+                    const frameData = BABYWHALE_SPRITE_DATA.frames[a.frame];
+                    if (frameData) {
+                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
+                        const aspectRatio = sWidth / sHeight;
+                        const dHeight = a.w / aspectRatio;
+                        ctx.imageSmoothingEnabled = false;
+                        if (a.vx > 0) { ctx.scale(-1, 1); }
+                        ctx.drawImage(babyWhaleImg, sx, sy, sWidth, sHeight, 
+                            Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
+                    }
+                }
+            }
+            else if (a.tipo === 'mierdei') {
                 // --- Dibuja el Mierdei ---
                 ctx.translate(a.x, a.y + offsetFlotante);
                 if (mierdeiListo && MIERDEI_SPRITE_DATA) {
