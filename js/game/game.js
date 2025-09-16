@@ -478,7 +478,42 @@ function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY =
 
 // --- Sistema de Partículas ---
 // Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
-export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [], particulasPolvoMarino = [];
+export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], whaleDebris = [], particulasPolvoMarino = [], pilotos = [];
+let trozosHumanos = [];
+let escombrosSubmarino = [];
+const SUBMARINE_DEBRIS_PATHS = [
+    // Placas de metal retorcidas
+    new Path2D('M-20,-15 L20,-20 L25,18 C 10,25 -10,22 -20,15 Z'), // Placa grande
+    new Path2D('M-15,-10 L15,-12 L18,10 L-12,15 Z'), // Placa mediana
+    new Path2D('M-10,-5 Q 5,-8 12,0 L5,8 Q -5,10 -10,5 Z'), // Trozo curvo
+    // Tuberías y componentes
+    new Path2D('M-25,-3 L25,-3 L25,3 L-25,3 Z'), // Tubo recto
+    new Path2D('M-15,-5 L10,-5 L10,5 C -5,15 -15,5 -15,-5 Z'), // Tubo doblado
+    // Fragmento de la cabina (vidrio roto)
+    new Path2D('M-15,-15 L 0, -18 L 18, -10 L 15, 15 L -10, 10 Z'),
+    // --- NUEVO: Fragmentos más pequeños y detallados ---
+    new Path2D('M-5,-2 L5,-2 L5,2 L-5,2 Z'), // Remache o tornillo
+    new Path2D('M-8,0 C-3,5 3,-5 8,0'), // Cable/alambre retorcido
+    new Path2D('M-6,-6 L6,6 M6,-6 L-6,6'), // Cruz de metal rota
+    new Path2D('M-5,-8 L5,0 L-5,8 Z'), // Esquirla pequeña y afilada
+    new Path2D('M-4,-4 a 4 4 0 1 1 8 0 a 4 4 0 1 1 -8 0'), // Arandela o tuerca
+];
+const PILOT_DEBRIS_PATHS = [
+    // Torsos (más gráficos)
+    new Path2D('M-10,-15 C-5,-22 5,-22 10,-15 L12,8 L-12,8 Z'), // Torso con hombros
+    new Path2D('M-8,-12 L8,-14 L10,10 C 5,15 -5,15 -10,10 Z'), // Torso desgarrado
+    // Extremidades
+    new Path2D('M-4,-20 L4,-18 L2,5 C -2,8 -5,2 -4,-20 Z'), // Brazo/Pierna con forma
+    new Path2D('M-15,-4 L15,-3 L12,4 L-12,5 Z'), // Trozo de extremidad
+    // Cabeza (semi-reconocible)
+    new Path2D('M-10,-10 a 10 10 0 1 1 20 0 C 15,15 -15,15 -10,-10 Z'), // Cabeza rota
+    // Trozos irreconocibles y sangrientos
+    new Path2D('M-15,-10 L5, -12 L18, 5 C 10,15 -10,12 -15,-10 Z'), // Fragmento 1
+    new Path2D('M0,0 C-20,-10 -15,10 0,15 C15,10 20,-10 0,0 Z'), // Fragmento 2 (curvo)
+    new Path2D('M-10,-8 L10,-12 L15,10 L-12,15 Z'), // Fragmento 3 (afilado)
+];
+
+
 
 // --- Funciones de Partículas ---
 // Funciones para crear, actualizar y dibujar las partículas.
@@ -620,8 +655,58 @@ export function generarTrozoBallena(x, y, numTrozos = 3, fuerza = 150) {
     }
 }
 
-export function generarGotasSangre(x, y) {
-    for (let i = 0; i < 10 + Math.random() * 10; i++) {
+function generarTrozosHumanos(x, y) {
+    S.reproducir('choque'); // Sonido húmedo y crujiente
+    // Aumentar la cantidad de trozos para un efecto más gore
+    for (let i = 0; i < 18; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 120 + Math.random() * 280; // Más variación en la velocidad de explosión
+        const vida = 1.8 + Math.random() * 2.5;
+        const escala = 0.5 + Math.random() * 0.6; // Escala más variada (0.5 a 1.1)
+        const coloresSangre = ['#b22222', '#8b0000', '#6d2e37', '#5c1f27'];
+        trozosHumanos.push({
+            x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+            vRot: (Math.random() - 0.5) * 12, // Rotación más rápida
+            rotacion: Math.random() * Math.PI * 2,
+            vida: vida, vidaMax: vida, color: coloresSangre[Math.floor(Math.random() * coloresSangre.length)],
+            path: PILOT_DEBRIS_PATHS[Math.floor(Math.random() * PILOT_DEBRIS_PATHS.length)],
+            escala: escala // Guardar la escala individual
+        });
+    }
+    // Generar una nube de sangre más densa
+    generarGotasSangre(x, y, 40);
+    generarBurbujasDeSangre(x, y);
+}
+
+function generarEscombrosSubmarino(x, y) {
+    const numTrozos = 40; // Aumentamos la cantidad para una explosión más densa
+    for (let i = 0; i < numTrozos; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 150 + Math.random() * 350;
+        const vida = 2.5 + Math.random() * 2.5;
+        const escala = 0.3 + Math.random() * 0.7; // Hacemos los trozos más pequeños y variados
+        const colores = ['#f7b500', '#d69d00', '#ffc733', '#444', '#222', '#ff8c00']; // Amarillos, grises oscuros, naranja quemado
+        escombrosSubmarino.push({
+            x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+            vRot: (Math.random() - 0.5) * 10,
+            rotacion: Math.random() * Math.PI * 2,
+            vida: vida, vidaMax: vida, color: colores[Math.floor(Math.random() * colores.length)],
+            path: SUBMARINE_DEBRIS_PATHS[Math.floor(Math.random() * SUBMARINE_DEBRIS_PATHS.length)],
+            escala: escala
+        });
+    }
+    // Pequeñas chispas y humo
+    for (let i = 0; i < 60; i++) { // Más chispas para mayor impacto visual
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 50 + Math.random() * 200;
+        generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 1 + Math.random() * 2.5, vida: 1.0 + Math.random() * 1.0, color: ['#ffc733', '#ff8c00', '#fff'][Math.floor(Math.random() * 3)] });
+    }
+}
+
+
+export function generarGotasSangre(x, y, cantidad = 0) {
+    const numGotas = cantidad > 0 ? cantidad : 10 + Math.random() * 10;
+    for (let i = 0; i < numGotas; i++) {
         const ang = Math.random() * Math.PI * 2;
         const spd = 20 + Math.random() * 100;
         const r = 1.5 + Math.random() * 2.5;
@@ -1645,6 +1730,8 @@ function actualizar(dt) {
     for (let i = whaleDebris.length - 1; i >= 0; i--) {
         const d = whaleDebris[i];
         d.vy += 250 * dtAjustado; // Gravedad
+        d.vx *= 0.99; // Fricción del agua para que la caída sea más notable
+        d.vy *= 0.99; // Fricción del agua
         d.x += d.vx * dtAjustado;
         d.y += d.vy * dtAjustado;
         d.rotacion += d.vRot * dtAjustado;
@@ -1872,7 +1959,7 @@ function renderizar(dt) {
         }
 
         // --- Dibuja al Jugador y sus Efectos ---
-        if (jugador) {
+        if (jugador && estadoJuego.faseJuego !== 'death_animation') {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
             // Animación de flotación sutil
             const bobbingY = Math.sin(estadoJuego.tiempoTranscurrido * 2.5) * 3;
@@ -2065,6 +2152,39 @@ function renderizar(dt) {
         ctx.fillStyle = grad;
         ctx.strokeStyle = '#5c1f27'; // Borde rojo sangre muy oscuro
         ctx.lineWidth = 4;
+        ctx.fill(d.path);
+        ctx.stroke(d.path);
+        ctx.restore();
+    }
+
+    // Dibujar gore de la muerte del jugador
+    for (const p of pilotos) {
+        dibujarPiloto(ctx, p);
+    }
+    for (const d of trozosHumanos) {
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rotacion);
+        ctx.scale(d.escala, d.escala);
+        ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
+        ctx.fillStyle = d.color;
+        ctx.strokeStyle = '#3b0000';
+        ctx.lineWidth = 3;
+        ctx.fill(d.path);
+        ctx.stroke(d.path);
+        ctx.restore();
+    }
+
+    // Dibujar escombros del submarino
+    for (const d of escombrosSubmarino) {
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rotacion);
+        ctx.scale(d.escala, d.escala);
+        ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
+        ctx.fillStyle = d.color;
+        ctx.strokeStyle = '#1a1a1a'; // Borde oscuro, casi negro
+        ctx.lineWidth = 3;
         ctx.fill(d.path);
         ctx.stroke(d.path);
         ctx.restore();
@@ -2303,7 +2423,7 @@ function dibujarMascaraLuz() {
     fx.globalCompositeOperation = 'source-over';
     fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
     fx.fillRect(0, 0, W, H);
-    if (estadoJuego.luzVisible && jugador) { // prettier-ignore
+    if (estadoJuego.luzVisible && jugador && estadoJuego.faseJuego !== 'death_animation') { // prettier-ignore
         // --- CORRECCIÓN: Convertir coordenadas del mundo a coordenadas de pantalla ---
         // La luz se dibuja en el canvas 'fx', que no se mueve con la cámara.
         // Por lo tanto, debemos restar la posición de la cámara a la del jugador.
@@ -2478,15 +2598,129 @@ function iniciarJuego(nivel = 1) {
     setTimeout(function () { __iniciando = false; }, 200);
 }
 
-export function perderJuego() {
-    if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
-    estadoJuego.faseJuego = 'gameover';
+function dibujarPiloto(ctx, p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotacion);
+    ctx.scale(1.2, 1.2); // Hacerlo un poco más grande
+
+    const headR = 5;
+    const bodyH = 10;
+    const bodyW = 8;
+    const limbL = 9;
+    const limbW = 3;
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Dibuja las extremidades primero (detrás del cuerpo)
+    ctx.strokeStyle = '#a5682a'; // Un tono de piel más oscuro para el contorno
+    ctx.lineWidth = limbW;
+
+    // Piernas (animadas)
+    const legAngle = Math.sin(estadoJuego.tiempoTranscurrido * 15 + p.x) * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(0, bodyH / 2);
+    ctx.lineTo(Math.cos(legAngle) * limbL, bodyH / 2 + Math.sin(legAngle) * limbL);
+    ctx.moveTo(0, bodyH / 2);
+    ctx.lineTo(Math.cos(-legAngle) * limbL, bodyH / 2 + Math.sin(-legAngle) * limbL);
+    ctx.stroke();
+
+    // Brazos (animados)
+    const armAngle = Math.cos(estadoJuego.tiempoTranscurrido * 12 + p.y) * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(0, -bodyH / 4);
+    ctx.lineTo(-limbL, armAngle * 4);
+    ctx.moveTo(0, -bodyH / 4);
+    ctx.lineTo(limbL, -armAngle * 4);
+    ctx.stroke();
+
+    // Dibuja el cuerpo y la cabeza
+    ctx.fillStyle = '#fce1c3'; // Color piel
+    ctx.strokeStyle = '#a5682a';
+    ctx.lineWidth = 2;
+
+    // Torso
+    ctx.beginPath();
+    ctx.rect(-bodyW / 2, -bodyH / 2, bodyW, bodyH);
+    ctx.fill();
+    ctx.stroke();
+
+    // Cabeza
+    ctx.beginPath();
+    ctx.arc(0, -bodyH / 2 - headR, headR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function iniciarAnimacionMuerte() {
     estadoJuego.enEjecucion = false;
+    estadoJuego.deathAnimTimer = 8.0; // 8 segundos de carnicería
+
+    // --- NUEVO: Iniciar en cámara lenta ---
+    estadoJuego.velocidadJuego = 0.2; // 20% de la velocidad normal
+    estadoJuego.slowMoDeathDuration = 2.5; // Duración en tiempo real de la cámara lenta
+
     S.detener('music');
     S.detener('laser_beam');
     S.detener('boost');
-    S.reproducir('gameover');
-    setTimeout(() => S.reproducir('theme_main'), 1500);
+    S.reproducir('explosion_grande');
+
+    // Limpiar entidades existentes para la escena de muerte
+    animales.length = 0;
+    pilotos.length = 0;
+    trozosHumanos.length = 0;
+    escombrosSubmarino.length = 0;
+    Weapons.initWeapons(); // Limpiar proyectiles, etc.
+
+    // Explosión del submarino
+    generarExplosion(jugador.x, jugador.y, '#ffcc33', 250);
+    generarEscombrosSubmarino(jugador.x, jugador.y);
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => generarExplosion(jugador.x + (Math.random() - 0.5) * 150, jugador.y + (Math.random() - 0.5) * 150, '#ff8833', 100), i * 100);
+    }
+
+    // Expulsar a los pilotos
+    for (let i = 0; i < 3; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 200 + Math.random() * 200;
+        pilotos.push({
+            x: jugador.x, y: jugador.y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            r: 8,
+            vida: 999,
+            targetBy: null,
+            rotacion: Math.random() * Math.PI * 2,
+            vRot: (Math.random() - 0.5) * 6
+        });
+    }
+
+    // Spawnea tiburones hambrientos
+    const numSharks = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < numSharks; i++) {
+        const y = Math.random() * H;
+        const x = (i % 2 === 0) ? (estadoJuego.cameraX - 200) : (estadoJuego.cameraX + W + 200);
+        animales.push({
+            x: x, y: y, vx: (x > W / 2 ? -1 : 1) * 400, vy: 0, r: 50, w: 128, h: 128,
+            capturado: false, frame: 0, timerFrame: 0,
+            semillaFase: Math.random() * Math.PI * 2,
+            tipo: 'shark',
+            isPilotHunter: true, // ¡Bandera especial!
+            targetPilot: null
+        });
+    }
+}
+
+export function perderJuego() {
+    if (!estadoJuego || estadoJuego.faseJuego === 'gameover' || estadoJuego.faseJuego === 'death_animation') return;
+    estadoJuego.faseJuego = 'death_animation';
+    iniciarAnimacionMuerte();
+}
+
+function mostrarPantallaGameOver() {
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none';
     if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none';
@@ -2494,7 +2728,7 @@ export function perderJuego() {
     if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
     if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none';
     if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block';
-    modoSuperposicion = 'gameover'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none';
+    modoSuperposicion = 'gameover'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none'; estadoJuego.faseJuego = 'gameover'; S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500);
 }
 function ganarJuego() {
     if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
@@ -2644,7 +2878,9 @@ export function gameLoop(t) {
 
         if (estadoJuego && estadoJuego.enEjecucion) {
             actualizar(dtAjustado);
-        } else {
+        } else if (estadoJuego && estadoJuego.faseJuego === 'death_animation') {
+            actualizarAnimacionMuerte(dtAjustado, dt); // Pasamos el dt original también
+        } else { // Menú
             actualizarCriaturasMenu(dtAjustado);
             actualizarAnimacionMenu(dtAjustado);
         }
@@ -2661,6 +2897,121 @@ export function gameLoop(t) {
     }
     // Solicita al navegador que vuelva a llamar a esta función en el próximo frame.
     requestAnimationFrame(gameLoop);
+}
+
+function actualizarAnimacionMuerte(dt, originalDt) {
+    // --- Lógica de cámara lenta ---
+    if (estadoJuego.slowMoDeathDuration > 0) {
+        estadoJuego.slowMoDeathDuration -= originalDt; // Usar el tiempo real para el contador
+        if (estadoJuego.slowMoDeathDuration <= 0) {
+            // Cuando el tiempo de slow-mo se acaba, la velocidad del juego empezará
+            // a interpolar de vuelta a 1.0 en el bloque 'else'.
+        }
+    } else {
+        // Suavemente volver a la velocidad normal para que los tiburones ataquen más rápido.
+        estadoJuego.velocidadJuego = lerp(estadoJuego.velocidadJuego, 1.0, originalDt * 2.5);
+    }
+
+    estadoJuego.deathAnimTimer -= dt;
+    if (estadoJuego.deathAnimTimer <= 0) {
+        mostrarPantallaGameOver();
+        return;
+    }
+
+    // Actualizar pilotos
+    for (const p of pilotos) {
+        p.vy += 60 * dt; // Gravedad ligera
+        p.vx *= 0.98; // Fricción del agua
+        p.vy *= 0.98;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rotacion += p.vRot * dt;
+    }
+
+    // Actualizar trozos humanos
+    for (let i = trozosHumanos.length - 1; i >= 0; i--) {
+        const d = trozosHumanos[i];
+        d.vy += 250 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.rotacion += d.vRot * dt; d.vida -= dt;
+        if (d.vida <= 0 || d.y > H + 50) {
+            trozosHumanos.splice(i, 1);
+        }
+    }
+
+    // Actualizar escombros del submarino
+    for (let i = escombrosSubmarino.length - 1; i >= 0; i--) {
+        const d = escombrosSubmarino[i];
+        d.vy += 200 * dt; // Gravedad un poco menor que los trozos humanos
+        d.vx *= 0.99; // Fricción
+        d.vy *= 0.99;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.rotacion += d.vRot * dt;
+        d.vida -= dt;
+        if (d.vida <= 0 || d.y > H + 100) {
+            escombrosSubmarino.splice(i, 1);
+        }
+    }
+
+    // Actualizar trozos de ballena (gore de colisión)
+    for (let i = whaleDebris.length - 1; i >= 0; i--) {
+        const d = whaleDebris[i];
+        d.vy += 250 * dt; // Gravedad
+        d.vx *= 0.99; // Fricción del agua
+        d.vy *= 0.99;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.rotacion += d.vRot * dt;
+        d.vida -= dt;
+
+        // Dejar un rastro de sangre
+        if (Math.random() < 0.4) {
+            generarParticula(particulasExplosion, {
+                x: d.x, y: d.y,
+                vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20,
+                r: 1 + Math.random() * 2, vida: 0.5 + Math.random() * 0.5, color: '#8b0000'
+            });
+        }
+
+        if (d.vida <= 0 || d.y > H + 50) { whaleDebris.splice(i, 1); }
+    }
+
+    // Actualizar tiburones cazadores
+    for (const a of animales) {
+        if (a.tipo === 'shark' && a.isPilotHunter) {
+            if (!a.targetPilot || pilotos.indexOf(a.targetPilot) === -1) {
+                // Buscar nuevo piloto
+                let closestPilot = null;
+                let minDis = Infinity;
+                for (const p of pilotos) {
+                    if (!p.targetBy) {
+                        const dis = Math.hypot(p.x - a.x, p.y - a.y);
+                        if (dis < minDis) { minDis = dis; closestPilot = p; }
+                    }
+                }
+                if (closestPilot) { a.targetPilot = closestPilot; closestPilot.targetBy = a; }
+            }
+
+            if (a.targetPilot) {
+                const target = a.targetPilot;
+                const angle = Math.atan2(target.y - a.y, target.x - a.x);
+                const speed = 700; // Velocidad de caza
+                a.vx = lerp(a.vx, Math.cos(angle) * speed, dt * 5);
+                a.vy = lerp(a.vy, Math.sin(angle) * speed, dt * 5);
+                if (Math.hypot(target.x - a.x, target.y - a.y) < a.r * 0.7) { generarTrozosHumanos(target.x, target.y); const pilotIndex = pilotos.indexOf(target); if (pilotIndex > -1) pilotos.splice(pilotIndex, 1); a.targetPilot = null; }
+            } else {
+                // No hay pilotos, nadar fuera de la pantalla
+                a.vx = lerp(a.vx, Math.sign(a.vx) * 400, dt);
+                a.vy = lerp(a.vy, 0, dt);
+            }
+        }
+        // Movimiento y animación
+        a.x += a.vx * dt; a.y += a.vy * dt; a.timerFrame += dt;
+        if (a.timerFrame >= SHARK_ANIMATION_SPEED) { a.timerFrame -= SHARK_ANIMATION_SPEED; if (SHARK_SPRITE_DATA) { a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length; } }
+    }
+
+    // Actualizar partículas de fondo
+    actualizarParticulas(dt);
+    actualizarPolvoMarino(dt);
 }
 
 // --- Animación especial para la pantalla de información ---
