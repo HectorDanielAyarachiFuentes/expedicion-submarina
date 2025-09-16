@@ -20,7 +20,7 @@ function generarEscombro() {
     const velocidadRotacion = (Math.random() - 0.5) * 3;
 
     escombros.push({
-        x: W + tamano,
+        x: estadoJuego.cameraX + W + tamano,
         y: y,
         vx: -velocidad,
         tamano: tamano,
@@ -118,8 +118,12 @@ export function update(dt) {
         }
 
         // Eliminar si sale de la pantalla
-        if (i < escombros.length && escombros[i].x < -escombros[i].tamano) {
-            escombros.splice(i, 1);
+        // --- CORRECCIÓN: La comprobación debe ser relativa a la cámara ---
+        if (i < escombros.length) { // Comprobar si el escombro aún existe tras las colisiones
+            const despawnLimit = estadoJuego.cameraX - escombros[i].tamano;
+            if (escombros[i].x < despawnLimit) {
+                escombros.splice(i, 1);
+            }
         }
     }
 }
