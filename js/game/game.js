@@ -782,6 +782,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             tipo: 'shark',
             huntCooldown: 2.0 + Math.random(), // Cooldown inicial antes de la primera caza
             isHunting: false,
+            isPackLeader: false,
         });
     } else if (tipo === 'whale') {
         const tamano = overrides.ancho || 250;
@@ -1230,6 +1231,7 @@ function actualizar(dt) {
                 // Si sale de la pantalla, deja de cazar
                 if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
                     a.isHunting = false;
+                    a.isPackLeader = false;
                     a.vx = -(velocidadActual() + 60) * 0.9; // Resetea a velocidad de patrulla
                     a.vy = 0;
                 }
@@ -1237,13 +1239,36 @@ function actualizar(dt) {
                 // Modo patrulla: se mueve de derecha a izquierda
                 a.x += a.vx * dtAjustado;
                 a.huntCooldown -= dtAjustado;
-                // Si ve al jugador y no está en cooldown, inicia la caza
+                // Si ve al jugador y no está en cooldown, inicia la caza en manada
                 if (a.huntCooldown <= 0 && jugador.x < a.x && a.x < W) {
+                    // --- INICIO DE LA NUEVA LÓGICA DE CAZA EN MANADA ---
                     a.isHunting = true;
+                    a.isPackLeader = true; // Este es el líder de la manada
                     const angle = Math.atan2(jugador.y - a.y, jugador.x - a.x);
                     a.vx = Math.cos(angle) * 600; // Velocidad de embestida
                     a.vy = Math.sin(angle) * 600;
-                    a.huntCooldown = 4.0 + Math.random() * 2; // Cooldown para la próxima caza
+                    a.huntCooldown = 5.0 + Math.random() * 3; // Cooldown más largo para el líder
+
+                    // El líder "llama" a otros tiburones cercanos para que se unan al ataque
+                    const PACK_CALL_RADIUS = W * 0.5; // Radio de llamada de la manada
+                    for (const otherShark of animales) {
+                        if (otherShark !== a && otherShark.tipo === 'shark' && !otherShark.isHunting) {
+                            const distance = Math.hypot(a.x - otherShark.x, a.y - otherShark.y);
+                            if (distance < PACK_CALL_RADIUS) {
+                                // Este tiburón se une a la caza como seguidor
+                                otherShark.isHunting = true;
+                                otherShark.isPackLeader = false;
+                                const targetX = jugador.x + (Math.random() - 0.5) * 200; // Apunta a una zona cercana al jugador
+                                const targetY = jugador.y + (Math.random() - 0.5) * 200;
+                                const followerAngle = Math.atan2(targetY - otherShark.y, targetX - otherShark.x);
+                                const followerSpeed = 550 + Math.random() * 100; // Velocidad ligeramente variable
+                                otherShark.vx = Math.cos(followerAngle) * followerSpeed;
+                                otherShark.vy = Math.sin(followerAngle) * followerSpeed;
+                                otherShark.huntCooldown = 3.0 + Math.random() * 2; // Cooldown para el seguidor
+                            }
+                        }
+                    }
+                    // --- FIN DE LA NUEVA LÓGICA ---
                 }
             }
             // Animación específica para el tiburón
@@ -1509,6 +1534,12 @@ function renderizar(dt) {
             } else if (a.tipo === 'shark') {
                 // --- Dibuja el Tiburón ---
                 ctx.translate(a.x, a.y);
+
+                // Efecto visual para la caza en manada
+                if (a.isHunting) {
+                    // Un tinte rojizo y más brillante para indicar furia
+                    ctx.filter = 'hue-rotate(-20deg) brightness(1.3) saturate(2)';
+                }
                 if (sharkListo && SHARK_SPRITE_DATA) {
                     const frameData = SHARK_SPRITE_DATA.frames[a.frame];
                     if (frameData) {
