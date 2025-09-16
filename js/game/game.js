@@ -725,6 +725,8 @@ function reiniciar(nivelDeInicio = 1) {
         velocidadJuego: 1.0,
         slowMoTimer: 0, 
         levelFlags: {}, // >>> CAMBIO CLAVE <<< Objeto para que los niveles comuniquen flags al motor (ej: no mover el fondo)
+        screenShake: 0,
+        cameraZoom: 1.0,
     };
     estadoJuego.cameraX = 0;
     estadoJuego.cameraY = 0;
@@ -1213,10 +1215,12 @@ function actualizar(dt) {
     // --- Lógica de Habilidades: Impulso (Boost) ---
     estadoJuego.boostActivo = (teclas['b'] || teclas['B']) && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
 
+    // --- NUEVO: Lógica de efectos de cámara para el impulso ---
     if (estadoJuego.boostActivo) {
         estadoJuego.boostEnergia -= Weapons.WEAPON_CONFIG.boost.consumo * dtAjustado;
-
-        // El impulso ahora empuja en la dirección del movimiento, o hacia adelante si está quieto.
+        estadoJuego.screenShake = 5; // Activa el temblor de pantalla
+        estadoJuego.cameraZoom = 0.95; // Activa el zoom out
+        
         let boostVx = 1, boostVy = 0;
         if (len > 0) {
             boostVx = vx / JUGADOR_VELOCIDAD; // Normalizar el vector de velocidad
@@ -1224,15 +1228,13 @@ function actualizar(dt) {
         }
         jugador.x += boostVx * Weapons.WEAPON_CONFIG.boost.fuerza * dtAjustado;
         jugador.y += boostVy * Weapons.WEAPON_CONFIG.boost.fuerza * dtAjustado;
-
-        for(let i = 0; i < 5; i++) { // Generar burbujas intensas
-            generarBurbujaPropulsion(jugador.x - 40, jugador.y + (Math.random() - 0.5) * 30, false);
-        }
     } else {
         if (estadoJuego.boostEnfriamiento <= 0) {
             estadoJuego.boostEnergia += Weapons.WEAPON_CONFIG.boost.regeneracion * dtAjustado; // Regeneración de energía
             estadoJuego.boostEnergia = Math.min(estadoJuego.boostEnergia, estadoJuego.boostMaxEnergia);
         }
+        estadoJuego.screenShake = lerp(estadoJuego.screenShake, 0, dtAjustado * 5);
+        estadoJuego.cameraZoom = lerp(estadoJuego.cameraZoom, 1.0, dtAjustado * 5);
     }
 
     if (estadoJuego.boostEnergia <= 0) {
@@ -1647,8 +1649,24 @@ function renderizar(dt) {
     ctx.clearRect(0, 0, W, H);
 
     if (estadoJuego) {
-        // --- INICIO DEL SISTEMA DE CÁMARA ---
         ctx.save();
+
+        // --- NUEVO: Aplicar Zoom y Shake a la cámara ---
+        // 1. Mover al centro de la pantalla para que el zoom sea centrado
+        ctx.translate(W / 2, H / 2);
+        // 2. Aplicar el zoom (si es diferente de 1.0)
+        if (estadoJuego.cameraZoom !== 1.0) {
+            ctx.scale(estadoJuego.cameraZoom, estadoJuego.cameraZoom);
+        }
+        // 3. Mover de vuelta desde el centro
+        ctx.translate(-W / 2, -H / 2);
+        // 4. Aplicar el temblor de pantalla (shake)
+        if (estadoJuego.screenShake > 0.1) {
+            const shakeX = (Math.random() - 0.5) * estadoJuego.screenShake;
+            const shakeY = (Math.random() - 0.5) * estadoJuego.screenShake;
+            ctx.translate(shakeX, shakeY);
+        }
+
         // Redondeamos la posición de la cámara para evitar temblores por subpíxeles.
         const camX = Math.round(estadoJuego.cameraX);
         const camY = Math.round(estadoJuego.cameraY);
@@ -1894,7 +1912,7 @@ function renderizar(dt) {
                     ctx.beginPath();
                     ctx.arc(10, 0, flareRadius, 0, Math.PI * 2); // Un poco hacia adelante para que se vea bien
                     ctx.fill();
-                    ctx.restore();
+                    ctx.restore(); // Fin Lens Flare
 
                     // 2. Resplandor exterior (más ancho y cian)
                     const glowWidth = width * 2.0;
@@ -1911,7 +1929,7 @@ function renderizar(dt) {
                     ctx.fillStyle = Weapons.thrusterPattern;
                     ctx.globalAlpha = (0.8 + 0.2 * boostIntensity) * moveIntensity;
                     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-length, -width / 2); ctx.lineTo(-length, width / 2); ctx.closePath(); ctx.fill();
-                    ctx.restore();
+                    ctx.restore(); // Fin Llama principal
 
                     // 4. Núcleo interior blanco y caliente
                     const coreLength = length * 0.9;
@@ -1923,16 +1941,35 @@ function renderizar(dt) {
                     ctx.fillStyle = coreGrad;
                     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-coreLength, -coreWidth / 2); ctx.lineTo(-coreLength, coreWidth / 2); ctx.closePath(); ctx.fill();
 
-                    // 5. Emisión de partículas
-                    if (Math.random() < 0.9) {
-                        const numParticles = 2 + Math.floor(Math.random() * 3);
+                    // 5. Chispas Eléctricas
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    const numSparks = 5 + Math.floor(Math.random() * 5);
+                    for (let i = 0; i < numSparks; i++) {
+                        const sparkStart = Math.random() * length * 0.8;
+                        const sparkLength = 15 + Math.random() * 25;
+                        const sparkY = (Math.random() - 0.5) * (width * (1 - sparkStart / length));
+                        
+                        ctx.strokeStyle = `rgba(220, 255, 255, ${0.4 + Math.random() * 0.5})`;
+                        ctx.lineWidth = 1 + Math.random() * 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(-sparkStart, sparkY);
+                        ctx.lineTo(-(sparkStart + sparkLength), sparkY + (Math.random() - 0.5) * 10);
+                        ctx.stroke();
+                    }
+                    ctx.restore(); // Fin Chispas
+
+                    // 6. Emisión de partículas (MEJORADA)
+                    if (Math.random() < 0.95) {
+                        const numParticles = 4 + Math.floor(Math.random() * 4);
                         for (let i = 0; i < numParticles; i++) {
-                            const particleAngle = anguloFinal + Math.PI + (Math.random() - 0.5) * 0.3;
-                            const particleSpeed = 400 + Math.random() * 300;
+                            const particleAngle = anguloFinal + Math.PI + (Math.random() - 0.5) * 0.4;
+                            const particleSpeed = 500 + Math.random() * 400;
                             const originX = px - 35 * Math.cos(anguloFinal);
                             const originY = py - 35 * Math.sin(anguloFinal);
-                            generarParticula(particulasExplosion, { x: originX, y: originY, vx: Math.cos(particleAngle) * particleSpeed, vy: Math.sin(particleAngle) * particleSpeed, r: 1.5 + Math.random() * 2.5, vida: 0.4 + Math.random() * 0.4, color: ['#ffffff', '#afeeee', '#87ceeb'][Math.floor(Math.random() * 3)] });
+                            generarParticula(particulasExplosion, { x: originX, y: originY, vx: Math.cos(particleAngle) * particleSpeed, vy: Math.sin(particleAngle) * particleSpeed, r: 1.5 + Math.random() * 2.5, vida: 0.5 + Math.random() * 0.5, color: ['#ffffff', '#afeeee', '#87ceeb'][Math.floor(Math.random() * 3)] });
                         }
+                        for(let i = 0; i < 8; i++) { generarBurbujaPropulsion(px - 40 * Math.cos(anguloFinal), py - 40 * Math.sin(anguloFinal) + (Math.random() - 0.5) * 30, isLevel5); }
                     }
                 } else {
                     // --- EFECTO NORMAL (SIN BOOST) ---
@@ -1993,8 +2030,8 @@ function renderizar(dt) {
         ctx.stroke(d.path);
         ctx.restore();
     }
-
-    // --- FIN DEL SISTEMA DE CÁMARA ---
+    
+    // Se restaura el contexto principal (que incluye la cámara, zoom y shake)
     ctx.restore();
 
     // --- Dibuja Efectos de Pantalla (fuera de la cámara) ---
