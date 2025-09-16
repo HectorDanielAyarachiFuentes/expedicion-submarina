@@ -1026,9 +1026,72 @@ function actualizarCriaturasMenu(dt) {
         a.x += a.vx * dt;
         a.y += Math.sin(estadoJuego.tiempoTranscurrido * 2 + a.semillaFase) * 40 * dt;
 
-        // Animación de frame
+        // --- Animación de frame y estela de burbujas (específico por tipo) ---
         a.timerFrame += dt;
-        if (a.timerFrame >= 0.25) { a.timerFrame -= 0.25; a.frame ^= 1; }
+
+        if (a.tipo === 'whale') {
+            if (a.timerFrame >= WHALE_ANIMATION_SPEED) {
+                a.timerFrame -= WHALE_ANIMATION_SPEED;
+                if (WHALE_SPRITE_DATA) {
+                    a.frame = (a.frame + 1) % WHALE_SPRITE_DATA.frames.length;
+                }
+            }
+            // Estela de burbujas
+            if (Math.random() < 0.25) {
+                const tailX = a.x + a.w / 2.5;
+                const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.3);
+                generarParticula(particulasBurbujas, {
+                    x: tailX, y: tailY,
+                    vx: 20 + Math.random() * 30,
+                    vy: (Math.random() - 0.5) * 20 - 15,
+                    r: Math.random() * 2.5 + 1, vida: 1.2 + Math.random() * 1.0, color: ''
+                });
+            }
+        } else if (a.tipo === 'baby_whale') {
+            if (a.timerFrame >= BABYWHALE_ANIMATION_SPEED) {
+                a.timerFrame -= BABYWHALE_ANIMATION_SPEED;
+                if (BABYWHALE_SPRITE_DATA) {
+                    a.frame = (a.frame + 1) % BABYWHALE_SPRITE_DATA.frames.length;
+                }
+            }
+            // Estela de burbujas para la cría
+            if (Math.random() < 0.2) {
+                const tailX = a.x + a.w / 2.2;
+                const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.25);
+                generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 15 + Math.random() * 25, vy: (Math.random() - 0.5) * 15 - 10, r: Math.random() * 1.8 + 0.8, vida: 1.0 + Math.random() * 0.8, color: '' });
+            }
+        } else if (a.tipo === 'shark') {
+            if (a.timerFrame >= SHARK_ANIMATION_SPEED) {
+                a.timerFrame -= SHARK_ANIMATION_SPEED;
+                if (SHARK_SPRITE_DATA) {
+                    a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length;
+                }
+            }
+            // Estela de burbujas para el tiburón
+            if (Math.random() < 0.1) {
+                const tailX = a.x + a.w / 2;
+                const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.1);
+                generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 30 + Math.random() * 30, vy: (Math.random() - 0.5) * 25 - 10, r: Math.random() * 2.0 + 1.0, vida: 0.9 + Math.random() * 0.7, color: '' });
+            }
+        } else { // Criaturas normales ('normal', 'rojo', etc.)
+            if (a.timerFrame >= 0.2) {
+                a.timerFrame -= 0.2;
+                a.frame ^= 1;
+            }
+            // Estela de burbujas
+            if (Math.random() < 0.15) {
+                const tailX = a.x + a.w / 2;
+                const tailY = a.y;
+                generarParticula(particulasBurbujas, {
+                    x: tailX, y: tailY,
+                    vx: 20 + Math.random() * 20,
+                    vy: (Math.random() - 0.5) * 20 - 15,
+                    r: Math.random() * 1.5 + 0.5,
+                    vida: 0.8 + Math.random() * 0.7,
+                    color: ''
+                });
+            }
+        }
 
         // Reciclar si sale de la pantalla para mantener el ambiente vivo
         if (a.x < -a.w) {
@@ -1450,6 +1513,12 @@ function actualizar(dt) {
                     a.frame = (a.frame + 1) % BABYWHALE_SPRITE_DATA.frames.length;
                 }
             }
+            // Estela de burbujas para la cría
+            if (Math.random() < 0.2) {
+                const tailX = a.x + a.w / 2.2;
+                const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.25);
+                generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 15 + Math.random() * 25, vy: (Math.random() - 0.5) * 15 - 10, r: Math.random() * 1.8 + 0.8, vida: 1.0 + Math.random() * 0.8, color: '' });
+            }
         } else if (a.tipo === 'shark') {
             if (a.isHunting) {
                 // El tiburón está cazando, se mueve en su vector de ataque
@@ -1466,6 +1535,12 @@ function actualizar(dt) {
             } else {
                 // Modo patrulla: se mueve de derecha a izquierda
                 a.x += a.vx * dtAjustado;
+                // Estela de burbujas en modo patrulla
+                if (Math.random() < 0.1) {
+                    const tailX = a.x + a.w / 2;
+                    const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.1);
+                    generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 30 + Math.random() * 30, vy: (Math.random() - 0.5) * 25 - 10, r: Math.random() * 2.0 + 1.0, vida: 0.9 + Math.random() * 0.7, color: '' });
+                }
                 a.huntCooldown -= dtAjustado;
                 // Si ve al jugador y no está en cooldown, inicia la caza en manada
                 if (a.huntCooldown <= 0 && jugador.x < a.x && a.x < W) {
@@ -1865,6 +1940,9 @@ function renderizar(dt) {
                 if (a.isHunting) {
                     // Un tinte rojizo y más brillante para indicar furia
                     ctx.filter = 'hue-rotate(-20deg) brightness(1.3) saturate(2)';
+                } else {
+                    // Para que se vean mejor en el fondo oscuro, aumentamos su brillo.
+                    ctx.filter = 'brightness(1.5)';
                 }
                 if (sharkListo && SHARK_SPRITE_DATA) {
                     const frameData = SHARK_SPRITE_DATA.frames[a.frame];
@@ -2818,7 +2896,12 @@ function mostrarVistaMenuPrincipal(desdePausa) {
     // Generar criaturas de fondo si es el menú inicial (no en pausa)
     if (!desdePausa) {
         animales.length = 0; // Limpiar cualquier animal de una partida anterior
-        const tiposMenu = ['normal', 'normal', 'normal', sharkListo ? 'shark' : 'normal', whaleListo ? 'whale' : 'normal'];
+        const tiposMenu = [
+            'normal', 'normal', 'normal', 
+            sharkListo ? 'shark' : 'normal', 
+            whaleListo ? 'whale' : 'normal',
+            babyWhaleListo ? 'baby_whale' : 'normal'
+        ];
         for (let i = 0; i < 7; i++) { // Más criaturas para un fondo más vivo
             const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)];
             setTimeout(() => generarAnimal(false, tipoAleatorio), i * 1800);
