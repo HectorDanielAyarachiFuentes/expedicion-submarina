@@ -99,6 +99,7 @@ const statScore = document.getElementById('statScore');
 const statDepth = document.getElementById('statDepth');
 const statSpecimens = document.getElementById('statSpecimens');
 const muteBtn = document.getElementById('muteBtn');
+const helpBtn = document.getElementById('helpBtn');
 const infoBtn = document.getElementById('infoBtn');
 const githubBtn = document.getElementById('githubBtn');
 const fsBtn = document.getElementById('fsBtn');
@@ -982,7 +983,7 @@ function reiniciar(nivelDeInicio = 1) {
     autoSize();
     iniciarParticulas();
     iniciarPolvoMarino();
-    if (gameplayHints) gameplayHints.style.display = 'none';
+    if (gameplayHints) gameplayHints.classList.remove('visible');
 }
 
 function velocidadActual() {
@@ -2975,12 +2976,13 @@ function iniciarJuego(nivel = 1) {
     estadoJuego.enEjecucion = true;
     estadoJuego.luzVisible = true;
     S.init();
-    S.detener('theme_main'); // prettier-ignore
-    S.startPlaylist(); if (overlay) { overlay.style.display = 'none'; overlay.classList.remove('initial-menu'); }
-    if (gameplayHints) {
-        gameplayHints.style.display = 'flex';
-        gameplayHints.querySelectorAll('[data-hint-type]').forEach(h => h.style.display = 'flex');
+    S.detener('theme_main');
+    S.startPlaylist();
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.classList.remove('initial-menu');
     }
+    if (gameplayHints) gameplayHints.classList.remove('visible'); // Ocultar panel de controles
     setTimeout(function () { __iniciando = false; }, 200);
 }
 
@@ -3118,8 +3120,8 @@ function mostrarPantallaGameOver() {
     modoSuperposicion = 'gameover';
     // --- CAMBIO CLAVE: Añadir 'initial-menu' para un fondo claro y animado ---
     if (overlay) { overlay.style.display = 'grid'; overlay.classList.add('initial-menu'); }
-    if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.style.display = 'none'; estadoJuego.faseJuego = 'gameover'; S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500);
-
+    if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.classList.remove('visible'); estadoJuego.faseJuego = 'gameover'; S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500);
+    if (gameplayHints) gameplayHints.classList.remove('visible');
     // --- NUEVO: Activar las animaciones de fondo del menú ---
     if (menuFlyBy) {
         menuFlyBy.active = false;
@@ -3157,7 +3159,7 @@ function ganarJuego() {
     modoSuperposicion = 'gameover';
     if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); }
     if (bossHealthContainer) bossHealthContainer.style.display = 'none';
-    if (gameplayHints) gameplayHints.style.display = 'none';
+    if (gameplayHints) gameplayHints.classList.remove('visible');
 }
 function comprobarCompletadoNivel() {
     if (!estadoJuego || estadoJuego.faseJuego !== 'playing') return;
@@ -3173,7 +3175,7 @@ function comprobarCompletadoNivel() {
     }
 }
 function activarTransicionNivel(proximoNivel) { estadoJuego.faseJuego = 'transition'; estadoJuego.enEjecucion = false; const config = Levels.CONFIG_NIVELES[proximoNivel - 1]; if (mainMenu) mainMenu.style.display = 'none'; if (levelTitle) levelTitle.textContent = config.nombre; if (levelDesc) levelDesc.textContent = config.objetivo; if (levelTransition) levelTransition.style.display = 'block'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } setTimeout(() => { iniciarSiguienteNivel(proximoNivel); }, 4000); }
-function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; Weapons.initWeapons(); estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) { gameplayHints.querySelectorAll('.hint[data-hint-type]').forEach(h => { h.style.display = 'flex'; }); } }
+function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; Weapons.initWeapons(); estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) gameplayHints.classList.remove('visible'); }
 function mostrarVistaMenuPrincipal(desdePausa) {    
     if (!mainMenu) return;
 
@@ -3245,7 +3247,7 @@ function poblarSelectorDeNiveles() {
 }
 
 function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.style.display = 'none'; } }
-function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); }
+function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); } // prettier-ignore
 function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { document.body.classList.toggle('immersive'); return; } const el = document.documentElement; try { if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) { if (el.requestFullscreen) return el.requestFullscreen(); if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen(); } else { if (document.exitFullscreen) return document.exitFullscreen(); if (document.webkitExitFullscreen) return document.webkitExitFullscreen(); } } catch (err) { console.warn('Pantalla completa no disponible', err); } }
 
 
@@ -3489,7 +3491,7 @@ function renderizarSubmarinoBailarin(t) {
 // Configura todos los listeners de eventos (teclado, ratón, botones de la UI).
 
 let arrastreId = -1, arrastreActivo = false, arrastreY = 0;
-function estaSobreUI(x, y) { const elementos = [muteBtn, infoBtn, fsBtn, shareBtn, githubBtn, overlay, infoOverlay, levelSelectBtn, backToMainBtn]; for (const el of elementos) { if (!el) continue; const style = getComputedStyle(el); if (style.display === 'none' || style.visibility === 'hidden') continue; const r = el.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true; } return false; }
+function estaSobreUI(x, y) { const elementos = [muteBtn, helpBtn, infoBtn, fsBtn, shareBtn, githubBtn, overlay, infoOverlay, levelSelectBtn, backToMainBtn]; for (const el of elementos) { if (!el) continue; const style = getComputedStyle(el); if (style.display === 'none' || style.visibility === 'hidden') continue; const r = el.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true; } return false; }
 
 export function init() {
     // --- 1. EVENTOS DE TECLADO Y RATÓN (Puntero) ---
@@ -3506,7 +3508,15 @@ export function init() {
     };
 
     addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
-    addEventListener('keyup', function (e) { teclas[e.key] = false; });
+    addEventListener('keyup', function (e) {
+        teclas[e.key] = false;
+        // --- NUEVO: Ocultar panel de ayuda con Escape ---
+        if (e.key === 'Escape') {
+            if (gameplayHints && gameplayHints.classList.contains('visible')) {
+                gameplayHints.classList.remove('visible');
+            }
+        }
+    });
     window.addEventListener('blur', () => { teclas = {}; }); // Limpiar teclas si se pierde el foco
     window.addEventListener('pointerdown', (e) => {
         // Resumir el contexto de audio en la primera interacción del usuario
@@ -3544,7 +3554,7 @@ export function init() {
                 if (estadoJuego) {
                     estadoJuego.enEjecucion = true;
                     estadoJuego.bloqueoEntrada = 0.15;
-                    if (gameplayHints) gameplayHints.style.display = 'flex';
+                    if (gameplayHints) gameplayHints.classList.remove('visible');
                 }
                 S.bucle('music'); // Reanudamos la música del juego
             } else { // Si no es pausa, es un nuevo juego
@@ -3570,6 +3580,11 @@ export function init() {
     }
 
     // --- 3. BOTONES DE LA BARRA DE HUD SUPERIOR ---
+    if (helpBtn) {
+        helpBtn.onclick = function () {
+            if (gameplayHints) gameplayHints.classList.toggle('visible');
+        };
+    }
     if (muteBtn) { muteBtn.onclick = function () { S.alternarSilenciado(); actualizarIconos(); }; }
     if (infoBtn) {
         infoBtn.onclick = () => {
@@ -3578,7 +3593,7 @@ export function init() {
             S.pausar('music');
             S.reproducir('theme_main');
             if (infoOverlay) infoOverlay.style.display = 'grid';
-            if (gameplayHints) gameplayHints.style.display = 'none';
+            if (gameplayHints) gameplayHints.classList.remove('visible');
             animarSubmarino = true;
 
             // Iniciar slideshow de créditos
@@ -3630,7 +3645,7 @@ export function init() {
             if (estabaCorriendoAntesCreditos && (!overlay || overlay.style.display === 'none')) {
                 if (estadoJuego) { estadoJuego.enEjecucion = true; }
                 S.bucle('music');
-                if (gameplayHints) gameplayHints.style.display = 'flex';
+                if (gameplayHints) gameplayHints.classList.remove('visible');
             }
             animarSubmarino = false;
 
@@ -3654,7 +3669,7 @@ export function init() {
                     if (estadoJuego) {
                         estadoJuego.enEjecucion = true;
                         estadoJuego.bloqueoEntrada = 0.15;
-                        if (gameplayHints) gameplayHints.style.display = 'flex';
+                    if (gameplayHints) gameplayHints.classList.remove('visible');
                     }
                     S.bucle('music');
                 } else {

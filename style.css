@@ -1,6 +1,6 @@
 /* ========= Variables y Estilos Globales ========= */
 :root {
-    --bg-dark: #06131f;
+    --bg-dark: #06131f; /* Azul muy oscuro, casi negro */
     --bg-card: #001830;
     --text-light: #e9f3ff;
     --accent-blue: #7ecbff;
@@ -8,11 +8,11 @@
     --accent-blue-light: #cfe9ff;
     --accent-yellow: #ffdd77;
     --accent-red: #b22222;
+    --accent-red-light: #ff4d4d;
 
-    --hud-bg-color: rgba(6, 19, 31, 0.65);
-    --hud-blur: 8px;
+    --hud-bg-color: rgba(6, 19, 31, 0.5); /* Más transparente */
+    --hud-blur: 12px; /* Más desenfoque */
     --hud-border-color: rgba(126, 203, 255, 0.4);
-
     --status-bar-height: 60px; /* Reducido para un look más moderno */
     --total-hud-height: var(--status-bar-height);
 }
@@ -29,8 +29,8 @@ html, body {
 canvas { 
     position: fixed; 
     left: 0;
-    top: var(--total-hud-height); /* Ajustado para el nuevo top-hud */
-    width: 100vw; height: calc(100vh - var(--total-hud-height));
+    top: 0; /* El canvas ocupa toda la pantalla */
+    width: 100vw; height: 100vh;
     display: block; 
 }
 /* ... (El resto de estilos de canvas permanece igual) ... */
@@ -40,55 +40,44 @@ canvas {
 #hudCanvas { z-index: 3; pointer-events: none; }
 
 /* ========= HUD SUPERIOR (DISEÑO EN LÍNEA ÚNICA) ========= */
+/* El contenedor principal del HUD ahora es solo un espaciador */
 #top-hud {
     position: fixed;
     top: 0;
-    left: 0; /* Asegura que ocupe todo el ancho */
-    width: 100%; z-index: 6;
-    image-rendering: pixelated;
-    background-color: var(--hud-bg-color);
-    backdrop-filter: blur(var(--hud-blur));
-    -webkit-backdrop-filter: blur(var(--hud-blur));
-    animation: fadeInHud 0.8s ease-out forwards;
-}
-
-@keyframes fadeInHud {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+    left: 0;
+    width: 100%; /* Ocupa todo el ancho para posicionar los pods */
+    z-index: 6;
+    pointer-events: none; /* No interfiere con clics */
 }
 
 #status-bar {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    height: var(--status-bar-height);
-    padding: 0 clamp(10px, 2vw, 15px); /* Padding ligeramente reducido */
+    align-items: flex-start; /* Alinea los pods en la parte superior */
+    padding: 15px; /* Espacio desde los bordes de la pantalla */
     box-sizing: border-box;
-    border-bottom: 1px solid var(--hud-border-color);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-#status-left {
-    display: flex; 
-    align-items: center; 
-    gap: clamp(10px, 3vw, 20px);
-}
-#logoHUD { height: clamp(40px, 7vh, 50px); }
-#status-text {
-    color: var(--text-light);
-    font-size: clamp(0.7rem, 1.8vw, 0.9rem); /* Fuente ligeramente más pequeña */
-    line-height: 1.4;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-}
-#hud-objective-text { color: var(--accent-yellow); }
-
-    /* display: flex; */ /* Controlado por JS */
-    justify-content: center;
+/* Estilo de "Pod" para los elementos del HUD */
+.hud-pod {
+    background-color: var(--hud-bg-color);
+    backdrop-filter: blur(var(--hud-blur));
+    -webkit-backdrop-filter: blur(var(--hud-blur));
+    border: 1px solid var(--hud-border-color);
+    border-radius: 10px;
+    padding: 8px 16px;
+    display: flex;
     align-items: center;
-    gap: 2rem;
-    color: var(--text-light);
-    flex-grow: 1;
+    gap: 12px; /* Espacio entre elementos dentro del pod */
+    pointer-events: all; /* Los pods sí son clickeables */
+    animation: slideInTop 0.6s 0.3s ease-out forwards;
+    opacity: 0;
+    transform: translateY(-100%);
 }
+
+@keyframes slideInTop { to { opacity: 1; transform: translateY(0); } }
+
+#hud-objective-text { color: var(--accent-yellow); }
 .hint { 
     display: flex;
     align-items: center;
@@ -120,8 +109,9 @@ kbd.key-icon {
     border: 1px solid #64748b;
     border-bottom: 3px solid #475569;
     font-family: 'Press Start 2P', monospace;
-    height: 28px;Bordes ligeramente más suaves */
+    height: 28px;
     transition: all 0.1s ease-out;
+    border-radius: 4px; /* Bordes ligeramente más suaves */
 }
 kbd.key-icon:active { transform: translateY(2px); border-bottom-width: 1px; }
 kbd.text-key { width: 28px; font-size: 1.1rem; }
@@ -130,14 +120,6 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 .key-arrow-down::before { content: ''; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid var(--accent-blue-light); }
 .key-arrow-left::before { content: ''; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 9px solid var(--accent-blue-light); }
 .key-arrow-right::before { content: ''; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 9px solid var(--accent-blue-light); } kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-blue-light); }
-
-
-#status-right {
-    display: flex; 
-    gap: 10px;
-    flex-shrink: 0; 
-}
-
 
 /* ===== NUEVO Y MEJORADO ESTILO PARA LOS BOTONES DEL HUD ===== */
 .spritebtn {
@@ -198,6 +180,36 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 
 /* (El resto del CSS para overlays, menús, etc., permanece igual) */
 
+/* ===== NUEVO: Panel de Controles Flotante ===== */
+#gameplay-hints {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    z-index: 12; /* Por encima de todo */
+    
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+    
+    background-color: var(--hud-bg-color);
+    backdrop-filter: blur(var(--hud-blur));
+    border: 1px solid var(--hud-border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    color: var(--text-light);
+    
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+#gameplay-hints.visible {
+    opacity: 1;
+    pointer-events: all;
+    transform: translate(-50%, -50%) scale(1);
+}
+
 /* ===== NUEVO: HUD DINÁMICO DE ESTADÍSTICAS (HTML) ===== */
 #game-stats-overlay {
     position: fixed;
@@ -248,7 +260,7 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     margin-right: 15px; /* Asegura espacio entre etiqueta y valor */
 }
 
-#game-stats-overlay .stat-value {
+#game-stats-overlay .stat-value, #statAssassinValue {
     color: var(--accent-yellow);
     font-size: clamp(0.8rem, 2vw, 1rem);
     text-align: right; /* Alinea los valores a la derecha */
@@ -308,7 +320,7 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 .boost-bar.reloading { background: linear-gradient(to right, #ff6666, #ff0000); }
 .laser-bar { background: linear-gradient(to right, #ff4d4d, #b22222); }
 .laser-bar.active { box-shadow: 0 0 8px #ff4d4d; }
-.shield-bar { background: linear-gradient(to right, #add8e6, #00bfff); }
+.shield-bar { background: linear-gradient(to right, #add8e6, #00bfff); } /* Light blue to sky blue */
 .shield-bar.reloading { background: linear-gradient(to right, #ff6666, #ff0000); }
 .shield-bar.active { box-shadow: 0 0 8px #add8e6; }
 .shield-bar.hit { animation: shieldHitFlash 0.4s forwards; }
@@ -320,13 +332,12 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 
 /* ========= Media Queries para Responsividad ========= */
 @media (max-width: 820px) {
-    .hint > span { display: none; }
-    #gameplay-hints { gap: 1rem; }
     kbd.key-spacebar { width: 80px; }
 }
 
 @media (max-width: 600px) { 
-    #gameplay-hints { display: none; }
+    /* En pantallas pequeñas, el panel de controles ocupa más ancho */
+    #gameplay-hints { width: 90%; padding: 1.5rem; gap: 1rem; }
     #fsBtn, #shareBtn, #githubBtn { display: none; }
     #game-stats-overlay {
         width: calc(100% - 20px); /* Ocupa casi todo el ancho */
@@ -344,7 +355,7 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 }
 
 @media (pointer: coarse) {
-    #gameplay-hints { display: none; }
+    /* En dispositivos táctiles, los hints se ocultan por defecto, pero se pueden mostrar con el botón '?' */
 }
 
 /* ... (Todo tu CSS existente va aquí arriba) ... */

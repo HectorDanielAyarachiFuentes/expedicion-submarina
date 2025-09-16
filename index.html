@@ -45,53 +45,19 @@
     <!-- ===== ESTRUCTURA DEL HUD SUPERIOR ===== -->
     <div id="top-hud">
         <div id="status-bar">
-            <div id="status-left">
-                <img id="logoHUD" src="img/logo.png" alt="logo">
+            <div id="status-left" class="hud-pod">
                 <div id="status-text">
                     <div id="hud-level-text">NIVEL 1</div>
                     <div id="hud-objective-text">CAPTURAS: 0 / 10</div>
                 </div>
             </div>
 
-            <!-- Controles/Hints del juego -->
-            <div id="gameplay-hints">
-                <!-- HINT DE MOVIMIENTO UNIFICADO (ahora el movimiento es libre en todos los niveles) -->
-                <div class="hint hint-grid" data-hint-type="movement">
-                    <span>MOVER</span>
-                    <kbd class="key-icon key-arrow-up"></kbd>
-                    <kbd class="key-icon key-arrow-left"></kbd>
-                    <kbd class="key-icon key-arrow-down"></kbd>
-                    <kbd class="key-icon key-arrow-right"></kbd>
-                </div>
-
-                <!-- HINTS COMUNES -->
-                <div class="hint" data-hint-type="all">
-                    <span>DISPARAR</span>
-                    <kbd class="key-icon key-spacebar"></kbd>
-                </div>
-                 <div class="hint" data-hint-type="all">
-                    <span>ARMA</span>
-                    <kbd class="key-icon text-key">C</kbd>
-                </div>
-                <div class="hint" data-hint-type="all">
-                    <span>TORPEDO</span>
-                    <kbd class="key-icon text-key">X</kbd>
-                </div>
-                <div class="hint" data-hint-type="all">
-                    <span>IMPULSO</span>
-                    <kbd class="key-icon text-key">B</kbd>
-                </div>
-                <div class="hint" data-hint-type="all">
-                    <span>SONAR</span>
-                    <kbd class="key-icon text-key">M</kbd>
-                </div>
-                <div class="hint" data-hint-type="all">
-                    <span>ESCUDO</span>
-                    <kbd class="key-icon text-key">V</kbd>
-                </div>
-            </div>
-
-            <div id="status-right">
+            <div id="status-right" class="hud-pod">
+                <!-- ===== NUEVO: Botón de Ayuda/Controles ===== -->
+                <button id="helpBtn" class="spritebtn" title="Ver Controles">
+                    <svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"></path></svg>
+                </button>
+                <!-- ========================================== -->
                 <button id="muteBtn" class="spritebtn" title="Silenciar / Activar Sonido">
                     <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path><path id="muteSlash" d="M1 1l22 22" stroke-width="2" stroke="currentColor" fill="none" style="display:none;"></path></svg>
                 </button>
@@ -108,6 +74,41 @@
                     <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3z"></path></svg>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== NUEVO: Panel de Controles Flotante (Oculto por defecto) ===== -->
+    <div id="gameplay-hints">
+        <div class="hint hint-grid" data-hint-type="movement">
+            <span>MOVER</span>
+            <kbd class="key-icon key-arrow-up"></kbd>
+            <kbd class="key-icon key-arrow-left"></kbd>
+            <kbd class="key-icon key-arrow-down"></kbd>
+            <kbd class="key-icon key-arrow-right"></kbd>
+        </div>
+        <div class="hint" data-hint-type="all">
+            <span>DISPARAR</span>
+            <kbd class="key-icon key-spacebar"></kbd>
+        </div>
+         <div class="hint" data-hint-type="all">
+            <span>ARMA</span>
+            <kbd class="key-icon text-key">C</kbd>
+        </div>
+        <div class="hint" data-hint-type="all">
+            <span>TORPEDO</span>
+            <kbd class="key-icon text-key">X</kbd>
+        </div>
+        <div class="hint" data-hint-type="all">
+            <span>IMPULSO</span>
+            <kbd class="key-icon text-key">B</kbd>
+        </div>
+        <div class="hint" data-hint-type="all">
+            <span>SONAR</span>
+            <kbd class="key-icon text-key">M</kbd>
+        </div>
+        <div class="hint" data-hint-type="all">
+            <span>ESCUDO</span>
+            <kbd class="key-icon text-key">V</kbd>
         </div>
     </div>
 
