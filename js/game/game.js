@@ -244,13 +244,15 @@ export const S = (function () {
         }
         const el = audioObj.element;
 
-        // Conectar al analizador si es la música del menú y el contexto de audio existe
-        if (k === 'theme_main' && audioCtx && !audioObj.source) {
-            try {
-                audioObj.source = audioCtx.createMediaElementSource(el);
-                audioObj.source.connect(analyser);
-            } catch (e) {
-                console.error(`No se pudo conectar el audio '${k}' al analizador:`, e);
+        // Conectar al analizador si es una pista de música y el contexto de audio existe
+        if (k.startsWith('music_') || k === 'theme_main') {
+            if (audioCtx && !audioObj.source) {
+                try {
+                    audioObj.source = audioCtx.createMediaElementSource(el);
+                    audioObj.source.connect(analyser);
+                } catch (e) {
+                    console.error(`No se pudo conectar el audio '${k}' al analizador:`, e);
+                }
             }
         }
 
@@ -3246,7 +3248,7 @@ function poblarSelectorDeNiveles() {
     });
 }
 
-function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.style.display = 'none'; } }
+function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.classList.remove('visible'); } }
 function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); } // prettier-ignore
 function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { document.body.classList.toggle('immersive'); return; } const el = document.documentElement; try { if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) { if (el.requestFullscreen) return el.requestFullscreen(); if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen(); } else { if (document.exitFullscreen) return document.exitFullscreen(); if (document.webkitExitFullscreen) return document.webkitExitFullscreen(); } } catch (err) { console.warn('Pantalla completa no disponible', err); } }
 
@@ -3259,6 +3261,19 @@ export function gameLoop(t) {
     // Calcula el delta time (dt) para un movimiento consistente independientemente de los FPS.
     const dt = Math.min(0.033, (t - ultimo) / 1000 || 0);
     ultimo = t;
+
+    // --- NUEVO: Animación del logo con la música ---
+    if (logoHUD) {
+        const audioLevel = S.getAudioData();
+        if (typeof audioLevel === 'number') {
+            // Normalizar el nivel de audio (0-255) a un factor de escala
+            // Usamos una curva (potencia) para que la reacción sea más notoria en los picos de graves.
+            const normalizedLevel = audioLevel / 255;
+            const scale = 1 + Math.pow(normalizedLevel, 2) * 0.15; // Reacción sutil de hasta 15%
+            logoHUD.style.transform = `scale(${scale})`;
+        }
+    }
+    // --- FIN NUEVO ---
 
     let dtAjustado = dt;
     if (estadoJuego) {

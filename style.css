@@ -77,6 +77,14 @@ canvas {
 
 @keyframes slideInTop { to { opacity: 1; transform: translateY(0); } }
 
+/* Estilo para el logo en el HUD superior */
+#logoHUD {
+    height: clamp(35px, 6vh, 45px); /* Tamaño del logo */
+    image-rendering: pixelated;
+    transition: transform 0.1s ease-out; /* Transición suave para el pulso */
+    filter: drop-shadow(0 0 5px rgba(126, 203, 255, 0.5)); /* Sutil resplandor */
+}
+
 #hud-objective-text { color: var(--accent-yellow); }
 .hint { 
     display: flex;
