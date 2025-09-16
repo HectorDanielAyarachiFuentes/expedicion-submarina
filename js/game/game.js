@@ -825,6 +825,9 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             isTailSwiping: false,
             tailSwipeProgress: 0,
             songCooldown: 2.0 + Math.random() * 2, // Cooldown para el canto ambiental (REDUCIDO PARA PRUEBAS)
+            // --- NUEVO: Estado de protección ---
+            isProtecting: false,
+            protectedBaby: null,
         };
         animales.push(adultWhale);
 
@@ -1355,6 +1358,27 @@ function actualizar(dt) {
                 generarGotasSangre(a.x, a.y); // Salpica sangre
             }
 
+            // --- NUEVO: Lógica de protección de crías ---
+            const PROTECTION_RADIUS = 400;
+            let closestThreatenedBaby = null;
+            let minPlayerDist = PROTECTION_RADIUS;
+
+            // Buscar la cría más amenazada que le pertenezca
+            for (const other of animales) {
+                if (other.tipo === 'baby_whale' && other.mother === a) {
+                    const dist = Math.hypot(jugador.x - other.x, jugador.y - other.y);
+                    if (dist < minPlayerDist) {
+                        minPlayerDist = dist;
+                        closestThreatenedBaby = other;
+                    }
+                }
+            }
+
+            // Actualizar estado de protección
+            a.isProtecting = !!closestThreatenedBaby;
+            a.protectedBaby = closestThreatenedBaby;
+            // --- FIN Lógica de protección ---
+
             // --- SUGERENCIA DE IA: LÓGICA DE NUEVOS ATAQUES ---
             // 1. Ataque de chorro de agua (Spout)
             a.spoutCooldown -= dtAjustado;
@@ -1402,8 +1426,30 @@ function actualizar(dt) {
                 if (a.tailSwipeProgress >= 1) {
                     a.isTailSwiping = false;
                 }
+            } else if (a.isProtecting && a.protectedBaby) {
+                // --- MOVIMIENTO DE PROTECCIÓN ---
+                // La ballena se interpone entre el jugador y la cría.
+                const baby = a.protectedBaby;
+                const dx = jugador.x - baby.x;
+                const dy = jugador.y - baby.y;
+                const dist = Math.hypot(dx, dy);
+                
+                // El objetivo es un punto delante de la cría, en la línea hacia el jugador
+                const offset = 120; // A qué distancia se interpone
+                const targetX = baby.x + (dx / dist) * offset;
+                const targetY = baby.y + (dy / dist) * offset;
+
+                // Moverse hacia el objetivo más rápido de lo normal
+                const protectionSpeed = 2.5;
+                a.x = lerp(a.x, targetX, dtAjustado * protectionSpeed);
+                a.y = lerp(a.y, targetY, dtAjustado * protectionSpeed);
+
+                // Si está protegiendo, puede intentar un coletazo si el jugador se acerca demasiado a la ballena
+                if (a.tailSwipeCooldown <= 0 && Math.hypot(jugador.x - a.x, jugador.y - a.y) < 200) {
+                    a.isTailSwiping = true; a.tailSwipeProgress = 0; a.tailSwipeCooldown = 4.0 + Math.random() * 3.0;
+                }
             } else {
-                a.x += a.vx * dtAjustado; // Solo se mueve si no está dando un coletazo
+                a.x += a.vx * dtAjustado; // Movimiento normal de patrulla
             }
             // --- FIN SUGERENCIA ---
 
