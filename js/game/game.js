@@ -1654,50 +1654,94 @@ function renderizar(dt) {
                 const isBoosting = estadoJuego.boostActivo;
                 const moveIntensity = clamp((propellerCurrentSpeed - 5) / 20, 0, 1); // 0 en ralentí, 1 a velocidad normal
 
-                // El largo y ancho base dependen del movimiento normal
                 let baseLength = 60 * moveIntensity;
                 let baseWidth = 40 * moveIntensity;
-
-                // Cuando se usa el impulso, se vuelve mucho más grande e intenso
-                if (isBoosting) {
-                    const boostIntensity = estadoJuego.boostEnergia / estadoJuego.boostMaxEnergia;
-                    baseLength = 120 + 80 * boostIntensity + Math.random() * 20;
-                    baseWidth = 45 + 20 * boostIntensity + Math.random() * 10;
-                }
                 
                 ctx.save();
                 ctx.translate(px, py);
                 ctx.rotate(anguloFinal);
                 ctx.translate(-35, 0); // Posicionar detrás del submarino
 
-                // --- DIBUJAR EL PROPULSOR EN CAPAS ---
+                if (isBoosting) {
+                    // --- NUEVO EFECTO DE BOOST ESPECTACULAR ---
+                    const boostIntensity = estadoJuego.boostEnergia / estadoJuego.boostMaxEnergia;
+                    const flicker = 1 + (Math.random() - 0.5) * 0.4; // Parpadeo
+                    const length = (180 + 120 * boostIntensity) * flicker;
+                    const width = (50 + 25 * boostIntensity) * flicker;
 
-                // 1. Resplandor exterior azul (más grande y suave)
-                const glowWidth = baseWidth * 1.5;
-                const glowGrad = ctx.createLinearGradient(0, 0, -baseLength, 0);
-                glowGrad.addColorStop(0, 'rgba(0, 150, 255, 0.5)');
-                glowGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
-                ctx.fillStyle = glowGrad;
-                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength * 1.1, -glowWidth / 2); ctx.lineTo(-baseLength * 1.1, glowWidth / 2); ctx.closePath(); ctx.fill();
+                    // 1. Lens Flare en la base
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    const flareRadius = width * 1.2;
+                    const flareGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, flareRadius);
+                    flareGrad.addColorStop(0, `rgba(220, 255, 255, ${0.9 * boostIntensity})`);
+                    flareGrad.addColorStop(0.4, `rgba(100, 220, 255, ${0.5 * boostIntensity})`);
+                    flareGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
+                    ctx.fillStyle = flareGrad;
+                    ctx.beginPath();
+                    ctx.arc(10, 0, flareRadius, 0, Math.PI * 2); // Un poco hacia adelante para que se vea bien
+                    ctx.fill();
+                    ctx.restore();
 
-                // 2. Llama principal con el patrón SVG
-                ctx.save();
-                ctx.translate(Weapons.thrusterPatternOffsetX, 0); // Animar el patrón
-                ctx.globalCompositeOperation = 'lighter';
-                ctx.fillStyle = Weapons.thrusterPattern;
-                const mainFlameAlpha = isBoosting ? 0.9 : 0.7;
-                ctx.globalAlpha = mainFlameAlpha * moveIntensity;
-                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength, -baseWidth / 2); ctx.lineTo(-baseLength, baseWidth / 2); ctx.closePath(); ctx.fill();
-                ctx.restore(); // Restaurar desde la animación del patrón
+                    // 2. Resplandor exterior (más ancho y cian)
+                    const glowWidth = width * 2.0;
+                    const glowGrad = ctx.createLinearGradient(0, 0, -length, 0);
+                    glowGrad.addColorStop(0, `rgba(0, 200, 255, ${0.5 * boostIntensity})`);
+                    glowGrad.addColorStop(1, 'rgba(0, 200, 255, 0)');
+                    ctx.fillStyle = glowGrad;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-length * 1.1, -glowWidth / 2); ctx.lineTo(-length * 1.1, glowWidth / 2); ctx.closePath(); ctx.fill();
 
-                // 3. Núcleo blanco y caliente (más pequeño y brillante)
-                const coreLength = baseLength * (isBoosting ? 0.8 : 0.6);
-                const coreWidth = baseWidth * 0.4;
-                const coreGrad = ctx.createLinearGradient(0, 0, -coreLength, 0);
-                coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                ctx.fillStyle = coreGrad;
-                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-coreLength, -coreWidth / 2); ctx.lineTo(-coreLength, coreWidth / 2); ctx.closePath(); ctx.fill();
+                    // 3. Llama principal (usando el patrón, pero más brillante)
+                    ctx.save();
+                    ctx.translate(Weapons.thrusterPatternOffsetX, 0);
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = Weapons.thrusterPattern;
+                    ctx.globalAlpha = (0.8 + 0.2 * boostIntensity) * moveIntensity;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-length, -width / 2); ctx.lineTo(-length, width / 2); ctx.closePath(); ctx.fill();
+                    ctx.restore();
+
+                    // 4. Núcleo interior blanco y caliente
+                    const coreLength = length * 0.9;
+                    const coreWidth = width * 0.3;
+                    const coreGrad = ctx.createLinearGradient(0, 0, -coreLength, 0);
+                    coreGrad.addColorStop(0, `rgba(255, 255, 255, ${1.0 * boostIntensity})`);
+                    coreGrad.addColorStop(0.8, `rgba(200, 255, 255, ${0.8 * boostIntensity})`);
+                    coreGrad.addColorStop(1, 'rgba(150, 240, 255, 0)');
+                    ctx.fillStyle = coreGrad;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-coreLength, -coreWidth / 2); ctx.lineTo(-coreLength, coreWidth / 2); ctx.closePath(); ctx.fill();
+
+                    // 5. Emisión de partículas
+                    if (Math.random() < 0.9) {
+                        const numParticles = 2 + Math.floor(Math.random() * 3);
+                        for (let i = 0; i < numParticles; i++) {
+                            const particleAngle = anguloFinal + Math.PI + (Math.random() - 0.5) * 0.3;
+                            const particleSpeed = 400 + Math.random() * 300;
+                            const originX = px - 35 * Math.cos(anguloFinal);
+                            const originY = py - 35 * Math.sin(anguloFinal);
+                            generarParticula(particulasExplosion, { x: originX, y: originY, vx: Math.cos(particleAngle) * particleSpeed, vy: Math.sin(particleAngle) * particleSpeed, r: 1.5 + Math.random() * 2.5, vida: 0.4 + Math.random() * 0.4, color: ['#ffffff', '#afeeee', '#87ceeb'][Math.floor(Math.random() * 3)] });
+                        }
+                    }
+                } else {
+                    // --- EFECTO NORMAL (SIN BOOST) ---
+                    const glowWidth = baseWidth * 1.5;
+                    const glowGrad = ctx.createLinearGradient(0, 0, -baseLength, 0);
+                    glowGrad.addColorStop(0, 'rgba(0, 150, 255, 0.5)'); glowGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
+                    ctx.fillStyle = glowGrad;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength * 1.1, -glowWidth / 2); ctx.lineTo(-baseLength * 1.1, glowWidth / 2); ctx.closePath(); ctx.fill();
+                    ctx.save();
+                    ctx.translate(Weapons.thrusterPatternOffsetX, 0);
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = Weapons.thrusterPattern;
+                    ctx.globalAlpha = 0.7 * moveIntensity;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength, -baseWidth / 2); ctx.lineTo(-baseLength, baseWidth / 2); ctx.closePath(); ctx.fill();
+                    ctx.restore();
+                    const coreLength = baseLength * 0.6;
+                    const coreWidth = baseWidth * 0.25;
+                    const coreGrad = ctx.createLinearGradient(0, 0, -coreLength, 0);
+                    coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)'); coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = coreGrad;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-coreLength, -coreWidth / 2); ctx.lineTo(-coreLength, coreWidth / 2); ctx.closePath(); ctx.fill();
+                }
 
                 ctx.restore();
             }
