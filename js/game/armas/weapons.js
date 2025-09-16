@@ -39,7 +39,8 @@ export const WEAPON_CONFIG = {
         dano: 10
     },
     torpedo: { enfriamiento: 1.5, velocidad: 1200, dano: 5 },
-    boost: { fuerza: 400, consumo: 35, regeneracion: 15, enfriamiento: 2.0 }
+    boost: { fuerza: 400, consumo: 35, regeneracion: 15, enfriamiento: 2.0 },
+    shield: { consumo: 25, regeneracion: 12, enfriamiento: 3.0, danoAbsorbido: 5 } // consumo por segundo, regeneracion por segundo, cooldown al agotarse, energia perdida por golpe
 };
 
 // --- Assets ---

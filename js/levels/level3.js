@@ -2,7 +2,7 @@
 
 // 1. IMPORTAMOS LAS DEPENDENCIAS DESDE EL MOTOR DEL JUEGO
 import { 
-    estadoJuego, jugador, W, H, carriles, ctx, generarAnimal, S, clamp, 
+    estadoJuego, jugador, W, H, carriles, ctx, generarAnimal, S, clamp, infligirDanoJugador,
     perderJuego, NUM_CARRILES, generarExplosion, generarNubeDeTinta
 } from '../game/game.js';
 import { 
@@ -105,16 +105,10 @@ export function update(dt) {
             
             // Comprobamos si el jugador está dentro de la zona del rayo
             if (jugador.y + jugador.r > rayoY - rayoAlturaMedia && jugador.y - jugador.r < rayoY + rayoAlturaMedia) {
-                jefe.datosAtaque.tiempoEnRayo += dt;
-                
+                jefe.datosAtaque.tiempoEnRayo += dt;                
                 if (jefe.datosAtaque.tiempoEnRayo >= jefe.datosAtaque.proximoDañoRayo) {
-                    if (estadoJuego.vidas > 0) {
-                        estadoJuego.vidas--;
-                        S.reproducir('choque');
-                        estadoJuego.animVida = 0.6;
-                    }
-                    if (estadoJuego.vidas <= 0) perderJuego();
-                    jefe.datosAtaque.proximoDañoRayo += 0.4;
+                    infligirDanoJugador(1);
+                    jefe.datosAtaque.proximoDañoRayo += 0.4; // El daño se intenta cada 0.4s
                 }
             } else {
                 jefe.datosAtaque.tiempoEnRayo = 0;
@@ -128,12 +122,7 @@ export function update(dt) {
             
             if (!jefe.datosAtaque.jugadorGolpeado && Math.hypot(jugador.x - tentaculoX, jugador.y - jefe.datosAtaque.y) < jugador.r + 30) {
                 jefe.datosAtaque.jugadorGolpeado = true;
-                if (estadoJuego.vidas > 0) {
-                    estadoJuego.vidas--;
-                    S.reproducir('choque');
-                    estadoJuego.animVida = 0.6;
-                }
-                if (estadoJuego.vidas <= 0) perderJuego();
+                infligirDanoJugador(1);
             }
 
             if (jefe.datosAtaque.progreso >= 1.2) {
@@ -148,12 +137,7 @@ export function update(dt) {
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) {
         const ink = estadoJuego.proyectilesTinta[i];
         if (Math.hypot(jugador.x - ink.x, jugador.y - ink.y) < jugador.r + ink.r) {
-            if (estadoJuego.vidas > 0) {
-                estadoJuego.vidas--;
-                S.reproducir('choque'); 
-                estadoJuego.animVida = 0.6;
-            }
-            if (estadoJuego.vidas <= 0) perderJuego();
+            infligirDanoJugador(1);
             generarNubeDeTinta(ink.x, ink.y, 60);
             estadoJuego.proyectilesTinta.splice(i, 1);
             break; 

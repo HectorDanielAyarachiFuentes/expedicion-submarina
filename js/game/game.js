@@ -649,11 +649,10 @@ function actualizarParticulas(dt) {
     for (let i = particulasBurbujas.length - 1; i >= 0; i--) {
         const p = particulasBurbujas[i];
         p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; p.vy -= 40 * dt; p.vx *= 0.98;
-        // Lógica de colisión para el chorro de la ballena
+        // Lógica de colisión para el chorro dañino de la ballena
         if (p.esChorroDañino && Math.hypot(jugador.x - p.x, jugador.y - p.y) < jugador.r + p.r) {
-            if (estadoJuego.vidas > 0) { estadoJuego.vidas--; estadoJuego.animVida = 0.6; S.reproducir('choque_ligero'); }
-            if (estadoJuego.vidas <= 0) perderJuego();
-            p.vida = 0; // La burbuja explota al impactar
+            infligirDanoJugador(1, 'choque_ligero');
+            p.vida = 0; // La burbuja explota al impactar, independientemente de si el escudo absorbió el daño
         }
         if (p.vida <= 0) { particulasBurbujas.splice(i, 1); }
     }
@@ -857,6 +856,39 @@ export function activarSlowMotion(duracion) {
     }
 }
 
+/**
+ * Centraliza la lógica de aplicar daño al jugador, teniendo en cuenta el escudo.
+ * @param {number} [cantidad=1] - La cantidad de vidas a restar.
+ * @param {string} [tipoSonido='choque'] - El sonido a reproducir si el jugador recibe daño.
+ * @returns {boolean} - Devuelve `true` si el jugador recibió daño, `false` si fue bloqueado por el escudo.
+ */
+export function infligirDanoJugador(cantidad = 1, tipoSonido = 'choque') {
+    if (!estadoJuego || !estadoJuego.enEjecucion) return false;
+
+    // Si el escudo está activo, absorbe el daño.
+    if (estadoJuego.shieldActivo) {
+        estadoJuego.shieldEnergia -= Weapons.WEAPON_CONFIG.shield.danoAbsorbido * cantidad;
+        estadoJuego.shieldHitTimer = 0.4; // Duración del efecto de impacto
+        S.reproducir('choque_ligero'); // Sonido de impacto en el escudo
+
+        if (estadoJuego.shieldEnergia <= 0) {
+            estadoJuego.shieldEnergia = 0;
+            estadoJuego.shieldActivo = false;
+            estadoJuego.shieldEnfriamiento = Weapons.WEAPON_CONFIG.shield.enfriamiento;
+            S.detener('laser_beam'); // El escudo usa el sonido del láser
+            S.reproducir('boss_hit'); // Sonido de escudo roto
+        }
+        return false; // Daño bloqueado
+    }
+
+    // Si no hay escudo, el jugador recibe el daño.
+    const antes = estadoJuego.vidas;
+    if (estadoJuego.vidas > 0) estadoJuego.vidas = Math.max(0, estadoJuego.vidas - cantidad);
+    if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir(tipoSonido); }
+    if (estadoJuego.vidas <= 0) perderJuego();
+    return true; // Daño aplicado
+}
+
 // --- Estado Principal y Entidades ---
 export let estadoJuego = null, jugador, animales;
 let teclas = {};
@@ -898,6 +930,11 @@ function reiniciar(nivelDeInicio = 1) {
         velocidadJuego: 1.0,
         slowMoTimer: 0, 
         levelFlags: {}, // >>> CAMBIO CLAVE <<< Objeto para que los niveles comuniquen flags al motor (ej: no mover el fondo)
+        shieldActivo: false,
+        shieldEnergia: 100,
+        shieldMaxEnergia: 100,
+        shieldEnfriamiento: 0,
+        shieldHitTimer: 0,
         screenShake: 0,
         cameraZoom: 1.0,
         sonarPingTimer: 0,
@@ -1468,6 +1505,41 @@ function actualizar(dt) {
         estadoJuego.armaCambiandoTimer = 0.3;
     }
     
+    // --- Lógica de Habilidades: Escudo de Energía ---
+    const eraShieldActivo = estadoJuego.shieldActivo;
+    // El escudo se activa con la tecla 'v' y si tiene energía y no está en enfriamiento.
+    estadoJuego.shieldActivo = (teclas['v'] || teclas['V']) && estadoJuego.shieldEnergia > 0 && estadoJuego.shieldEnfriamiento <= 0;
+
+    // Lógica de sonidos de activación/desactivación
+    if (estadoJuego.shieldActivo && !eraShieldActivo) {
+        S.reproducir('powerup'); // Sonido de activación
+        S.bucle('laser_beam'); // Reutilizamos el sonido del láser para el zumbido del escudo
+    } else if (!estadoJuego.shieldActivo && eraShieldActivo) {
+        S.detener('laser_beam'); // Detener el zumbido si se desactiva manualmente
+    }
+
+    if (estadoJuego.shieldActivo) {
+        estadoJuego.shieldEnergia -= Weapons.WEAPON_CONFIG.shield.consumo * dtAjustado;
+        if (estadoJuego.shieldEnergia <= 0) {
+            estadoJuego.shieldEnergia = 0;
+            estadoJuego.shieldActivo = false;
+            estadoJuego.shieldEnfriamiento = Weapons.WEAPON_CONFIG.shield.enfriamiento;
+            S.detener('laser_beam');
+            S.reproducir('boss_hit'); // Sonido de escudo roto
+        }
+    } else {
+        // Regenerar energía si no está activo y no está en enfriamiento
+        if (estadoJuego.shieldEnfriamiento <= 0) {
+            estadoJuego.shieldEnergia += Weapons.WEAPON_CONFIG.shield.regeneracion * dtAjustado;
+            estadoJuego.shieldEnergia = Math.min(estadoJuego.shieldEnergia, estadoJuego.shieldMaxEnergia);
+        }
+    }
+
+    if (estadoJuego.shieldEnfriamiento > 0) {
+        estadoJuego.shieldEnfriamiento -= dtAjustado;
+    }
+    if (estadoJuego.shieldHitTimer > 0) estadoJuego.shieldHitTimer -= dtAjustado;
+
     // --- Actualización del Progreso del Nivel ---
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
@@ -1848,27 +1920,26 @@ function actualizar(dt) {
         
         // --- Colisión Jugador-Enemigo ---
         if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) {
-            const damage = a.tipo === 'whale' ? 7 : 1;
-
-            // Efectos de sangre y trozos al chocar
+            // --- REINTEGRACIÓN DE EFECTOS DE COLISIÓN ---
+            // Calcular el punto de impacto
             const collisionX = (jugador.x + a.x) / 2;
             const collisionY = (jugador.y + a.y) / 2;
-            generarBurbujasDeSangre(collisionX, collisionY);
-            generarTrozoBallena(collisionX, collisionY, 4, 120);
-            generarGotasSangre(collisionX, collisionY);
 
-            Levels.onKill(a.tipo); // Notificar al sistema de niveles sobre la muerte
+            // Generar efectos visuales de gore, independientemente de si el escudo absorbe el daño.
+            // El impacto físico ocurre de todos modos.
+            if (a.tipo === 'whale' || a.tipo === 'baby_whale' || a.tipo === 'shark') {
+                generarBurbujasDeSangre(collisionX, collisionY);
+                generarTrozoBallena(collisionX, collisionY, 4, 120);
+                generarGotasSangre(collisionX, collisionY);
+            } else {
+                // Para criaturas más pequeñas, una explosión genérica
+                generarExplosion(collisionX, collisionY, '#ff5e5e');
+            }
 
-            animales.splice(i, 1);
-            const antes = estadoJuego.vidas;
-            if (estadoJuego.vidas > 0) {
-                estadoJuego.vidas = Math.max(0, estadoJuego.vidas - damage);
-            }
-            if (estadoJuego.vidas < antes) {
-                estadoJuego.animVida = 0.6;
-                S.reproducir('choque');
-            }
-            if (estadoJuego.vidas <= 0) perderJuego();
+            // Infligir daño al jugador (el escudo puede absorberlo)
+            infligirDanoJugador(a.tipo === 'whale' ? 7 : 1);
+            Levels.onKill(a.tipo); // Notificar al sistema de niveles que el animal fue "eliminado" por colisión
+            animales.splice(i, 1); // El animal se destruye al chocar
             continue;
         } 
         
@@ -2285,6 +2356,65 @@ function renderizar(dt) {
 
             const drawContext = { ctx, estadoJuego, jugador, px, py, W, H };
             Weapons.drawWeapons(drawContext);
+
+            // --- Dibuja el Escudo de Energía ---
+            if (estadoJuego.shieldActivo || estadoJuego.shieldHitTimer > 0) {
+                ctx.save();
+                ctx.translate(px, py); // Usar las coordenadas de renderizado del jugador
+
+                // --- MODIFICACIÓN: Aumentar el tamaño del escudo ---
+                // El radio del escudo ahora se basa en el tamaño visual del submarino, no en su radio de colisión.
+                // Esto asegura que el escudo cubra todo el sprite, incluyendo la hélice.
+                const subVisualWidth = spriteAncho * robotEscala; // Ancho del sprite del submarino
+                const shieldRadius = subVisualWidth * 0.65; // Un 65% del ancho visual es un buen tamaño
+
+                const time = estadoJuego.tiempoTranscurrido;
+                let baseAlpha = 0;
+
+                if (estadoJuego.shieldActivo) {
+                    const energyRatio = estadoJuego.shieldEnergia / estadoJuego.shieldMaxEnergia;
+                    baseAlpha = 0.2 + energyRatio * 0.4; // El escudo es más visible con más energía
+                }
+
+                // Efecto de impacto
+                if (estadoJuego.shieldHitTimer > 0) {
+                    const hitProgress = estadoJuego.shieldHitTimer / 0.4;
+                    baseAlpha = Math.max(baseAlpha, hitProgress * 0.9); // Flash brillante al ser golpeado
+
+                    // Dibujar onda de choque en el punto de impacto
+                    const rippleRadius = (1 - hitProgress) * shieldRadius * 1.5;
+                    const rippleAlpha = hitProgress;
+                    ctx.strokeStyle = `rgba(173, 216, 230, ${rippleAlpha})`; // Light blue
+                    ctx.lineWidth = 3 * hitProgress;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, shieldRadius + rippleRadius * 0.2, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Dibujar el escudo principal
+                ctx.globalAlpha = baseAlpha;
+                const grad = ctx.createRadialGradient(0, 0, shieldRadius * 0.7, 0, 0, shieldRadius);
+                grad.addColorStop(0, 'rgba(173, 216, 230, 0.1)');
+                grad.addColorStop(0.8, 'rgba(173, 216, 230, 0.8)');
+                grad.addColorStop(1, 'rgba(220, 240, 255, 0.5)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, shieldRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Dibujar patrón hexagonal que se mueve
+                ctx.strokeStyle = `rgba(200, 230, 255, ${baseAlpha * 0.7})`;
+                ctx.lineWidth = 1.5;
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.beginPath();
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2 + time * 0.5;
+                    ctx.moveTo(Math.cos(angle) * shieldRadius, Math.sin(angle) * shieldRadius);
+                    ctx.lineTo(Math.cos(angle + Math.PI / 6) * shieldRadius * 0.9, Math.sin(angle + Math.PI / 6) * shieldRadius * 0.9);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
         }
 
         // --- Dibuja los Proyectiles ---
@@ -2727,10 +2857,10 @@ function dibujarHUD() {
     hud.shadowColor = 'rgba(0,0,0,0.7)';
     hud.shadowBlur = 4;
     const filas = [{ label: 'SCORE', value: String(valorPuntuacion) }, { label: 'DEPTH', value: valorProfundidad + ' m' }, { label: 'RECORD', value: String(puntuacionMaxima) }];
-    const totalFilas = filas.length + 6;
+    const totalFilas = filas.length + 7; // Aumentado para el escudo
     const y0 = H - padY - lh * totalFilas;
     let maxAnchoEtiqueta = 0;
-    const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO', 'IMPULSO'];
+    const todasLasEtiquetas = [...filas.map(f => f.label), 'VIDAS', 'TORPEDO', 'ARMA', 'ASESINO', 'IMPULSO', 'LASER', 'ESCUDO'];
     for (const label of todasLasEtiquetas) { maxAnchoEtiqueta = Math.max(maxAnchoEtiqueta, hud.measureText(label).width); }
     const gap = 16;
     const valueX = padX + maxAnchoEtiqueta + gap;
@@ -2805,10 +2935,21 @@ function dibujarHUD() {
     const laserBarY = currentY - laserBarH;
     hud.fillStyle = '#333';
     hud.fillRect(laserBarX, laserBarY, laserBarW, laserBarH);
-    const laserRatio = s.laserEnergia / s.laserMaxEnergia;
-    hud.fillStyle = '#ff4d4d';
-    hud.fillRect(laserBarX, laserBarY, laserBarW * laserRatio, laserBarH);
-    hud.strokeStyle = '#fff'; hud.lineWidth = 2; hud.strokeRect(laserBarX, laserBarY, laserBarW, laserBarH);
+    const laserRatio = s.laserEnergia / s.laserMaxEnergia; hud.fillStyle = '#ff4d4d'; hud.fillRect(laserBarX, laserBarY, laserBarW * laserRatio, laserBarH); hud.strokeStyle = '#fff'; hud.lineWidth = 2; hud.strokeRect(laserBarX, laserBarY, laserBarW, laserBarH);
+    currentY += lh;
+    hud.fillStyle = '#ffffff';
+    hud.fillText('ESCUDO', padX, currentY);
+    const shieldBarX = valueX;
+    const shieldBarW = 150;
+    const shieldBarH = 10;
+    const shieldBarY = currentY - shieldBarH;
+    hud.fillStyle = '#333';
+    hud.fillRect(shieldBarX, shieldBarY, shieldBarW, shieldBarH);
+    const shieldRatio = s.shieldEnergia / s.shieldMaxEnergia;
+    const shieldColor = s.shieldEnfriamiento > 0 ? '#ff6666' : '#add8e6'; // Rojo en cooldown, azul claro normal
+    hud.fillStyle = shieldColor;
+    hud.fillRect(shieldBarX, shieldBarY, shieldBarW * shieldRatio, shieldBarH);
+    hud.strokeStyle = '#fff'; hud.lineWidth = 2; hud.strokeRect(shieldBarX, shieldBarY, shieldBarW, shieldBarH);
     hud.restore();
     
     // >>> CAMBIO CLAVE <<<
@@ -3370,6 +3511,7 @@ export function init() {
 
     addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
     addEventListener('keyup', function (e) { teclas[e.key] = false; });
+    window.addEventListener('blur', () => { teclas = {}; }); // Limpiar teclas si se pierde el foco
     window.addEventListener('pointerdown', (e) => {
         // Resumir el contexto de audio en la primera interacción del usuario
         S.init(); // Asegura que el audio context se cree
@@ -3381,7 +3523,7 @@ export function init() {
             return;
         }
         const tapX = e.clientX;
-        if (tapX < W * 0.4) { arrastreId = e.pointerId; arrastreActivo = true; arrastreY = e.clientY; e.preventDefault(); }
+        if (tapX < W * 0.4) { arrastreId = e.pointerId; arrastreActivo = true; arrastreY = e.clientY; e.preventDefault(); } // prettier-ignore
         else if (tapX > W * 0.6) { if (!estadoJuego || !estadoJuego.enEjecucion) return; if (estadoJuego.bloqueoEntrada === 0) { teclas[' '] = true; } }
         else { lanzarTorpedo(); }
     }, { passive: false });
