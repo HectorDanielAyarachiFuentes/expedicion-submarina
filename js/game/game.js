@@ -848,6 +848,9 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
                     hp: 40, // Ahora tiene vida y puede ser eliminada
                     maxHp: 40,
                     mother: adultWhale, // Referencia a su madre
+                    // --- NUEVO: Estado de huida ---
+                    isFleeing: false,
+                    fleeTimer: 0,
                 });
             }
         }
@@ -1272,13 +1275,40 @@ function actualizar(dt) {
         
         // --- IA y Movimiento Específico por Tipo de Enemigo ---        
         if (a.tipo === 'baby_whale') {
-            // La cría intenta seguir a su madre si existe y está viva
+            // --- NUEVO: Lógica de huida ---
+            const FLEE_RADIUS = 250;
+            const playerDist = Math.hypot(jugador.x - a.x, jugador.y - a.y);
+
+            // Si el jugador se acerca y la cría no está huyendo, inicia la huida.
+            if (playerDist < FLEE_RADIUS && !a.isFleeing && a.mother && animales.includes(a.mother)) {
+                a.isFleeing = true;
+                a.fleeTimer = 2.5; // Huirá durante 2.5 segundos.
+            }
+
+            // Actualizar el temporizador de huida.
+            if (a.isFleeing) {
+                a.fleeTimer -= dtAjustado;
+                if (a.fleeTimer <= 0) {
+                    a.isFleeing = false;
+                }
+            }
+
+            // --- Movimiento ---
             if (a.mother && animales.includes(a.mother)) {
-                const targetX = a.mother.x + 150;
-                const targetY = a.mother.y;
-                // Usa lerp para un seguimiento suave
-                a.x = lerp(a.x, targetX, dtAjustado * 0.8);
-                a.y = lerp(a.y, targetY, dtAjustado * 0.8);
+                let targetX, targetY, speed;
+                if (a.isFleeing) {
+                    // Objetivo: un punto seguro detrás de la madre.
+                    targetX = a.mother.x + 200;
+                    targetY = a.mother.y;
+                    speed = 2.2; // Se mueve más rápido para escapar.
+                } else {
+                    // Comportamiento normal: seguir a la madre.
+                    targetX = a.mother.x + 150;
+                    targetY = a.mother.y;
+                    speed = 0.8;
+                }
+                a.x = lerp(a.x, targetX, dtAjustado * speed);
+                a.y = lerp(a.y, targetY, dtAjustado * speed);
             } else {
                 // Si no hay madre, se mueve por su cuenta
                 a.x += a.vx * dtAjustado;
