@@ -183,6 +183,7 @@ export const S = (function () {
         whale_song2: 'sonidos/ballena/ballenacanta2.mp3',
         whale_song3: 'sonidos/ballena/ballenacanta3.mp3',
         whale_spout: 'sonidos/ballena/ballenachorro.mp3',
+        boost: 'sonidos/submarino/boost.wav',
         sonar_ping: 'sonidos/sonar_ping.wav'
     };
 
@@ -212,8 +213,12 @@ export const S = (function () {
                 const el = new Audio(mapaFuentes[k]);
                 el.crossOrigin = "anonymous";
                 el.preload = 'auto';
-                if (k.startsWith('music_')) { el.loop = false; el.volume = 0.35; el.addEventListener('ended', playRandomMusic); } 
-                else if (k === 'theme_main') { el.loop = true; el.volume = 0.35; } 
+                if (k.startsWith('music_')) { el.loop = false; el.volume = 0.35; el.addEventListener('ended', playRandomMusic); }
+                else if (k === 'theme_main') { el.loop = true; el.volume = 0.35; }
+                // --- NUEVO: Sonidos de efectos que hacen loop ---
+                else if (k === 'laser_beam' || k === 'boost') {
+                    el.loop = true; el.volume = 0.45; // Un volumen adecuado para efectos continuos
+                }
                 else { el.volume = 0.5; }
                 el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = { element: el, source: null }; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
     function reproducir(k) {
@@ -1238,7 +1243,16 @@ function actualizar(dt) {
     else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dtAjustado, configNivel.meta);
     
     // --- Lógica de Habilidades: Impulso (Boost) ---
+    const eraBoostActivo = estadoJuego.boostActivo;
     estadoJuego.boostActivo = (teclas['b'] || teclas['B']) && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
+
+    // --- NUEVO: Lógica de sonido del impulso ---
+    // Comprueba si el estado del impulso ha cambiado para iniciar o detener el sonido.
+    if (estadoJuego.boostActivo && !eraBoostActivo) {
+        S.bucle('boost');
+    } else if (!estadoJuego.boostActivo && eraBoostActivo) {
+        S.detener('boost');
+    }
 
     // --- NUEVO: Lógica de efectos de cámara para el impulso ---
     if (estadoJuego.boostActivo) {
@@ -2466,7 +2480,13 @@ function iniciarJuego(nivel = 1) {
 
 export function perderJuego() {
     if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
-    estadoJuego.faseJuego = 'gameover'; estadoJuego.enEjecucion = false; S.detener('music'); S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500);
+    estadoJuego.faseJuego = 'gameover';
+    estadoJuego.enEjecucion = false;
+    S.detener('music');
+    S.detener('laser_beam');
+    S.detener('boost');
+    S.reproducir('gameover');
+    setTimeout(() => S.reproducir('theme_main'), 1500);
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none';
     if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none';
@@ -2483,6 +2503,8 @@ function ganarJuego() {
     estadoJuego.faseJuego = 'gameover';
     estadoJuego.enEjecucion = false;
     S.detener('music');
+    S.detener('laser_beam');
+    S.detener('boost');
     S.reproducir('victory'); setTimeout(() => S.reproducir('theme_main'), 2000);
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block';
