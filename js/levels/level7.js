@@ -635,17 +635,24 @@ function completarSubnivel() {
     
     // Reiniciar posición del jefe si es el subnivel de boss
     if (nuevoSub.tipo === 'boss') {
-        levelState.jefe.x = W - 200;
-        levelState.jefe.y = H / 2;
+        // --- TRANSICIÓN A MODO ARENA ---
+        // 1. Congelar el scroll
+        estadoJuego.levelFlags.scrollBackground = false;
+        // 2. Calcular el offset para mover todo al nuevo origen (0,0)
+        const worldOffset = estadoJuego.cameraX;
+        // 3. Mover al jugador a la nueva coordenada de mundo
+        jugador.x -= worldOffset;
+        // 4. Resetear la cámara a 0.
+        estadoJuego.cameraX = 0;
+        // 5. Mover al jefe a la nueva coordenada de mundo y resetearlo
+        levelState.jefe.x = W - 200; // Posición fija en la arena
+        levelState.jefe.y = H / 2;        
         levelState.jefe.hp = 200;
         levelState.jefe.vx = 0;
         levelState.jefe.vy = 0;
         levelState.jefe.lasers = [];
         levelState.jefe.bombas = [];
         levelState.jefe.estado = 'idle';
-
-        // Cambiar a modo de lucha en arena estática
-        estadoJuego.levelFlags.scrollBackground = false;
         
         estadoJuego.jefe = levelState.jefe;
         const bossHealthContainer = document.getElementById('bossHealthContainer');

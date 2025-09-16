@@ -44,7 +44,7 @@ function spawnShark() {
 
 function spawnMegaWhale() {
     levelState.jefe = {
-        x: estadoJuego.cameraX + W + 200,
+        x: W + 200,
         y: H / 2,
         w: 350,
         h: 180,
@@ -239,6 +239,14 @@ function recibirDanoJefe(proyectil, cantidad) {
         jefe.estado = 'muriendo';
         jefe.timerMuerte = 5.0; // 5 segundos de animación de muerte
         jefe.hp = 0; // Para que la barra de vida no se vaya a negativo
+
+        // --- CORRECCIÓN: Marcar el objetivo como cumplido inmediatamente ---
+        // Esto evita que el juego se quede atascado si se sigue disparando al jefe.
+        levelState.progresoSubnivel = 1;
+        if (levelState.progresoSubnivel >= SUBNIVELES[levelState.subnivelActual].meta) {
+             // No llamamos a completarSubnivel() aquí para permitir que la animación de muerte termine.
+             // La animación llamará a completarSubnivel() cuando finalice.
+        }
         startWhaleBreakup(jefe);
     }
 }
@@ -360,9 +368,19 @@ function completarSubnivel() {
         levelState.spawnTimer = 1.0;
         spawnShark();
     } else if (nuevoSub.tipo === 'kill_boss_whale') {
-        levelState.spawnTimer = 999;
+        levelState.spawnTimer = 999; // No más spawns normales
+
+        // --- TRANSICIÓN A MODO ARENA ---
+        // 1. Congelar el scroll
+        estadoJuego.levelFlags.scrollBackground = false;
+        // 2. Calcular el offset para mover todo al nuevo origen (0,0)
+        const worldOffset = estadoJuego.cameraX;
+        // 3. Mover al jugador a la nueva coordenada de mundo
+        jugador.x -= worldOffset;
+        // 4. Resetear la cámara a 0. El motor del juego se encargará de mantenerla ahí.
+        estadoJuego.cameraX = 0;
+        // 5. Ahora que el mundo está en (0,0), spawnear al jefe fuera de la pantalla.
         spawnMegaWhale();
-        estadoJuego.levelFlags.scrollBackground = false; // ¡Lucha en arena estática!
         const bossHealthContainer = document.getElementById('bossHealthContainer');
         if (bossHealthContainer) bossHealthContainer.style.display = 'block';
     }
