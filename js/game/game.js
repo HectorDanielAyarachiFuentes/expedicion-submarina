@@ -1959,7 +1959,7 @@ function renderizar(dt) {
         }
 
         // --- Dibuja al Jugador y sus Efectos ---
-        if (jugador && estadoJuego.faseJuego !== 'death_animation') {
+        if (jugador && estadoJuego.enEjecucion) {
             const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
             // Animación de flotación sutil
             const bobbingY = Math.sin(estadoJuego.tiempoTranscurrido * 2.5) * 3;
@@ -2423,7 +2423,7 @@ function dibujarMascaraLuz() {
     fx.globalCompositeOperation = 'source-over';
     fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
     fx.fillRect(0, 0, W, H);
-    if (estadoJuego.luzVisible && jugador && estadoJuego.faseJuego !== 'death_animation') { // prettier-ignore
+    if (estadoJuego.luzVisible && jugador && estadoJuego.enEjecucion) { // prettier-ignore
         // --- CORRECCIÓN: Convertir coordenadas del mundo a coordenadas de pantalla ---
         // La luz se dibuja en el canvas 'fx', que no se mueve con la cámara.
         // Por lo tanto, debemos restar la posición de la cámara a la del jugador.
