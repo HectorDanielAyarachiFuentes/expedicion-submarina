@@ -75,7 +75,7 @@ function generarFragmentos(x, y, tamanoOriginal) {
 }
 
 function generarEscombro() {
-    const x = Math.random() * W;
+    const x = estadoJuego.cameraX + Math.random() * W;
     const tamano = 35 + Math.random() * 70;
     const svgId = Math.floor(Math.random() * formasEscombrosSVG.length);
     let tipo = 'normal';
@@ -334,8 +334,8 @@ export function draw() {
     // Dibujar corrientes (NUEVO ESTILO MEJORADO)
     for (const corriente of corrientes) {
         const alpha = clamp(corriente.duracion / corriente.maxDuracion, 0, 1) * 0.4;
-        const xStart = corriente.isLeft ? 0 : W;
-        const xEnd = corriente.isLeft ? 450 : W - 450;
+        const xStart = corriente.isLeft ? estadoJuego.cameraX : estadoJuego.cameraX + W;
+        const xEnd = corriente.isLeft ? estadoJuego.cameraX + 450 : estadoJuego.cameraX + W - 450;
         const direction = corriente.isLeft ? 1 : -1;
 
         // Dibujar múltiples líneas onduladas para dar sensación de flujo

@@ -197,6 +197,9 @@ export function init() {
     phaseHistory = [];
     jugador.x = W * 0.15;
     jugador.y = H / 2;
+    // Regla del nivel: El fondo es estático, es una arena.
+    estadoJuego.levelFlags.scrollBackground = false;
+
     for (let i = 0; i < 50; i++) spawnVortexParticle(true);
     PHASE_BEHAVIORS[0].start();
 }
