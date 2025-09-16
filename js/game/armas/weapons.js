@@ -67,37 +67,63 @@ export function initWeapons() {
     minas = [];
 }
 
+/**
+ * Calcula la posición y el ángulo del cañón del submarino en el mundo.
+ * @param {number} baseX - La coordenada X base del submarino (mundo).
+ * @param {number} baseY - La coordenada Y base del submarino (mundo).
+ * @param {object} jugador - El objeto del jugador (para la inclinación).
+ * @param {object} estadoJuego - El estado actual del juego.
+ * @returns {{x: number, y: number, angle: number}} - Posición y ángulo del cañón.
+ */
+function getCannonTransform(baseX, baseY, jugador, estadoJuego) {
+    const isLevel5 = estadoJuego.nivel === 5;
+    const finalAngle = (isLevel5 ? -Math.PI / 2 : 0) + jugador.inclinacion;
+
+    // El cañón está a un offset del centro del submarino.
+    // En el sistema de coordenadas local del submarino (apuntando a la derecha), está en (45, 0).
+    const cannonOffsetX = 45; 
+    const cannonOffsetY = 0;
+
+    // Rotamos este offset para encontrar la posición mundial del cañón.
+    const cannonX = baseX + cannonOffsetX * Math.cos(finalAngle) - cannonOffsetY * Math.sin(finalAngle);
+    const cannonY = baseY + cannonOffsetX * Math.sin(finalAngle) + cannonOffsetY * Math.cos(finalAngle);
+
+    return {
+        x: cannonX,
+        y: cannonY,
+        angle: finalAngle
+    };
+}
+
 // --- Funciones de Disparo ---
 
 function dispararGarfio(ctx) {
     const { jugador, estadoJuego, S, W, generarRafagaBurbujasDisparo, Levels } = ctx;
     if (!jugador || jugador.garra || !estadoJuego || estadoJuego.bloqueoEntrada > 0) return;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const baseX = jugador.x;
-    const baseY = isLevel5 ? jugador.y : jugador.y;
-    const cannonX = isLevel5 ? baseX : baseX + 45;
-    const cannonY = isLevel5 ? baseY - 45 : baseY;
-    generarRafagaBurbujasDisparo(cannonX, cannonY, isLevel5);
-    const dx = isLevel5 ? 0 : 1;
-    const dy = isLevel5 ? -1 : 0; // prettier-ignore
-    jugador.garra = { x: baseX, y: baseY, dx, dy, velocidad: WEAPON_CONFIG.garra.velocidad, fase: 'ida', golpeado: null, alcance: W * WEAPON_CONFIG.garra.alcance, recorrido: 0 };
+
+    const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
+    generarRafagaBurbujasDisparo(cannon.x, cannon.y, estadoJuego.nivel === 5);
+
+    const dx = Math.cos(cannon.angle);
+    const dy = Math.sin(cannon.angle);
+
+    jugador.garra = { x: cannon.x, y: cannon.y, dx, dy, velocidad: WEAPON_CONFIG.garra.velocidad, fase: 'ida', golpeado: null, alcance: W * WEAPON_CONFIG.garra.alcance, recorrido: 0 };
     S.reproducir('arpon');
 }
 
 function dispararShotgun(ctx) {
     const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo } = ctx;
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : jugador.x + 40;
-    const py = isLevel5 ? jugador.y - 40 : jugador.y;
-    generarRafagaBurbujasDisparo(px, py, isLevel5);
+
+    const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
+    generarRafagaBurbujasDisparo(cannon.x, cannon.y, estadoJuego.nivel === 5);
+
     const config = WEAPON_CONFIG.shotgun;
     for (let i = 0; i < config.balas; i++) {
-        const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
-        const angulo = anguloBase + (Math.random() - 0.5) * config.dispersion;
+        const angulo = cannon.angle + (Math.random() - 0.5) * config.dispersion;
         const velocidad = config.velocidadProyectil.min + Math.random() * (config.velocidadProyectil.max - config.velocidadProyectil.min);
         const vida = config.vidaProyectil.min + Math.random() * (config.vidaProyectil.max - config.vidaProyectil.min);
-        proyectiles.push({ x: px, y: py, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 8, h: 3, color: '#ffb733', vida: vida });
+        proyectiles.push({ x: cannon.x, y: cannon.y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 8, h: 3, color: '#ffb733', vida: vida });
     }
     estadoJuego.enfriamientoArma = config.enfriamiento;
     S.reproducir('shotgun');
@@ -108,19 +134,16 @@ function dispararMetralleta(ctx) {
     const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo } = ctx;
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
     const config = WEAPON_CONFIG.metralleta;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : jugador.x + 40;
-    const py = isLevel5 ? jugador.y - 40 : jugador.y;
-    generarRafagaBurbujasDisparo(px, py, isLevel5);
+    const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
+    generarRafagaBurbujasDisparo(cannon.x, cannon.y, estadoJuego.nivel === 5);
     const numBalas = 30;
     for (let i = 0; i < numBalas; i++) {
-        const anguloBase = isLevel5 ? -Math.PI / 2 : 0;
-        const angulo = anguloBase + (Math.random() - 0.5) * config.dispersion;
+        const angulo = cannon.angle + (Math.random() - 0.5) * config.dispersion;
         const velocidad = config.velocidadProyectil;
         const offset = (i / numBalas) * velocidad * 0.05; // Efecto de ráfaga
-        const offsetX = isLevel5 ? Math.cos(angulo + Math.PI / 2) * offset : offset;
-        const offsetY = isLevel5 ? Math.sin(angulo + Math.PI / 2) * offset : 0;
-        proyectiles.push({ x: px + offsetX, y: py + offsetY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 12, h: 2, color: '#ff6363', vida: config.vidaProyectil });
+        const offsetX = Math.cos(angulo + Math.PI / 2) * offset;
+        const offsetY = Math.sin(angulo + Math.PI / 2) * offset;
+        proyectiles.push({ x: cannon.x + offsetX, y: cannon.y + offsetY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 12, h: 2, color: '#ff6363', vida: config.vidaProyectil });
     }
     estadoJuego.enfriamientoArma = config.enfriamiento;
     let soundCount = 0;
@@ -131,13 +154,11 @@ function dispararMetralleta(ctx) {
 function lanzarMina(ctx) {
     const { estadoJuego, jugador, S } = ctx;
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
-    const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : jugador.x + 40;
-    const py = isLevel5 ? jugador.y - 40 : jugador.y;
+    const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
 
     minas.push({
-        x: px,
-        y: py,
+        x: cannon.x,
+        y: cannon.y,
         r: 12, // Radio visual de la mina
         vida: 15, // La mina desaparece después de 15 segundos si no se activa
     });
@@ -161,14 +182,24 @@ export function disparar(ctx) {
 export function lanzarTorpedo(ctx) {
     const { estadoJuego, jugador, S } = ctx;
     if (!estadoJuego || !estadoJuego.enEjecucion || estadoJuego.enfriamientoTorpedo > 0) return;
+
+    // Los torpedos salen de la parte inferior del submarino.
     const isLevel5 = estadoJuego.nivel === 5;
-    const px = isLevel5 ? jugador.x : jugador.x;
-    const py = isLevel5 ? jugador.y : jugador.y;
-    if (isLevel5) {
-        torpedos.push({ x: px, y: py, w: 6, h: 20, isVertical: true });
-    } else {
-        torpedos.push({ x: px, y: py, w: 20, h: 6, isVertical: false });
-    }
+    const finalAngle = (isLevel5 ? -Math.PI / 2 : 0) + jugador.inclinacion;
+
+    // Offset local: debajo del centro del submarino
+    const torpedoBayOffsetX = 0;
+    const torpedoBayOffsetY = 30; // Debajo del centro
+
+    const px = jugador.x + torpedoBayOffsetX * Math.cos(finalAngle) - torpedoBayOffsetY * Math.sin(finalAngle);
+    const py = jugador.y + torpedoBayOffsetX * Math.sin(finalAngle) + torpedoBayOffsetY * Math.cos(finalAngle);
+
+    // El torpedo siempre dispara hacia adelante
+    const torpedoAngle = finalAngle;
+
+    torpedos.push({ 
+        x: px, y: py, w: 20, h: 6, angle: torpedoAngle
+    });
     estadoJuego.enfriamientoTorpedo = WEAPON_CONFIG.torpedo.enfriamiento;
     S.reproducir('torpedo');
 }
@@ -321,15 +352,19 @@ export function updateWeapons(ctx) {
     // --- Actualización de Proyectiles (Torpedos y Balas) ---
     for (let i = torpedos.length - 1; i >= 0; i--) {
         const t = torpedos[i];
-        t.x += (t.isVertical ? 0 : WEAPON_CONFIG.torpedo.velocidad) * dtAjustado;
-        t.y -= (t.isVertical ? WEAPON_CONFIG.torpedo.velocidad : 0) * dtAjustado;
+        t.x += Math.cos(t.angle) * WEAPON_CONFIG.torpedo.velocidad * dtAjustado;
+        t.y += Math.sin(t.angle) * WEAPON_CONFIG.torpedo.velocidad * dtAjustado;
 
         if (Math.random() < 0.9) {
-            const bubbleX = t.x - (t.isVertical ? 0 : t.w / 2);
-            const bubbleY = t.y + (t.isVertical ? t.h / 2 : 0);
+            const bubbleX = t.x - Math.cos(t.angle) * (t.w / 2);
+            const bubbleY = t.y - Math.sin(t.angle) * (t.w / 2);
             generarParticula(particulasBurbujas, { x: bubbleX, y: bubbleY, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30 + 20, r: Math.random() * 2.5 + 1, vida: 0.8 + Math.random() * 0.8, color: '' });
         }
-        if (t.y < -t.h || t.x > W + t.w) { 
+        // --- CORRECCIÓN: La comprobación de fuera de pantalla debe ser relativa a la cámara ---
+        const offscreenRight = estadoJuego.cameraX + W + t.w;
+        const offscreenLeft = estadoJuego.cameraX - t.w;
+
+        if (t.y < -t.h || t.x > offscreenRight || t.x < offscreenLeft) { 
             torpedos.splice(i, 1); 
             continue; 
         }
@@ -350,7 +385,11 @@ export function updateWeapons(ctx) {
             continue;
         }
 
-        if (p.vida <= 0 || p.x > W + 20 || p.x < -20 || p.y < -20 || p.y > H + 20) {
+        // --- CORRECCIÓN: La comprobación de fuera de pantalla debe ser relativa a la cámara ---
+        const offscreenRight = estadoJuego.cameraX + W + 20;
+        const offscreenLeft = estadoJuego.cameraX - 20;
+
+        if (p.vida <= 0 || p.x > offscreenRight || p.x < offscreenLeft || p.y < -20 || p.y > H + 20) {
             proyectiles.splice(i, 1);
             continue;
         }
@@ -412,22 +451,24 @@ export function updateWeapons(ctx) {
 // --- Lógica de Dibujado ---
 
 export function drawWeapons(dCtx) {
-    const { ctx, estadoJuego, jugador, W, H, inclinacionRobot } = dCtx;
-    const px = jugador.x;
-    const py = jugador.y + (Math.sin(estadoJuego.tiempoTranscurrido * 2.5) * 3);
+    const { ctx, estadoJuego, jugador, px, py, W, H } = dCtx;
 
     // --- Dibuja el Láser ---
     if (estadoJuego.laserActivo) {
+        // Usa las coordenadas de renderizado (px, py) que incluyen el efecto de flotación.
+        const cannon = getCannonTransform(px, py, jugador, estadoJuego);
         const isLevel5 = estadoJuego.nivel === 5;
         const energyRatio = estadoJuego.laserEnergia / estadoJuego.laserMaxEnergia;
         const time = estadoJuego.tiempoTranscurrido;
         const baseWidth = 20;
         const pulse = Math.sin(time * 60) * 3;
         const beamWidth = (baseWidth + pulse) * energyRatio;
-        const laserStartX = isLevel5 ? px : px + 40;
-        const laserStartY = isLevel5 ? py - 40 : py;
-        const angle = isLevel5 ? -Math.PI / 2 : 0;
-        const length = isLevel5 ? laserStartY : W - laserStartX;
+
+        const laserStartX = cannon.x;
+        const laserStartY = cannon.y;
+        const angle = cannon.angle;
+        // Usamos una longitud grande para que siempre se salga de la pantalla.
+        const length = W * 1.5;
 
         ctx.save();
         ctx.translate(laserStartX, laserStartY);
@@ -487,9 +528,10 @@ export function drawWeapons(dCtx) {
 
     // --- Dibuja el Garfio ---
     if (jugador.garra) {
-        const isLevel5 = estadoJuego.nivel === 5;
-        const hx0 = jugador.x;
-        const hy0 = jugador.y;
+        // El origen del garfio también debe usar las coordenadas de renderizado.
+        const cannon = getCannonTransform(px, py, jugador, estadoJuego);
+        const hx0 = cannon.x;
+        const hy0 = cannon.y;
         ctx.save();
         ctx.strokeStyle = '#8ff';
         ctx.lineWidth = 2;
@@ -500,7 +542,7 @@ export function drawWeapons(dCtx) {
         ctx.restore();
         ctx.save();
         ctx.translate(jugador.garra.x, jugador.garra.y);
-        if (isLevel5) ctx.rotate(-Math.PI / 2);
+        ctx.rotate(Math.atan2(jugador.garra.dy, jugador.garra.dx));
         ctx.fillStyle = '#8ff';
         ctx.beginPath();
         ctx.moveTo(0, -6); ctx.lineTo(6, 0); ctx.lineTo(0, 6); ctx.closePath();
@@ -512,8 +554,7 @@ export function drawWeapons(dCtx) {
     for (const t of torpedos) {
         ctx.save();
         ctx.translate(t.x, t.y);
-        const angle = t.isVertical ? -Math.PI / 2 : 0;
-        ctx.rotate(angle);
+        ctx.rotate(t.angle);
         const grad = ctx.createLinearGradient(-t.w / 2, 0, t.w / 2, 0);
         grad.addColorStop(0, '#ffdd99');
         grad.addColorStop(0.5, '#ffcc00');

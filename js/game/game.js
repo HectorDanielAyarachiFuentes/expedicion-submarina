@@ -39,7 +39,7 @@ let a_creditos_imagen_actual = 0;
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 export function dificultadBase() { 
-    if (!estadoJuego) return 0;
+    if (!estadoJuego || !estadoJuego.enEjecucion) return 0;
     return estadoJuego.tiempoTranscurrido / 150;
 }
 
@@ -328,10 +328,26 @@ let robotImg = null, robotListo = false, spriteAncho = 96, spriteAlto = 64, robo
 cargarImagen('img/subastian.png', function (img) { if (img) { robotImg = img; robotListo = true; const altoObjetivo = 64; const ratio = img.width / img.height; spriteAlto = altoObjetivo; spriteAncho = Math.round(altoObjetivo * ratio); } });
 let criaturasImg = null, criaturasListas = false, cFrameAncho = 0, cFrameAlto = 0, cFilas = 0;
 cargarImagen('img/sprites/criaturas.png', function (img) { if (img) { criaturasImg = img; cFrameAncho = Math.floor(img.width / 2); cFilas = Math.max(1, Math.floor(img.height / cFrameAncho)); cFrameAlto = Math.floor(img.height / cFilas); criaturasListas = true; } });
-let bgImg = null, bgListo = false, bgOffset = 0, bgAncho = 0, bgAlto = 0, BG_VELOCIDAD_BASE = 35;
-cargarImagen('img/Fondos/bg_back.png', function (img) { if (img) { bgImg = img; bgListo = true; bgAncho = img.width; bgAlto = img.height; } });
-let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0, FG_VELOCIDAD_BASE = 60;
+let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0;
 cargarImagen('img/Fondos/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
+ 
+// --- Fondos con Parallax ---
+let bgImg = null, bgListo = false, bgAncho = 0, bgAlto = 0;
+let bgOffset = 0; // Offset para el scroll del fondo
+const BG_DRIFT_SPEED = 8; // Velocidad de deriva constante para el fondo (píxeles/seg)
+const FG_DRIFT_SPEED = 25; // Velocidad de deriva constante para el primer plano (píxeles/seg)
+ 
+cargarImagen('img/Fondos/bg_back.png', function (img) {
+    if (img) {
+        bgImg = img;
+        bgListo = true;
+        bgAncho = img.width;
+        bgAlto = img.height;
+        console.log("Imagen de fondo cargada.");
+    } else {
+        console.error("No se pudo cargar 'img/Fondos/bg_back.png'. Asegúrate de que el archivo existe.");
+    }
+});
 
 // --- Spritesheets Animados (con JSON) ---
 // Cada uno de estos sprites tiene una imagen y un archivo JSON que define los frames.
@@ -495,18 +511,29 @@ function iniciarPolvoMarino() {
 }
 
 function actualizarPolvoMarino(dt) {
-    // El polvo se mueve con el fondo para crear un efecto de paralaje
+    if (!estadoJuego || !estadoJuego.enEjecucion) return;
+
     const scrollFondo = estadoJuego.levelFlags.scrollBackground !== false;
-    const velocidadBaseScroll = scrollFondo ? BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2)) : 0;
+    if (!scrollFondo) return; // No scroll, no dust movement
+
+    // Calcula el cambio en la posición de la cámara desde el último frame
+    const cameraDeltaX = estadoJuego.cameraX - (estadoJuego.prevCameraX || estadoJuego.cameraX);
 
     for (let i = particulasPolvoMarino.length - 1; i >= 0; i--) {
         const p = particulasPolvoMarino[i];
         // Las partículas más "profundas" (cercanas) se mueven más rápido
-        p.x -= velocidadBaseScroll * p.profundidad * dt;
+        p.x -= cameraDeltaX * p.profundidad;
         p.y += p.vy * dt;
 
         // Si una partícula se sale de la pantalla, la reciclamos en el otro lado
-        if (p.x < -5) { p.x = W + 5; p.y = Math.random() * H; }
+        if (p.x < -5) {
+            p.x = W + 5;
+            p.y = Math.random() * H;
+        } else if (p.x > W + 5) {
+            p.x = -5;
+            p.y = Math.random() * H;
+        }
+        // Reciclaje vertical
         if (p.y < -5) { p.y = H + 5; } else if (p.y > H + 5) { p.y = -5; }
     }
 }
@@ -636,10 +663,10 @@ export function activarSlowMotion(duracion) {
 // --- Estado Principal y Entidades ---
 export let estadoJuego = null, jugador, animales;
 let teclas = {};
-let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
+let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false; // prettier-ignore
 let __iniciando = false;
 let menuFlyBy = null; // Para la animación del submarino en el menú
-let inclinacionRobot = 0, inclinacionRobotObjetivo = 0; const INCLINACION_MAX = Math.PI / 24;
+const INCLINACION_MAX = Math.PI / 24;
 const JUGADOR_VELOCIDAD = 350;
 const ENFRIAMIENTO_TORPEDO = 1.5;
 const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
@@ -674,10 +701,13 @@ function reiniciar(nivelDeInicio = 1) {
         slowMoTimer: 0, 
         levelFlags: {}, // >>> CAMBIO CLAVE <<< Objeto para que los niveles comuniquen flags al motor (ej: no mover el fondo)
     };
+    estadoJuego.cameraX = 0;
+    estadoJuego.cameraY = 0;
+    estadoJuego.prevCameraX = 0;
     
     delete estadoJuego.darknessOverride; // Limpiamos la oscuridad del nivel 2, si existiera.
 
-    jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0 };
+    jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0, inclinacion: 0 };
     
     Levels.initLevel(nivelDeInicio);
     
@@ -702,6 +732,9 @@ function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 
 // --- Generación de Enemigos ---
 export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrides = {}) {
     const minY = H * 0.15;
+    // Con el sistema de cámara, el jugador puede estar en cualquier 'y', así que generamos en toda la altura.
+    const usaCamera = estadoJuego.levelFlags.scrollBackground !== false;
+
     const maxY = H * 0.85;
     const y = overrides.y !== undefined ? overrides.y : (minY + Math.random() * (maxY - minY));
     let velocidad = overrides.velocidad || (velocidadActual() + 60);
@@ -723,6 +756,8 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         }
     }
 
+    const spawnX = usaCamera ? estadoJuego.cameraX + W + (overrides.ancho || 100) : W + (overrides.ancho || 100);
+
     if (tipo === 'mierdei') {
         if (!mierdeiListo) return; // Evitar error si la imagen no ha cargado
         const anchoDeseado = overrides.ancho || 100;
@@ -731,7 +766,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
         }
         animales.push({
-            x: W + anchoDeseado, y, vx: -velocidad * 0.7, r: anchoDeseado / 2,
+            x: spawnX, y, vx: -velocidad * 0.7, r: anchoDeseado / 2,
             w: anchoDeseado, h: altoDeseado, capturado: false, tipo: 'mierdei',
             semillaFase: Math.random() * Math.PI * 2, // Kept for floating, might remove later if not needed
             frame: 0, 
@@ -741,7 +776,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         const tamano = overrides.ancho || 128;
         velocidad *= 0.9; // Un poco más lentos al patrullar
         animales.push({
-            x: W + tamano, y, vx: -velocidad, vy: 0, r: 50, w: tamano, h: tamano,
+            x: spawnX, y, vx: -velocidad, vy: 0, r: 50, w: tamano, h: tamano,
             capturado: false, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'shark',
@@ -752,7 +787,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         const tamano = overrides.ancho || 250;
         velocidad *= 0.5; // Muy lentas
         animales.push({
-            x: W + tamano, y, vx: -velocidad, vy: 0, r: 100, w: tamano, h: tamano,
+            x: spawnX, y, vx: -velocidad, vy: 0, r: 100, w: tamano, h: tamano,
             capturado: false, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'whale',
@@ -790,7 +825,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         // --- FIN SUGERENCIA ---
 
         animales.push({
-            x: W + tamano, y, vx: -velocidad, r: 44, w: tamano, h: tamano,
+            x: spawnX, y, vx: -velocidad, r: 44, w: tamano, h: tamano,
             capturado: false, fila, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, tipo: tipo,
             patronMovimiento: patronMovimiento, // Propiedad para el nuevo tipo de movimiento
@@ -982,6 +1017,9 @@ function actualizarAnimacionMenu(dt) {
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
 
+    // Guardar la posición de la cámara del frame anterior para calcular el delta del parallax.
+    estadoJuego.prevCameraX = estadoJuego.cameraX;
+
     if (estadoJuego.slowMoTimer > 0) {
         estadoJuego.slowMoTimer -= dt;
         if (estadoJuego.slowMoTimer <= 0) {
@@ -989,6 +1027,9 @@ function actualizar(dt) {
         }
     }
     const dtAjustado = dt * estadoJuego.velocidadJuego;
+
+    // --- Determinar si se usa el sistema de cámara para este nivel ---
+    const usaCamera = estadoJuego.levelFlags.scrollBackground !== false;
 
     // --- Actualización de Timers y Estado General ---
     estadoJuego.tiempoTranscurrido += dtAjustado;
@@ -1036,19 +1077,65 @@ function actualizar(dt) {
     jugador.x += vx * dtAjustado;
     jugador.y += vy * dtAjustado;
 
-    // --- Actualización de la Posición e Inclinación del Jugador ---
-    jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
-    jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
+    // --- LÓGICA DE CÁMARA Y POSICIÓN DEL JUGADOR ---
+    if (usaCamera) {
+        // En niveles con scroll, el jugador se mantiene en el centro y el mundo se mueve.
+        // El jugador puede salirse verticalmente y aparecer por el otro lado (wrap).
+        if (jugador.y < -jugador.r) jugador.y = H + jugador.r;
+        if (jugador.y > H + jugador.r) jugador.y = -jugador.r;
+
+        // --- NUEVA LÓGICA DE CÁMARA CON "ZONA MUERTA" ---
+        // La cámara solo se mueve si el jugador sale de una zona central,
+        // dándole más libertad de movimiento sin que el fondo se desplace constantemente.
+        const deadZoneLeft = W * 0.25;
+        const deadZoneRight = W * 0.60;
+
+        // Posición del jugador relativa a la vista de la cámara actual
+        const playerViewX = jugador.x - estadoJuego.cameraX;
+
+        let targetCameraX = estadoJuego.cameraX;
+
+        if (playerViewX < deadZoneLeft) {
+            targetCameraX = jugador.x - deadZoneLeft;
+        } else if (playerViewX > deadZoneRight) {
+            targetCameraX = jugador.x - deadZoneRight;
+        }
+
+        estadoJuego.cameraX = lerp(estadoJuego.cameraX, targetCameraX, dtAjustado * 4);
+        estadoJuego.cameraY = 0; // Cámara vertical bloqueada para un movimiento más estable y predecible.
+
+    } else {
+        // En niveles de jefe (sin scroll), el jugador se mueve dentro de la pantalla.
+        jugador.x = clamp(jugador.x, jugador.r, W - jugador.r);
+        jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
+        // La cámara se queda fija.
+        estadoJuego.cameraX = 0;
+        estadoJuego.cameraY = 0;
+    }
+    let inclinacionRobotObjetivo = 0;
     if (vy < 0) inclinacionRobotObjetivo = -INCLINACION_MAX;
     else if (vy > 0) inclinacionRobotObjetivo = INCLINACION_MAX;
-    else inclinacionRobotObjetivo = 0;
 
     const isLevel5 = estadoJuego.nivel === 5;
     if(isLevel5){
         if (teclas['ArrowLeft']) inclinacionRobotObjetivo -= INCLINACION_MAX * 1.5;
         else if (teclas['ArrowRight']) inclinacionRobotObjetivo += INCLINACION_MAX * 1.5;
     }
-    inclinacionRobot += (inclinacionRobotObjetivo - inclinacionRobot) * Math.min(1, 8 * dtAjustado);
+    jugador.inclinacion += (inclinacionRobotObjetivo - jugador.inclinacion) * Math.min(1, 8 * dtAjustado);
+
+    // --- Actualización de los Offsets de Fondo/Primer Plano ---
+    if (usaCamera) {
+        // El offset total es la suma de una deriva constante (corriente) y el paralaje de la cámara.
+        const timeDriftBg = estadoJuego.tiempoTranscurrido * BG_DRIFT_SPEED;
+        const timeDriftFg = estadoJuego.tiempoTranscurrido * FG_DRIFT_SPEED;
+
+        bgOffset = (estadoJuego.cameraX * 0.3) + timeDriftBg;
+        fgOffset = (estadoJuego.cameraX * 1.0) + timeDriftFg;
+    } else {
+        // En niveles de jefe, todo está estático.
+        bgOffset = 0;
+        fgOffset = 0;
+    }
 
     // --- Procesamiento de la Entrada del Jugador (Acciones) ---
     if (teclas[' '] && estadoJuego.bloqueoEntrada === 0 && estadoJuego.armaActual !== 'laser') { disparar(); teclas[' '] = false; }
@@ -1331,9 +1418,10 @@ function actualizar(dt) {
         } 
         
         // --- Limpieza de Enemigos Fuera de Pantalla ---
-        if (a.x < -a.w) { 
+        const despawnLimit = usaCamera ? estadoJuego.cameraX - a.w : -a.w;
+        if (a.x < despawnLimit) { 
             animales.splice(i, 1); 
-        } 
+        }
     }
     
     // --- Actualización de Otros Proyectiles y Efectos ---
@@ -1381,11 +1469,21 @@ function actualizar(dt) {
 // =================================================================================
 // Se encarga de dibujar todo en la pantalla en el orden correcto (de atrás hacia adelante).
 function renderizar(dt) {
-    if (estadoJuego) dibujarFondo(dt);
+    // La actualización de los offsets del fondo ahora se hace en `actualizar`.
+    // La función de dibujado ya no necesita `dt`.
+    if (estadoJuego) dibujarFondoParallax();
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
 
     if (estadoJuego) {
+        // --- INICIO DEL SISTEMA DE CÁMARA ---
+        ctx.save();
+        // Redondeamos la posición de la cámara para evitar temblores por subpíxeles.
+        const camX = Math.round(estadoJuego.cameraX);
+        const camY = Math.round(estadoJuego.cameraY);
+        // Movemos todo el "mundo" en la dirección opuesta a la cámara.
+        ctx.translate(-camX, -camY);
+
         // La llamada a drawLevel() es la que permitirá que level3.js dibuje al jefe.
         Levels.drawLevel();
 
@@ -1514,8 +1612,8 @@ function renderizar(dt) {
 
             ctx.save();
             ctx.translate(px, py);
-            const anguloFinal = isLevel5 ? -Math.PI / 2 + inclinacionRobot : inclinacionRobot;
-            ctx.rotate(anguloFinal);
+            const anguloFinal = isLevel5 ? -Math.PI / 2 + jugador.inclinacion : jugador.inclinacion;
+            ctx.rotate(anguloFinal); // prettier-ignore
 
             // --- Dibuja la Hélice ---
             if (propellerReady && propellerImg) {
@@ -1605,7 +1703,7 @@ function renderizar(dt) {
                 ctx.restore();
             }
 
-            const drawContext = { ctx, estadoJuego, jugador, W, H, inclinacionRobot };
+            const drawContext = { ctx, estadoJuego, jugador, px, py, W, H };
             Weapons.drawWeapons(drawContext);
         }
 
@@ -1616,10 +1714,9 @@ function renderizar(dt) {
         ctx.imageSmoothingEnabled = true;
     }
 
-    // --- Dibuja Partículas y Efectos Finales ---
+    // --- Dibuja Partículas y Efectos de Mundo (dentro de la cámara) ---
     dibujarParticulas();
 
-    ctx.save();
     for (const d of whaleDebris) {
         ctx.save();
         ctx.translate(d.x, d.y);
@@ -1641,41 +1738,54 @@ function renderizar(dt) {
         ctx.restore();
     }
 
+    // --- FIN DEL SISTEMA DE CÁMARA ---
     ctx.restore();
+
+    // --- Dibuja Efectos de Pantalla (fuera de la cámara) ---
     dibujarMascaraLuz();
     dibujarPolvoMarino(); // Dibuja el polvo/plancton en el canvas de efectos
     dibujarHUD();
 }
 
 // --- Funciones de Renderizado Auxiliares ---
-function dibujarFondo(dt) {
+/**
+ * Dibuja el fondo y el primer plano con efecto de paralaje,
+ * asegurando que las imágenes mantengan su proporción.
+ */
+function dibujarFondoParallax() {
     if (!estadoJuego || !bgCtx) return;
-    // >>> CAMBIO CLAVE <<<
-    // La decisión de si el fondo se mueve o no, ahora depende de un flag que el nivel puede activar/desactivar.
-    // Por defecto, se mueve. El Nivel 3 lo pondrá en `false`.
-    const scrollFondo = estadoJuego.levelFlags.scrollBackground !== false;
-    
-    bgCtx.clearRect(0, 0, W, H);
-    if (bgListo && bgAncho > 0 && bgAlto > 0) {
-        const spd = BG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2));
-        if (scrollFondo) bgOffset = (bgOffset + spd * dt) % bgAncho;
+
+    // 1. Limpiar el canvas y dibujar el color de fondo base
+    bgCtx.fillStyle = '#06131f';
+    bgCtx.fillRect(0, 0, W, H);
+
+    // 2. Dibujar la capa de fondo (background)
+    if (bgListo && bgAncho > 0) {
         bgCtx.imageSmoothingEnabled = false;
-        for (let x = -bgOffset; x < W + bgAncho; x += bgAncho) {
-            for (let y = 0; y < H + bgAlto; y += bgAlto) {
-                bgCtx.drawImage(bgImg, Math.round(x), Math.round(y), bgAncho, bgAlto);
-            }
+        
+        // Calcular el alto y ancho manteniendo la proporción para que cubra la altura del canvas
+        const ratio = bgAncho / bgAlto;
+        const alturaDibujoBg = H;
+        const anchoDibujoBg = alturaDibujoBg * ratio;
+
+        // Usar el operador de módulo para que el scroll sea infinito
+        const bgOffsetLooping = bgOffset % anchoDibujoBg;
+
+        // Dibujar las imágenes necesarias para cubrir la pantalla
+        for (let x = -bgOffsetLooping; x < W; x += anchoDibujoBg) {
+            bgCtx.drawImage(bgImg, Math.round(x), 0, anchoDibujoBg, alturaDibujoBg);
         }
-        if (fgListo && fgAncho > 0 && fgAlto > 0) {
-            const fspd = FG_VELOCIDAD_BASE * (1 + 0.6 * clamp(estadoJuego.tiempoTranscurrido / 180, 0, 2));
-            if (scrollFondo) fgOffset = (fgOffset + fspd * dt) % fgAncho;
-            const yBase = H - fgAlto;
-            for (let xx = -fgOffset; xx < W + fgAncho; xx += fgAncho) {
-                bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto);
-            }
+    }
+
+    // 3. Dibujar la capa de primer plano (foreground)
+    if (fgListo && fgAncho > 0 && fgAlto > 0) {
+        // El primer plano se alinea abajo y no se escala, para que el suelo siempre esté en su sitio.
+        const yBase = H - fgAlto;
+        const fgOffsetLooping = fgOffset % fgAncho;
+
+        for (let xx = -fgOffsetLooping; xx < W; xx += fgAncho) {
+            bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto);
         }
-    } else {
-        bgCtx.fillStyle = '#06131f';
-        bgCtx.fillRect(0, 0, W, H);
     }
 }
 
@@ -1723,7 +1833,7 @@ function dibujarMascaraLuz() {
     fx.clearRect(0, 0, W, H);
     const isLevel5 = estadoJuego.nivel === 5;
 
-    const oscuridadBase = estadoJuego.tiempoTranscurrido / 180;
+    const oscuridadBase = estadoJuego.tiempoTranscurrido / 180; // prettier-ignore
     const oscuridadObjetivo = estadoJuego.darknessOverride !== undefined 
         ? estadoJuego.darknessOverride 
         : oscuridadBase;
@@ -1734,8 +1844,14 @@ function dibujarMascaraLuz() {
     fx.globalCompositeOperation = 'source-over';
     fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
     fx.fillRect(0, 0, W, H);
-    if (estadoJuego.luzVisible && jugador) {
-        const px = jugador.x; const py = jugador.y; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + inclinacionRobot; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11)); const L = isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560); const theta = Math.PI / 9; const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half; let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)'); fx.globalCompositeOperation = 'destination-out'; fx.fillStyle = g; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)'); fx.fillStyle = rg; fx.beginPath(); fx.arc(ax, ay, 54, 0, Math.PI * 2); fx.fill(); fx.globalCompositeOperation = 'lighter'; const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60, 'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(255,255,255,0.00)'); fx.fillStyle = gGlow; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over';
+    if (estadoJuego.luzVisible && jugador) { // prettier-ignore
+        // --- CORRECCIÓN: Convertir coordenadas del mundo a coordenadas de pantalla ---
+        // La luz se dibuja en el canvas 'fx', que no se mueve con la cámara.
+        // Por lo tanto, debemos restar la posición de la cámara a la del jugador.
+        const screenPx = jugador.x - Math.round(estadoJuego.cameraX);
+        const screenPy = jugador.y - Math.round(estadoJuego.cameraY);
+
+        const px = screenPx; const py = screenPy; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + jugador.inclinacion; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11)); const L = isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560); const theta = Math.PI / 9; const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half; let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)'); fx.globalCompositeOperation = 'destination-out'; fx.fillStyle = g; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)'); fx.fillStyle = rg; fx.beginPath(); fx.arc(ax, ay, 54, 0, Math.PI * 2); fx.fill(); fx.globalCompositeOperation = 'lighter'; const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(255,255,255,0.14)'); gGlow.addColorStop(0.60, 'rgba(255,255,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(255,255,255,0.00)'); fx.fillStyle = gGlow; fx.beginPath(); fx.moveTo(ax, ay); fx.lineTo(pTopX, pTopY); fx.lineTo(pBotX, pBotY); fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over';
     }
 }
 
@@ -2050,7 +2166,6 @@ export function gameLoop(t) {
 
     try {
         actualizarParticulas(dtAjustado);
-        actualizarPolvoMarino(dtAjustado);
 
         // Actualiza las armas siempre, para efectos de menú y de juego.
         const weaponUpdateContext = {
@@ -2066,6 +2181,9 @@ export function gameLoop(t) {
             actualizarCriaturasMenu(dtAjustado);
             actualizarAnimacionMenu(dtAjustado);
         }
+
+        // Actualiza el polvo de paralaje después de que la cámara se haya movido.
+        actualizarPolvoMarino(dtAjustado);
         renderizar(dt);
 
         if (animarSubmarino) {
