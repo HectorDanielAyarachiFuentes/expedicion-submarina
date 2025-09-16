@@ -182,7 +182,8 @@ export const S = (function () {
         whale_song1: 'sonidos/ballena/ballenacanta1.mp3',
         whale_song2: 'sonidos/ballena/ballenacanta2.mp3',
         whale_song3: 'sonidos/ballena/ballenacanta3.mp3',
-        whale_spout: 'sonidos/ballena/ballenachorro.mp3'
+        whale_spout: 'sonidos/ballena/ballenachorro.mp3',
+        sonar_ping: 'sonidos/sonar_ping.wav'
     };
 
     GAME_PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
@@ -728,6 +729,9 @@ function reiniciar(nivelDeInicio = 1) {
         levelFlags: {}, // >>> CAMBIO CLAVE <<< Objeto para que los niveles comuniquen flags al motor (ej: no mover el fondo)
         screenShake: 0,
         cameraZoom: 1.0,
+        sonarPingTimer: 0,
+        sonarActivo: true,
+        sonarToggleCooldown: 0,
     };
     estadoJuego.cameraX = 0;
     estadoJuego.cameraY = 0;
@@ -1073,6 +1077,19 @@ function actualizarAnimacionMenu(dt) {
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
 
+    // --- Lógica del Sonar (Ping y Activación) ---
+    if (estadoJuego.sonarActivo) {
+        // El timer se descuenta en cada frame. Cuando llega a cero, suena el "ping"
+        // y se reinicia para la siguiente vuelta del barrido del sonar.
+        estadoJuego.sonarPingTimer -= dt;
+        if (estadoJuego.sonarPingTimer <= 0) {
+            const sweepDuration = (Math.PI * 2) / SONAR_SWEEP_SPEED;
+            // Reiniciar el timer con un pequeño offset aleatorio para que no sea tan repetitivo
+            estadoJuego.sonarPingTimer = sweepDuration + (Math.random() - 0.5) * 0.1;
+            S.reproducir('sonar_ping');
+        }
+    }
+
     // Guardar la posición de la cámara del frame anterior para calcular el delta del parallax.
     estadoJuego.prevCameraX = estadoJuego.cameraX;
 
@@ -1193,6 +1210,13 @@ function actualizar(dt) {
     }
 
     // --- Procesamiento de la Entrada del Jugador (Acciones) ---
+    if (estadoJuego.sonarToggleCooldown > 0) estadoJuego.sonarToggleCooldown -= dtAjustado;
+    if ((teclas['m'] || teclas['M']) && estadoJuego.sonarToggleCooldown <= 0) {
+        estadoJuego.sonarActivo = !estadoJuego.sonarActivo;
+        estadoJuego.sonarToggleCooldown = 0.3;
+        teclas['m'] = teclas['M'] = false;
+    }
+
     if (teclas[' '] && estadoJuego.bloqueoEntrada === 0 && estadoJuego.armaActual !== 'laser') { disparar(); teclas[' '] = false; }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
     if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
@@ -2084,18 +2108,19 @@ function dibujarFondoParallax() {
     }
 }
 
+const SONAR_SWEEP_SPEED = 3.0; // Radianes por segundo
+
 /**
  * Dibuja la superposición del efecto de sonar en su propio canvas.
  */
 function dibujarSonar() {
-    if (!sonarCtx || !estadoJuego || !estadoJuego.enEjecucion) {
+    if (!sonarCtx || !estadoJuego || !estadoJuego.enEjecucion || !estadoJuego.sonarActivo) {
         if (sonarCtx) sonarCtx.clearRect(0, 0, W, H);
         return;
     }
 
     const SONAR_COLOR_FAINT = 'rgba(100, 255, 150, 0.3)';
     const SONAR_COLOR_BORDER = 'rgba(126, 203, 255, 0.4)';
-    const SWEEP_SPEED = 3.0; // Radianes por segundo
 
     sonarCtx.clearRect(0, 0, W, H);
     sonarCtx.save();
@@ -2131,7 +2156,7 @@ function dibujarSonar() {
     }
 
     // --- 3. Dibujar el barrido (sweep) ---
-    const sweepAngle = (estadoJuego.tiempoTranscurrido * SWEEP_SPEED) % (Math.PI * 2);
+    const sweepAngle = (estadoJuego.tiempoTranscurrido * SONAR_SWEEP_SPEED) % (Math.PI * 2);
     const grad = sonarCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, SONAR_RADIUS);
     grad.addColorStop(0, 'rgba(120, 255, 170, 0.4)');
     grad.addColorStop(0.8, 'rgba(100, 255, 150, 0.05)');
