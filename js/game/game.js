@@ -351,6 +351,13 @@ cargarImagen('img/Fondos/bg_back.png', function (img) {
         bgAncho = img.width;
         bgAlto = img.height;
         console.log("Imagen de fondo cargada.");
+        // >>> NUEVO: Forzar un redibujado del fondo <<<
+        // Si el juego ya ha empezado a renderizar (lo que es probable),
+        // esta llamada asegura que el fondo se dibuje inmediatamente
+        // en lugar de esperar al siguiente ciclo del gameLoop.
+        if (estadoJuego) {
+            dibujarFondoParallax();
+        }
     } else {
         console.error("No se pudo cargar 'img/Fondos/bg_back.png'. Asegúrate de que el archivo existe.");
     }
@@ -2513,8 +2520,11 @@ function dibujarFondoParallax() {
         const alturaDibujoBg = H;
         const anchoDibujoBg = alturaDibujoBg * ratio;
 
-        // Usar el operador de módulo para que el scroll sea infinito
-        const bgOffsetLooping = bgOffset % anchoDibujoBg;
+        // --- CORRECCIÓN: Asegurar que el offset para el bucle sea siempre positivo ---
+        // El operador de módulo (%) en JS puede devolver números negativos.
+        // Esta fórmula asegura un resultado positivo, evitando huecos en el
+        // lado izquierdo de la pantalla cuando el offset es negativo.
+        const bgOffsetLooping = ((bgOffset % anchoDibujoBg) + anchoDibujoBg) % anchoDibujoBg;
 
         // Dibujar las imágenes necesarias para cubrir la pantalla
         for (let x = -bgOffsetLooping; x < W; x += anchoDibujoBg) {
@@ -2526,7 +2536,7 @@ function dibujarFondoParallax() {
     if (fgListo && fgAncho > 0 && fgAlto > 0) {
         // El primer plano se alinea abajo y no se escala, para que el suelo siempre esté en su sitio.
         const yBase = H - fgAlto;
-        const fgOffsetLooping = fgOffset % fgAncho;
+        const fgOffsetLooping = ((fgOffset % fgAncho) + fgAncho) % fgAncho;
 
         for (let xx = -fgOffsetLooping; xx < W; xx += fgAncho) {
             bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto);
