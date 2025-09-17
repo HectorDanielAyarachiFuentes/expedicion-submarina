@@ -2773,7 +2773,15 @@ function dibujarMascaraLuz() {
 
         // --- MEJORAS GRÁFICAS ---
         const time = estadoJuego.tiempoTranscurrido;
-        const flicker = 1.0 + Math.sin(time * 20) * 0.02; // Parpadeo sutil
+        let flicker = 1.0 + Math.sin(time * 20) * 0.02; // Parpadeo sutil
+
+        // --- NUEVO: Parpadeo por consumo de energía ---
+        let powerDrawAlpha = 1.0;
+        if (estadoJuego.laserActivo || estadoJuego.shieldActivo) {
+            // Un parpadeo rápido y errático que afecta la intensidad (alpha)
+            powerDrawAlpha = 0.75 + Math.sin(time * 70) * 0.25; // Varía entre 0.5 y 1.0
+        }
+
         const L = (isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560)) * flicker;
         const theta = (Math.PI / 9) * (1.0 + Math.sin(time * 2) * 0.05); // El cono "respira"
         const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half;
@@ -2782,12 +2790,17 @@ function dibujarMascaraLuz() {
 
         // 1. Dibujar el cono principal para cortar la oscuridad
         fx.globalCompositeOperation = 'destination-out';
-        let g = fx.createLinearGradient(ax, ay, endx, endy); g.addColorStop(0.00, 'rgba(255,255,255,1.0)'); g.addColorStop(0.45, 'rgba(255,255,255,0.5)'); g.addColorStop(1.00, 'rgba(255,255,255,0.0)');
+        let g = fx.createLinearGradient(ax, ay, endx, endy);
+        g.addColorStop(0.00, `rgba(255,255,255,${1.0 * powerDrawAlpha})`);
+        g.addColorStop(0.45, `rgba(255,255,255,${0.5 * powerDrawAlpha})`);
+        g.addColorStop(1.00, 'rgba(255,255,255,0.0)');
         fx.fillStyle = g;
         fx.fill(conePath);
 
         // 2. Dibujar el halo en la base
-        const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54 * flicker); rg.addColorStop(0, 'rgba(255,255,255,1.0)'); rg.addColorStop(1, 'rgba(255,255,255,0.0)');
+        const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54 * flicker);
+        rg.addColorStop(0, `rgba(255,255,255,${1.0 * powerDrawAlpha})`);
+        rg.addColorStop(1, 'rgba(255,255,255,0.0)');
         fx.fillStyle = rg;
         fx.beginPath();
         fx.arc(ax, ay, 54 * flicker, 0, Math.PI * 2);
@@ -2797,14 +2810,19 @@ function dibujarMascaraLuz() {
         fx.globalCompositeOperation = 'lighter';
 
         // Resplandor suave general
-        const gGlow = fx.createLinearGradient(ax, ay, endx, endy); gGlow.addColorStop(0.00, 'rgba(200,220,255,0.15)'); gGlow.addColorStop(0.60, 'rgba(200,220,255,0.06)'); gGlow.addColorStop(1.00, 'rgba(200,220,255,0.00)');
+        const gGlow = fx.createLinearGradient(ax, ay, endx, endy);
+        gGlow.addColorStop(0.00, `rgba(200,220,255,${0.15 * powerDrawAlpha})`);
+        gGlow.addColorStop(0.60, `rgba(200,220,255,${0.06 * powerDrawAlpha})`);
+        gGlow.addColorStop(1.00, 'rgba(200,220,255,0.00)');
         fx.fillStyle = gGlow;
         fx.fill(conePath);
 
         // Lens Flare en el origen
         const flareRadius = 25 * flicker;
         const flareGradient = fx.createRadialGradient(ax, ay, 0, ax, ay, flareRadius);
-        flareGradient.addColorStop(0, 'rgba(255, 255, 230, 0.4)'); flareGradient.addColorStop(0.3, 'rgba(255, 255, 230, 0.1)'); flareGradient.addColorStop(1, 'rgba(255, 255, 230, 0)');
+        flareGradient.addColorStop(0, `rgba(255, 255, 230, ${0.4 * powerDrawAlpha})`);
+        flareGradient.addColorStop(0.3, `rgba(255, 255, 230, ${0.1 * powerDrawAlpha})`);
+        flareGradient.addColorStop(1, 'rgba(255, 255, 230, 0)');
         fx.fillStyle = flareGradient;
         fx.beginPath();
         fx.arc(ax, ay, flareRadius, 0, Math.PI * 2);
@@ -2820,7 +2838,7 @@ function dibujarMascaraLuz() {
             const rayEndX = ax + Math.cos(rayAngle) * rayL;
             const rayEndY = ay + Math.sin(rayAngle) * rayL;
             const rayGrad = fx.createLinearGradient(ax, ay, rayEndX, rayEndY);
-            rayGrad.addColorStop(0, `rgba(200, 220, 255, ${0.05 + Math.random() * 0.05})`);
+            rayGrad.addColorStop(0, `rgba(200, 220, 255, ${(0.05 + Math.random() * 0.05) * powerDrawAlpha})`);
             rayGrad.addColorStop(1, 'rgba(200, 220, 255, 0)');
             fx.strokeStyle = rayGrad;
             fx.lineWidth = rayW;
