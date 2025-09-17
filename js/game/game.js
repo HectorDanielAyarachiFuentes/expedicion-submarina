@@ -1375,41 +1375,17 @@ function actualizarAnimacionMenu(dt) {
 function actualizar(dt) {
     if (!estadoJuego || !estadoJuego.enEjecucion) return;
 
-    // --- Lógica del Sonar (Ping y Activación) ---
-    if (estadoJuego.sonarActivo) {
-        // El timer se descuenta en cada frame. Cuando llega a cero, suena el "ping"
-        // y se reinicia para la siguiente vuelta del barrido del sonar.
-        estadoJuego.sonarPingTimer -= dt;
-        if (estadoJuego.sonarPingTimer <= 0) {
-            const sweepDuration = (Math.PI * 2) / SONAR_SWEEP_SPEED;
-            // Reiniciar el timer con un pequeño offset aleatorio para que no sea tan repetitivo
-            estadoJuego.sonarPingTimer = sweepDuration + (Math.random() - 0.5) * 0.1;
-            S.reproducir('sonar_ping');
-        }
-    }
-
     // Guardar la posición de la cámara del frame anterior para calcular el delta del parallax.
     estadoJuego.prevCameraX = estadoJuego.cameraX;
-
-    if (estadoJuego.slowMoTimer > 0) {
-        estadoJuego.slowMoTimer -= dt;
-        if (estadoJuego.slowMoTimer <= 0) {
-            estadoJuego.velocidadJuego = 1.0;
-        }
-    }
-    const dtAjustado = dt * estadoJuego.velocidadJuego;
 
     // --- Determinar si se usa el sistema de cámara para este nivel ---
     const usaCamera = estadoJuego.levelFlags.scrollBackground !== false;
 
     // --- Actualización de Timers y Estado General ---
-    estadoJuego.tiempoTranscurrido += dtAjustado;
-    estadoJuego.bloqueoEntrada = Math.max(0, estadoJuego.bloqueoEntrada - dtAjustado);
-    if (estadoJuego.enfriamientoTorpedo > 0) estadoJuego.enfriamientoTorpedo -= dtAjustado;
-    if (estadoJuego.armaCambiandoTimer > 0) {
-        estadoJuego.armaCambiandoTimer -= dtAjustado;
-    }
-    if (estadoJuego.enfriamientoArma > 0) estadoJuego.enfriamientoArma -= dtAjustado;
+    estadoJuego.bloqueoEntrada = Math.max(0, estadoJuego.bloqueoEntrada - dt);
+    if (estadoJuego.enfriamientoTorpedo > 0) estadoJuego.enfriamientoTorpedo -= dt;
+    if (estadoJuego.armaCambiandoTimer > 0) estadoJuego.armaCambiandoTimer -= dt;
+    if (estadoJuego.enfriamientoArma > 0) estadoJuego.enfriamientoArma -= dt;
     estadoJuego.teclasActivas = teclas;
     
     const progresoProfundidad = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1);
@@ -1426,7 +1402,7 @@ function actualizar(dt) {
     if (len > 0) {
         vx = (vx / len) * JUGADOR_VELOCIDAD;
         vy = (vy / len) * JUGADOR_VELOCIDAD;
-        generarBurbujaPropulsion(jugador.x - 30, jugador.y, false);
+        generarBurbujaPropulsion(jugador.x - 30, jugador.y, estadoJuego.nivel === 5);
     }
     
     // --- Animación de la Hélice ---
@@ -1438,15 +1414,15 @@ function actualizar(dt) {
         targetSpeed = 25; // Velocidad de movimiento normal
     }
     // Suavizar la transición de velocidad
-    propellerCurrentSpeed = lerp(propellerCurrentSpeed, targetSpeed, dtAjustado * 8);
-    propellerRotation += propellerCurrentSpeed * dtAjustado;
+    propellerCurrentSpeed = lerp(propellerCurrentSpeed, targetSpeed, dt * 8);
+    propellerRotation += propellerCurrentSpeed * dt;
 
     // Llama a la lógica de actualización del nivel actual
-    Levels.updateLevel(dtAjustado);
+    Levels.updateLevel(dt);
     
     // Aplicar el movimiento calculado a partir de las teclas
-    jugador.x += vx * dtAjustado;
-    jugador.y += vy * dtAjustado;
+    jugador.x += vx * dt;
+    jugador.y += vy * dt;
 
     // --- LÓGICA DE CÁMARA Y POSICIÓN DEL JUGADOR ---
     if (usaCamera) {
@@ -1471,7 +1447,7 @@ function actualizar(dt) {
             targetCameraX = jugador.x - deadZoneRight;
         }
 
-        estadoJuego.cameraX = lerp(estadoJuego.cameraX, targetCameraX, dtAjustado * 4);
+        estadoJuego.cameraX = lerp(estadoJuego.cameraX, targetCameraX, dt * 4);
         estadoJuego.cameraY = 0; // Cámara vertical bloqueada para un movimiento más estable y predecible.
 
     } else {
@@ -1491,7 +1467,7 @@ function actualizar(dt) {
         if (teclas['ArrowLeft']) inclinacionRobotObjetivo -= INCLINACION_MAX * 1.5;
         else if (teclas['ArrowRight']) inclinacionRobotObjetivo += INCLINACION_MAX * 1.5;
     }
-    jugador.inclinacion += (inclinacionRobotObjetivo - jugador.inclinacion) * Math.min(1, 8 * dtAjustado);
+    jugador.inclinacion += (inclinacionRobotObjetivo - jugador.inclinacion) * Math.min(1, 8 * dt);
 
     // --- Actualización de los Offsets de Fondo/Primer Plano ---
     if (usaCamera) {
@@ -1508,7 +1484,7 @@ function actualizar(dt) {
     }
 
     // --- Procesamiento de la Entrada del Jugador (Acciones) ---
-    if (estadoJuego.sonarToggleCooldown > 0) estadoJuego.sonarToggleCooldown -= dtAjustado;
+    if (estadoJuego.sonarToggleCooldown > 0) estadoJuego.sonarToggleCooldown -= dt;
     if ((teclas['m'] || teclas['M']) && estadoJuego.sonarToggleCooldown <= 0) {
         estadoJuego.sonarActivo = !estadoJuego.sonarActivo; // prettier-ignore
         estadoJuego.sonarToggleCooldown = 0.3;
@@ -1527,7 +1503,7 @@ function actualizar(dt) {
         estadoJuego.armaActual = Weapons.WEAPON_ORDER[nextIndex];
         teclas['c'] = teclas['C'] = false;
         S.reproducir('reload');
-        estadoJuego.armaCambiandoTimer = 0.3;
+        estadoJuego.armaCambiandoTimer = 0.3; // Este timer es para la animación del HUD
     }
     
     // --- Lógica de Habilidades: Escudo de Energía ---
@@ -1544,7 +1520,7 @@ function actualizar(dt) {
     }
 
     if (estadoJuego.shieldActivo) {
-        estadoJuego.shieldEnergia -= Weapons.WEAPON_CONFIG.shield.consumo * dtAjustado;
+        estadoJuego.shieldEnergia -= Weapons.WEAPON_CONFIG.shield.consumo * dt;
         if (estadoJuego.shieldEnergia <= 0) {
             estadoJuego.shieldEnergia = 0;
             estadoJuego.shieldActivo = false;
@@ -1555,20 +1531,20 @@ function actualizar(dt) {
     } else {
         // Regenerar energía si no está activo y no está en enfriamiento
         if (estadoJuego.shieldEnfriamiento <= 0) {
-            estadoJuego.shieldEnergia += Weapons.WEAPON_CONFIG.shield.regeneracion * dtAjustado;
+            estadoJuego.shieldEnergia += Weapons.WEAPON_CONFIG.shield.regeneracion * dt;
             estadoJuego.shieldEnergia = Math.min(estadoJuego.shieldEnergia, estadoJuego.shieldMaxEnergia);
         }
     }
 
     if (estadoJuego.shieldEnfriamiento > 0) {
-        estadoJuego.shieldEnfriamiento -= dtAjustado;
+        estadoJuego.shieldEnfriamiento -= dt;
     }
-    if (estadoJuego.shieldHitTimer > 0) estadoJuego.shieldHitTimer -= dtAjustado;
+    if (estadoJuego.shieldHitTimer > 0) estadoJuego.shieldHitTimer -= dt;
 
     // --- Actualización del Progreso del Nivel ---
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
-    if (configNivel.tipo === 'capture') estadoJuego.valorObjetivoNivel = estadoJuego.rescatados;
-    else if (configNivel.tipo === 'survive') estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dtAjustado, configNivel.meta);
+    if (configNivel.tipo === 'capture') { estadoJuego.valorObjetivoNivel = estadoJuego.rescatados; }
+    else if (configNivel.tipo === 'survive') { estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dt, configNivel.meta); }
     
     // --- Lógica de Habilidades: Impulso (Boost) ---
     const eraBoostActivo = estadoJuego.boostActivo;
@@ -1584,7 +1560,7 @@ function actualizar(dt) {
 
     // --- NUEVO: Lógica de efectos de cámara para el impulso ---
     if (estadoJuego.boostActivo) {
-        estadoJuego.boostEnergia -= Weapons.WEAPON_CONFIG.boost.consumo * dtAjustado;
+        estadoJuego.boostEnergia -= Weapons.WEAPON_CONFIG.boost.consumo * dt;
         estadoJuego.screenShake = 5; // Activa el temblor de pantalla
         estadoJuego.cameraZoom = 0.95; // Activa el zoom out
         
@@ -1593,15 +1569,15 @@ function actualizar(dt) {
             boostVx = vx / JUGADOR_VELOCIDAD; // Normalizar el vector de velocidad
             boostVy = vy / JUGADOR_VELOCIDAD;
         }
-        jugador.x += boostVx * Weapons.WEAPON_CONFIG.boost.fuerza * dtAjustado;
-        jugador.y += boostVy * Weapons.WEAPON_CONFIG.boost.fuerza * dtAjustado;
+        jugador.x += boostVx * Weapons.WEAPON_CONFIG.boost.fuerza * dt;
+        jugador.y += boostVy * Weapons.WEAPON_CONFIG.boost.fuerza * dt;
     } else {
         if (estadoJuego.boostEnfriamiento <= 0) {
-            estadoJuego.boostEnergia += Weapons.WEAPON_CONFIG.boost.regeneracion * dtAjustado; // Regeneración de energía
+            estadoJuego.boostEnergia += Weapons.WEAPON_CONFIG.boost.regeneracion * dt; // Regeneración de energía
             estadoJuego.boostEnergia = Math.min(estadoJuego.boostEnergia, estadoJuego.boostMaxEnergia);
         }
-        estadoJuego.screenShake = lerp(estadoJuego.screenShake, 0, dtAjustado * 5);
-        estadoJuego.cameraZoom = lerp(estadoJuego.cameraZoom, 1.0, dtAjustado * 5);
+        estadoJuego.screenShake = lerp(estadoJuego.screenShake, 0, dt * 5);
+        estadoJuego.cameraZoom = lerp(estadoJuego.cameraZoom, 1.0, dt * 5);
     }
 
     if (estadoJuego.boostEnergia <= 0) {
@@ -1612,14 +1588,14 @@ function actualizar(dt) {
     }
 
     if (estadoJuego.boostEnfriamiento > 0) {
-        estadoJuego.boostEnfriamiento -= dtAjustado;
+        estadoJuego.boostEnfriamiento -= dt;
     }
 
     // --- Lógica de Habilidades: Arma Láser ---
     if (estadoJuego.armaActual === 'laser') {
         if (teclas[' '] && estadoJuego.laserEnergia > 0) {
             estadoJuego.laserActivo = true;
-            estadoJuego.laserEnergia = Math.max(0, estadoJuego.laserEnergia - Weapons.WEAPON_CONFIG.laser.consumoEnergia * dtAjustado);
+            estadoJuego.laserEnergia = Math.max(0, estadoJuego.laserEnergia - Weapons.WEAPON_CONFIG.laser.consumoEnergia * dt);
             S.bucle('laser_beam');
         } else {
             estadoJuego.laserActivo = false;
@@ -1633,14 +1609,19 @@ function actualizar(dt) {
     }
     // Regeneración de energía del láser
     if (!estadoJuego.laserActivo && estadoJuego.laserEnergia < estadoJuego.laserMaxEnergia) {
-        estadoJuego.laserEnergia += Weapons.WEAPON_CONFIG.laser.regeneracionEnergia * dtAjustado;
+        estadoJuego.laserEnergia += Weapons.WEAPON_CONFIG.laser.regeneracionEnergia * dt;
         estadoJuego.laserEnergia = Math.min(estadoJuego.laserEnergia, estadoJuego.laserMaxEnergia);
     }
 
     // --- Actualización de Enemigos (Animales) ---
     for (let i = animales.length - 1; i >= 0; i--) { 
         const a = animales[i]; 
-        if (a.laserHitTimer > 0) a.laserHitTimer -= dtAjustado;
+        // --- CORRECCIÓN: Añadir una guarda para prevenir el crash ---
+        // Si 'a' es undefined por alguna razón (un bug sutil de splice en otro lugar),
+        // esta comprobación evitará que el juego se bloquee.
+        if (!a) continue;
+
+        if (a.laserHitTimer > 0) a.laserHitTimer -= dt;
         
         // --- IA y Movimiento Específico por Tipo de Enemigo ---        
         if (a.tipo === 'baby_whale') {
@@ -1656,7 +1637,7 @@ function actualizar(dt) {
 
             // Actualizar el temporizador de huida.
             if (a.isFleeing) {
-                a.fleeTimer -= dtAjustado;
+                a.fleeTimer -= dt;
                 if (a.fleeTimer <= 0) {
                     a.isFleeing = false;
                 }
@@ -1676,17 +1657,17 @@ function actualizar(dt) {
                     targetY = a.mother.y;
                     speed = 0.8;
                 }
-                a.x = lerp(a.x, targetX, dtAjustado * speed);
-                a.y = lerp(a.y, targetY, dtAjustado * speed);
+                a.x = lerp(a.x, targetX, dt * speed);
+                a.y = lerp(a.y, targetY, dt * speed);
             } else {
                 // Si no hay madre, se mueve por su cuenta
-                a.x += a.vx * dtAjustado;
+                a.x += a.vx * dt;
             }
 
             // Movimiento sinusoidal para que sea más natural
-            a.y += Math.sin(estadoJuego.tiempoTranscurrido * 2.5 + a.semillaFase) * 60 * dtAjustado;
+            a.y += Math.sin(estadoJuego.tiempoTranscurrido * 2.5 + a.semillaFase) * 60 * dt;
 
-            a.timerFrame += dtAjustado;
+            a.timerFrame += dt;
             if (a.timerFrame >= BABYWHALE_ANIMATION_SPEED) {
                 a.timerFrame -= BABYWHALE_ANIMATION_SPEED;
                 if (BABYWHALE_SPRITE_DATA) {
@@ -1702,8 +1683,8 @@ function actualizar(dt) {
         } else if (a.tipo === 'shark') {
             if (a.isHunting) {
                 // El tiburón está cazando, se mueve en su vector de ataque
-                a.x += a.vx * dtAjustado;
-                a.y += a.vy * dtAjustado;
+                a.x += a.vx * dt;
+                a.y += a.vy * dt;
                 generarBurbujasEmbestidaTiburom(a.x, a.y);
                 // Si sale de la pantalla, deja de cazar
                 if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
@@ -1714,14 +1695,14 @@ function actualizar(dt) {
                 }
             } else {
                 // Modo patrulla: se mueve de derecha a izquierda
-                a.x += a.vx * dtAjustado;
+                a.x += a.vx * dt;
                 // Estela de burbujas en modo patrulla
                 if (Math.random() < 0.1) {
                     const tailX = a.x + a.w / 2;
                     const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.1);
                     generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 30 + Math.random() * 30, vy: (Math.random() - 0.5) * 25 - 10, r: Math.random() * 2.0 + 1.0, vida: 0.9 + Math.random() * 0.7, color: '' });
                 }
-                a.huntCooldown -= dtAjustado;
+                a.huntCooldown -= dt;
                 // Si ve al jugador y no está en cooldown, inicia la caza en manada
                 if (a.huntCooldown <= 0 && jugador.x < a.x && a.x < W) {
                     // --- INICIO DE LA NUEVA LÓGICA DE CAZA EN MANADA ---
@@ -1755,7 +1736,7 @@ function actualizar(dt) {
                 }
             }
             // Animación específica para el tiburón
-            a.timerFrame += dtAjustado;
+            a.timerFrame += dt;
             if (a.timerFrame >= SHARK_ANIMATION_SPEED) {
                 a.timerFrame -= SHARK_ANIMATION_SPEED; // Más preciso que resetear a 0
                 a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length;
@@ -1792,7 +1773,7 @@ function actualizar(dt) {
 
             // --- SUGERENCIA DE IA: LÓGICA DE NUEVOS ATAQUES ---
             // 1. Ataque de chorro de agua (Spout)
-            a.spoutCooldown -= dtAjustado;
+            a.spoutCooldown -= dt;
             if (a.spoutCooldown <= 0 && !a.isTailSwiping) {
                 // Dispara un chorro de agua hacia arriba o abajo
                 const dirY = a.y > H / 2 ? -1 : 1; // Dispara lejos del centro de la pantalla
@@ -1802,7 +1783,7 @@ function actualizar(dt) {
 
             // --- LÓGICA DE CANTO AMBIENTAL ---
             if (a.songCooldown > 0) {
-                a.songCooldown -= dtAjustado;
+                a.songCooldown -= dt;
             } else {
                 S.playRandomWhaleSong();
                 // Reinicia el temporizador para el próximo canto (REDUCIDO PARA PRUEBAS)
@@ -1810,7 +1791,7 @@ function actualizar(dt) {
             }
 
             // 2. Ataque de coletazo (Tail Swipe)
-            a.tailSwipeCooldown -= dtAjustado;
+            a.tailSwipeCooldown -= dt;
             // El coletazo solo ocurre si el jugador está detrás de la ballena
             if (a.tailSwipeCooldown <= 0 && !a.isTailSwiping && jugador.x > a.x) {
                 a.isTailSwiping = true;
@@ -1819,7 +1800,7 @@ function actualizar(dt) {
             }
 
             if (a.isTailSwiping) {
-                a.tailSwipeProgress += dtAjustado * 4; // El coletazo dura 0.25s
+                a.tailSwipeProgress += dt * 4; // El coletazo dura 0.25s
                 // Hitbox del coletazo
                 const tailX = a.x + a.w / 2;
                 const tailY = a.y;
@@ -1852,15 +1833,15 @@ function actualizar(dt) {
 
                 // Moverse hacia el objetivo más rápido de lo normal
                 const protectionSpeed = 2.5;
-                a.x = lerp(a.x, targetX, dtAjustado * protectionSpeed);
-                a.y = lerp(a.y, targetY, dtAjustado * protectionSpeed);
+                a.x = lerp(a.x, targetX, dt * protectionSpeed);
+                a.y = lerp(a.y, targetY, dt * protectionSpeed);
 
                 // Si está protegiendo, puede intentar un coletazo si el jugador se acerca demasiado a la ballena
                 if (a.tailSwipeCooldown <= 0 && Math.hypot(jugador.x - a.x, jugador.y - a.y) < 200) {
                     a.isTailSwiping = true; a.tailSwipeProgress = 0; a.tailSwipeCooldown = 4.0 + Math.random() * 3.0;
                 }
             } else {
-                a.x += a.vx * dtAjustado; // Movimiento normal de patrulla
+                a.x += a.vx * dt; // Movimiento normal de patrulla
             }
             // --- FIN SUGERENCIA ---
 
@@ -1877,14 +1858,14 @@ function actualizar(dt) {
             }
 
             // Animación
-            a.timerFrame += dtAjustado;
+            a.timerFrame += dt;
             if (a.timerFrame >= WHALE_ANIMATION_SPEED) {
                 a.timerFrame -= WHALE_ANIMATION_SPEED;
                 a.frame = (a.frame + 1) % WHALE_SPRITE_DATA.frames.length;
             }
         } else if (a.tipo === 'mierdei') {
-            a.x += a.vx * dtAjustado;
-            a.timerFrame += dtAjustado;
+            a.x += a.vx * dt;
+            a.timerFrame += dt;
             if (a.timerFrame >= MIERDEi_ANIMATION_SPEED) {
                 a.timerFrame -= MIERDEi_ANIMATION_SPEED;
                 a.frame = (a.frame + 1) % MIERDEI_SPRITE_DATA.frames.length;
@@ -1893,20 +1874,20 @@ function actualizar(dt) {
             // --- SUGERENCIA DE IA: LÓGICA DE MOVIMIENTO VARIADO ---
             switch (a.patronMovimiento) {
                 case 'sinusoidal':
-                    a.x += a.vx * dtAjustado;
+                    a.x += a.vx * dt;
                     // Usamos el tiempo de juego y una semilla para que cada pez tenga una onda única
-                    a.y += Math.sin(estadoJuego.tiempoTranscurrido * 3 + a.semillaFase) * 80 * dtAjustado;
+                    a.y += Math.sin(estadoJuego.tiempoTranscurrido * 3 + a.semillaFase) * 80 * dt;
                     break;
                 case 'pausa_acelera':
                     if (a.estadoMovimiento === 'moviendo') {
-                        a.x += a.vx * dtAjustado;
+                        a.x += a.vx * dt;
                         // Si cruza cierto punto de la pantalla, entra en estado de pausa
                         if (a.x < W * 0.85) {
                             a.estadoMovimiento = 'pausado';
                             a.timerMovimiento = 0.5 + Math.random() * 0.8; // Pausa entre 0.5 y 1.3s
                         }
                     } else if (a.estadoMovimiento === 'pausado') {
-                        a.timerMovimiento -= dtAjustado;
+                        a.timerMovimiento -= dt;
                         if (a.timerMovimiento <= 0) {
                             a.estadoMovimiento = 'acelerando';
                             // Acelera hacia la Y del jugador
@@ -1915,12 +1896,12 @@ function actualizar(dt) {
                             a.vy = Math.sin(angulo) * velocidadActual() * 1.5;
                         }
                     } else { // 'acelerando'
-                        a.x += a.vx * dtAjustado;
-                        a.y += a.vy * dtAjustado;
+                        a.x += a.vx * dt;
+                        a.y += a.vy * dt;
                     }
                     break;
                 default: // 'lineal'
-                    a.x += a.vx * dtAjustado;
+                    a.x += a.vx * dt;
                     break;
             }
             // --- FIN SUGERENCIA ---
@@ -1939,7 +1920,7 @@ function actualizar(dt) {
                 });
             }
             // Animación para otras criaturas
-            a.timerFrame += dtAjustado; 
+            a.timerFrame += dt; 
             if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
         }
         
@@ -1976,20 +1957,20 @@ function actualizar(dt) {
     }
     
     // --- Actualización de Otros Proyectiles y Efectos ---
-    for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dtAjustado; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
+    for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dt; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
 
-    estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dtAjustado);
+    estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dt);
     
     // Actualizar trozos de ballena
     for (let i = whaleDebris.length - 1; i >= 0; i--) {
         const d = whaleDebris[i];
-        d.vy += 250 * dtAjustado; // Gravedad
+        d.vy += 250 * dt; // Gravedad
         d.vx *= 0.99; // Fricción del agua para que la caída sea más notable
         d.vy *= 0.99; // Fricción del agua
-        d.x += d.vx * dtAjustado;
-        d.y += d.vy * dtAjustado;
-        d.rotacion += d.vRot * dtAjustado;
-        d.vida -= dtAjustado;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.rotacion += d.vRot * dt;
+        d.vida -= dt;
 
         // Dejar un rastro de sangre
         if (Math.random() < 0.4) { // 40% de probabilidad por frame de soltar una partícula
@@ -2012,6 +1993,30 @@ function actualizar(dt) {
     if (estadoJuego.levelFlags.clearScreen) {
         limpiarTodosLosAnimales();
         estadoJuego.levelFlags.clearScreen = false;
+    }
+
+    // --- Lógica del Sonar (Ping y Activación) ---
+    if (estadoJuego.sonarActivo) {
+        // El timer se descuenta en cada frame. Cuando llega a cero, suena el "ping"
+        // y se reinicia para la siguiente vuelta del barrido del sonar.
+        estadoJuego.sonarPingTimer -= dt;
+        if (estadoJuego.sonarPingTimer <= 0) {
+            const sweepDuration = (Math.PI * 2) / SONAR_SWEEP_SPEED;
+            // Reiniciar el timer con un pequeño offset aleatorio para que no sea tan repetitivo
+            estadoJuego.sonarPingTimer = sweepDuration + (Math.random() - 0.5) * 0.1;
+            S.reproducir('sonar_ping');
+        }
+    }
+
+    // --- Actualización de Timers Globales ---
+    // El tiempo transcurrido del juego y el slow-motion se actualizan aquí,
+    // usando el `dt` ajustado que se pasó a la función.
+    estadoJuego.tiempoTranscurrido += dt;
+    if (estadoJuego.slowMoTimer > 0) {
+        estadoJuego.slowMoTimer -= dt;
+        if (estadoJuego.slowMoTimer <= 0) {
+            estadoJuego.velocidadJuego = 1.0;
+        }
     }
 
     comprobarCompletadoNivel();
@@ -3694,7 +3699,30 @@ export function init() {
         });
     }
 
-    // --- 5. INICIALIZACIÓN FINAL DEL JUEGO ---
+    // --- 5. LÓGICA DE PESTAÑAS EN LA VENTANA DE INFORMACIÓN ---
+    const infoTabs = document.querySelectorAll('.info-tab-btn');
+    const infoPanels = document.querySelectorAll('.info-tab-panel');
+
+    infoTabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            // Evita que el click en el botón se propague al overlay y lo cierre.
+            e.stopPropagation();
+
+            // 1. Ocultar todos los paneles y desactivar todas las pestañas.
+            infoTabs.forEach(t => t.classList.remove('active'));
+            infoPanels.forEach(p => p.classList.remove('active'));
+
+            // 2. Activar la pestaña y el panel seleccionados.
+            tab.classList.add('active');
+            const tabId = tab.dataset.tab;
+            const targetPanel = document.getElementById(`tab-${tabId}`);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+            }
+        });
+    });
+
+    // --- 7. INICIALIZACIÓN FINAL DEL JUEGO ---
     autoSize();
     S.init();
     actualizarIconos();

@@ -391,33 +391,38 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 }
 
 .menu-card {
-    background: var(--bg-card);
-    border: 2px solid var(--hud-border-color);
+    background-color: var(--hud-bg-color);
+    backdrop-filter: blur(var(--hud-blur));
+    -webkit-backdrop-filter: blur(var(--hud-blur));
+    border: 1px solid var(--hud-border-color);
     border-radius: 12px;
     padding: clamp(1rem, 5vw, 2.5rem);
-    max-width: 600px;
+    max-width: 750px;
     width: 90%;
     box-shadow: 0 5px 25px rgba(0,0,0,0.5);
 }
 
 /* Estilo especial para el menú inicial, sin desenfoque */
 #overlay.initial-menu {
-    background: rgba(6, 19, 31, 0.4); /* Un fondo más sutil para ver la acción detrás */
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    /* Este estilo ya no es necesario, .menu-card se encarga de todo */
 }
 
 /* Estilos para el nuevo mensaje de bienvenida */
 #welcomeMessage {
-    margin: 1.5rem 0;
-    line-height: 1.5;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background-color: rgba(0, 10, 20, 0.3); /* Más sutil para dejar ver el blur */
+    border: 1px solid rgba(126, 203, 255, 0.25);
+    border-radius: 8px;
+    line-height: 1.6;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 #welcomeTitle {
     color: var(--accent-yellow);
-    font-size: clamp(1.4rem, 4vw, 1.8rem);
-    margin: 0 0 0.5rem;
-    text-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    margin: 0 0 0.75rem;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
 }
 
 #welcomeSubtitle {
@@ -425,6 +430,7 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     opacity: 0.9;
     margin: 0;
     font-family: monospace;
+    color: var(--accent-blue-light);
 }
 
 /* Estilos para el logo del menú principal para centrarlo */
@@ -568,7 +574,7 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 
 /* ========= ESTILOS PARA LA VENTANA DE INFORMACIÓN (MEJORADA) ========= */
 .info-card {
-    max-width: 700px;
+    max-width: 750px;
     position: relative;
     padding-top: 80px; /* Espacio para el canvas de animación */
 }
@@ -587,9 +593,11 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 .creator-profile {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1.5rem; /* Reducido para el panel */
     text-align: left;
-    margin: 2rem 0;
+    margin: 0; /* Reseteado para el panel */
+    padding-bottom: 0;
+    border-bottom: none;
     flex-wrap: wrap; /* Para que se adapte en pantallas pequeñas */
 }
 
@@ -634,33 +642,126 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 }
 
 .gallery {
-    margin: 2.5rem 0 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--hud-border-color);
+    margin: 0; /* Reseteado para el panel */
+    padding-top: 0;
+    border-top: none;
 }
 .gallery h4 {
-    margin: 0 0 1rem;
+    margin: 0 0 1.5rem;
     color: var(--accent-blue-light);
+    text-align: left;
+}
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
 }
 .gallery-item {
     display: inline-block;
     position: relative;
+    max-width: 350px; /* Evita que la imagen sea demasiado ancha si es la única en la galería */
+    margin: 0 auto; /* Centra el item si el espacio de la grilla es mayor */
 }
 .gallery-item img {
-    max-width: 250px;
+    max-width: 100%;
     width: 100%;
     border-radius: 8px;
     border: 2px solid var(--hud-border-color);
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .gallery-item:hover img {
     transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(126, 203, 255, 0.4);
 }
 .gallery-caption {
     font-family: monospace;
     font-size: 0.8rem;
     margin-top: 0.5rem;
     opacity: 0.8;
+}
+
+/* ===== NUEVA SECCIÓN: TECNOLOGÍAS ===== */
+.tech-stack {
+    margin: 0; /* Reseteado para el panel */
+    padding-top: 0;
+    border-top: none;
+}
+.tech-stack h4 {
+    margin: 0 0 1.5rem;
+    color: var(--accent-blue-light);
+    text-align: left;
+}
+.tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    text-align: left;
+}
+.tech-item {
+    background: rgba(0, 24, 48, 0.4);
+    border: 1px solid rgba(126, 203, 255, 0.15);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.tech-icon {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 1.2rem;
+    color: var(--accent-yellow);
+    margin-bottom: 0.5rem;
+}
+.tech-item p {
+    font-family: monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    opacity: 0.8;
+    margin: 0;
+}
+
+/* ===== NUEVO: ESTILOS PARA PESTAÑAS DE INFORMACIÓN ===== */
+.info-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--hud-border-color);
+    margin: 1rem 0 1.5rem;
+}
+
+.info-tab-btn {
+    font-family: 'Press Start 2P', monospace;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: rgba(233, 243, 255, 0.6);
+    padding: 0.8rem 1.2rem;
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: -1px; /* Solapa el borde inferior del contenedor */
+}
+
+.info-tab-btn:hover {
+    color: var(--text-light);
+    background-color: rgba(126, 203, 255, 0.1);
+}
+
+.info-tab-btn.active {
+    color: var(--accent-yellow);
+    border-bottom-color: var(--accent-yellow);
+}
+
+.info-tab-panel {
+    display: none;
+    animation: fadeInPanel 0.4s ease;
+}
+
+.info-tab-panel.active {
+    display: block;
+}
+
+@keyframes fadeInPanel {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ===== NUEVO: Estilo para el título de la misión ===== */
