@@ -860,6 +860,27 @@ function generarBurbujasEmbestidaTiburom(x, y) {
     }
 }
 
+// --- NUEVO: Función para generar humo/aceite cuando el submarino está dañado ---
+function generarHumoDaño(x, y, isLevel5 = false) {
+    // No generar en cada frame para un efecto más esporádico
+    if (Math.random() > 0.6) return;
+
+    const anguloBase = isLevel5 ? Math.PI / 2 : Math.PI; // Hacia abajo en nivel 5, hacia atrás en horizontal
+    const angulo = anguloBase + (Math.random() - 0.5) * 0.9; // Un poco de dispersión
+    const velocidad = 25 + Math.random() * 30;
+
+    // Reutilizamos el array de partículas de tinta para el humo, ya que tienen un comportamiento similar (oscuro, se disipa)
+    generarParticula(particulasTinta, {
+        x: x,
+        y: y,
+        vx: Math.cos(angulo) * velocidad,
+        vy: Math.sin(angulo) * velocidad - 25, // Tiende a flotar un poco hacia arriba
+        r: 4 + Math.random() * 6, // Partículas de tamaño variable
+        vida: 2.0 + Math.random() * 2.0, // Duran un poco más que las burbujas
+        color: `rgba(25, 25, 25, ${0.4 + Math.random() * 0.3})` // Humo/aceite oscuro y semitransparente
+    });
+}
+
 // =================================================================================
 //  7. FUNCIONES DE ACCIÓN Y ESTADO DEL JUEGO
 // =================================================================================
@@ -1417,6 +1438,21 @@ function actualizar(dt) {
     propellerCurrentSpeed = lerp(propellerCurrentSpeed, targetSpeed, dt * 8);
     propellerRotation += propellerCurrentSpeed * dt;
 
+    // --- NUEVO: Efecto de humo con vida baja ---
+    const isLevel5 = estadoJuego.nivel === 5;
+    if (estadoJuego.vidas <= 1 && estadoJuego.vidas > 0) {
+        // Generar humo desde la parte trasera del submarino
+        const anguloFinal = (isLevel5 ? -Math.PI / 2 : 0) + jugador.inclinacion;
+        const offsetX = -45; // Offset hacia atrás, cerca de la hélice
+        const offsetY = (Math.random() - 0.5) * 25; // Un poco de variación vertical
+
+        const humoX = jugador.x + offsetX * Math.cos(anguloFinal) - offsetY * Math.sin(anguloFinal);
+        const humoY = jugador.y + offsetX * Math.sin(anguloFinal) + offsetY * Math.cos(anguloFinal);
+        
+        generarHumoDaño(humoX, humoY, isLevel5);
+    }
+
+
     // Llama a la lógica de actualización del nivel actual
     Levels.updateLevel(dt);
     
@@ -1462,7 +1498,6 @@ function actualizar(dt) {
     if (vy < 0) inclinacionRobotObjetivo = -INCLINACION_MAX;
     else if (vy > 0) inclinacionRobotObjetivo = INCLINACION_MAX;
 
-    const isLevel5 = estadoJuego.nivel === 5;
     if(isLevel5){
         if (teclas['ArrowLeft']) inclinacionRobotObjetivo -= INCLINACION_MAX * 1.5;
         else if (teclas['ArrowRight']) inclinacionRobotObjetivo += INCLINACION_MAX * 1.5;
