@@ -333,16 +333,27 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 }
 .boost-bar { background: linear-gradient(to right, #007bff, #7ecbff); }
 .boost-bar.reloading { background: linear-gradient(to right, #ff6666, #ff0000); }
+
+/* NUEVO: Estilo para parpadeo con energía baja */
+.boost-bar.low-energy {
+    animation: lowEnergyFlash 0.7s infinite step-end;
+}
+@keyframes lowEnergyFlash {
+    50% { background: linear-gradient(to right, #ff8c00, #ff4500); } /* Naranja/Rojo de advertencia */
+}
+
 .laser-bar { background: linear-gradient(to right, #ff4d4d, #b22222); }
 .laser-bar.active { box-shadow: 0 0 8px #ff4d4d; }
-.shield-bar { background: linear-gradient(to right, #add8e6, #00bfff); } /* Light blue to sky blue */
+.shield-bar { /* El color de fondo ahora es controlado por JavaScript */ }
 .shield-bar.reloading { background: linear-gradient(to right, #ff6666, #ff0000); }
 .shield-bar.active { box-shadow: 0 0 8px #add8e6; }
-.shield-bar.hit { animation: shieldHitFlash 0.4s forwards; }
+/* La animación de impacto ahora no usa 'forwards' para permitir que el estilo de JS se reaplique */
+.shield-bar.hit { animation: shieldHitFlash 0.4s; }
 @keyframes shieldHitFlash {
-    0% { background-color: #fff; }
-    50% { background-color: #add8e6; }
-    100% { background-color: #add8e6; }
+    0% { background: #fff; }
+    50% { background: #add8e6; }
+    /* Al final de la animación, el estilo inline de JS tomará el control de nuevo */
+    100% { }
 }
 
 /* ========= Media Queries para Responsividad ========= */

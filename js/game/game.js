@@ -3377,16 +3377,36 @@ function dibujarHUD() {
     if (boostProgressBar) {
         boostProgressBar.style.width = `${(s.boostEnergia / s.boostMaxEnergia) * 100}%`;
         boostProgressBar.classList.toggle('reloading', s.boostEnfriamiento > 0);
+
+        // --- NUEVO: Lógica de parpadeo con energía baja ---
+        const lowEnergyThreshold = s.boostMaxEnergia * 0.25; // 25%
+        // Parpadea si la energía es baja Y no está en enfriamiento (porque 'reloading' ya tiene un estilo rojo)
+        boostProgressBar.classList.toggle('low-energy', s.boostEnergia > 0 && s.boostEnergia < lowEnergyThreshold && s.boostEnfriamiento <= 0);
     }
     if (laserProgressBar) {
         laserProgressBar.style.width = `${(s.laserEnergia / s.laserMaxEnergia) * 100}%`;
         laserProgressBar.classList.toggle('active', s.laserActivo);
     }
     if (shieldProgressBar) {
-        shieldProgressBar.style.width = `${(s.shieldEnergia / s.shieldMaxEnergia) * 100}%`;
+        const shieldRatio = s.shieldEnergia / s.shieldMaxEnergia;
+        shieldProgressBar.style.width = `${shieldRatio * 100}%`;
+
+        // Clases para efectos visuales (no color)
         shieldProgressBar.classList.toggle('reloading', s.shieldEnfriamiento > 0);
         shieldProgressBar.classList.toggle('active', s.shieldActivo);
         shieldProgressBar.classList.toggle('hit', s.shieldHitTimer > 0);
+
+        // --- NUEVO: Lógica de color gradual ---
+        // Se elimina la clase 'low-energy' en favor de un color que cambia dinámicamente.
+        shieldProgressBar.classList.remove('low-energy');
+        if (s.shieldEnfriamiento <= 0) {
+            // El matiz (hue) va de 195 (cian/azul) a 0 (rojo) a medida que baja la energía.
+            const hue = shieldRatio * 195;
+            shieldProgressBar.style.background = `linear-gradient(to right, hsl(${hue}, 100%, 65%), hsl(${hue}, 100%, 45%))`;
+        } else {
+            // Si está recargando, se elimina el estilo inline para que la clase .reloading de CSS tome el control.
+            shieldProgressBar.style.background = '';
+        }
     }
     
     // Lógica de la barra de vida del jefe (se mantiene en HTML)
