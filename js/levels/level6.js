@@ -1,7 +1,7 @@
 // js/level6.js
 'use strict';
 
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarNubeDeTinta } from '../game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarNubeDeTinta, escombros } from '../game/game.js';
 import { 
     torpedos, proyectiles 
 } from '../game/armas/weapons.js';
@@ -16,7 +16,6 @@ const MAX_PHASES = 8; // ¡8 fases únicas!
 let vortexRotation = 0;
 let vortexParticles = [];
 let creatures = [];
-let fallingDebris = [];
 let shockwaves = [];
 let blackHoles = [];
 let timeWarps = [];
@@ -81,7 +80,7 @@ function spawnCreature(typeIndex = null) {
 function spawnFallingDebris(epic = false) {
   const size = epic ? 80 + Math.random() * 100 : 30 + Math.random() * 70;
   const speed = epic ? 500 + Math.random() * 300 : 300 + Math.random() * 200;
-  fallingDebris.push({ x: Math.random() * W, y: -size, vx: (Math.random() - 0.5) * (epic ? 300 : 200), vy: speed, size: size, rotation: Math.random() * Math.PI * 2, rotationSpeed: (Math.random() - 0.5) * (epic ? 0.3 : 0.2), color: `hsl(${Math.random() * 40 + 10}, 80%, ${epic ? 60 : 50}%)`, isEpic: epic });
+  escombros.push({ x: Math.random() * W, y: -size, vx: (Math.random() - 0.5) * (epic ? 300 : 200), vy: speed, tamano: size, rotation: Math.random() * Math.PI * 2, vRot: (Math.random() - 0.5) * (epic ? 0.3 : 0.2), color: `hsl(${Math.random() * 40 + 10}, 80%, ${epic ? 60 : 50}%)`, isEpic: epic });
 }
 
 function createShockwave(x, y, power, color = '#FF00FF') {
@@ -192,7 +191,7 @@ function applyAllForces(entity, dt) {
 
 export function init() {
     console.log("Inicializando Nivel 6: El Vortex del Caos Infinito");
-    vortexParticles = []; creatures = []; fallingDebris = []; shockwaves = []; blackHoles = []; timeWarps = []; gravityWells = []; sanctuary = null;
+    vortexParticles = []; creatures = []; escombros.length = 0; shockwaves = []; blackHoles = []; timeWarps = []; gravityWells = []; sanctuary = null;
     vortexRotation = 0; currentPhase = 0; phaseTimer = 0; screenShake = 0; mirrorMode = false; timeSlow = 1; blackHoleMode = false;
     phaseHistory = [];
     jugador.x = W * 0.15;
@@ -295,11 +294,11 @@ export function update(dt) {
     }
 
     // Escombros y Santuario
-    for (let i = fallingDebris.length - 1; i >= 0; i--) {
-        const d = fallingDebris[i];
+    for (let i = escombros.length - 1; i >= 0; i--) {
+        const d = escombros[i];
         d.x += d.vx * dt;
         d.y += d.vy * dt;
-        d.rotation += d.rotationSpeed * dt;
+        d.rotation += d.vRot * dt;
 
         let playerIsSafe = false;
         if (sanctuary && Math.hypot(jugador.x - sanctuary.x, jugador.y - sanctuary.y) < sanctuary.radius) {
@@ -309,8 +308,8 @@ export function update(dt) {
         // Colisión con el Santuario
         if (sanctuary && Math.hypot(d.x - sanctuary.x, d.y - sanctuary.y) < sanctuary.radius) {
             sanctuary.hp -= d.isEpic ? 3 : 1; // Escombros épicos hacen más daño
-            generarExplosion(d.x, d.y, '#00FFFF', d.size * 0.5); // Explosión de escudo
-            fallingDebris.splice(i, 1);
+            generarExplosion(d.x, d.y, '#00FFFF', d.tamano * 0.5); // Explosión de escudo
+            escombros.splice(i, 1);
 
             if (sanctuary.hp <= 0) {
                 generarExplosion(sanctuary.x, sanctuary.y, '#FFFFFF', sanctuary.radius * 2);
@@ -322,17 +321,17 @@ export function update(dt) {
         }
 
         // Colisión con el jugador (solo si no está a salvo)
-        if (!playerIsSafe && Math.hypot(jugador.x - d.x, jugador.y - d.y) < jugador.r + d.size / 2) {
+        if (!playerIsSafe && Math.hypot(jugador.x - d.x, jugador.y - d.y) < jugador.r + d.tamano / 2) {
             generarExplosion(d.x, d.y, d.color);
             createShockwave(d.x, d.y, d.isEpic ? 1.5 : 1, d.color);
             if (estadoJuego.vidas > 0) estadoJuego.vidas--;
             estadoJuego.animVida = 0.6; S.reproducir('choque');
-            fallingDebris.splice(i, 1);
+            escombros.splice(i, 1);
             if (estadoJuego.vidas <= 0) perderJuego();
             continue;
         }
 
-        if (d.y > H + d.size) fallingDebris.splice(i, 1);
+        if (d.y > H + d.tamano) escombros.splice(i, 1);
     }
     
     // Entidades especiales
@@ -364,7 +363,7 @@ export function draw() {
     gravityWells.forEach(gw => { ctx.strokeStyle = gw.direction === 'in' ? `rgba(255, 0, 0, ${0.5 * (1-gw.life/gw.maxLife)})` : `rgba(0, 255, 0, ${0.5 * (1-gw.life/gw.maxLife)})`; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(gw.x, gw.y, gw.radius * (gw.life/gw.maxLife), 0, Math.PI*2); ctx.stroke(); });
     blackHoles.forEach(bh => { ctx.fillStyle = `rgba(0, 0, 0, 0.8)`; ctx.beginPath(); ctx.arc(bh.x, bh.y, bh.radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = `rgba(150, 50, 255, ${0.8 * Math.sin(bh.pulseTimer * 5)})`; ctx.lineWidth = 5; ctx.stroke(); });
     shockwaves.forEach(w => { ctx.strokeStyle = w.color; ctx.lineWidth = 8 * (1-w.life/w.maxLife); ctx.beginPath(); ctx.arc(w.x, w.y, w.radius, 0, Math.PI*2); ctx.stroke(); });
-    fallingDebris.forEach(d => { ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); ctx.fillStyle = d.color; ctx.fillRect(-d.size/2, -d.size/2, d.size, d.size); ctx.strokeStyle = d.isEpic ? '#000' : '#333'; ctx.lineWidth=3; ctx.strokeRect(-d.size/2, -d.size/2, d.size, d.size); ctx.restore(); });
+    escombros.forEach(d => { ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); ctx.fillStyle = d.color; ctx.fillRect(-d.tamano/2, -d.tamano/2, d.tamano, d.tamano); ctx.strokeStyle = d.isEpic ? '#000' : '#333'; ctx.lineWidth=3; ctx.strokeRect(-d.tamano/2, -d.tamano/2, d.tamano, d.tamano); ctx.restore(); });
 
     // Santuario
     if (sanctuary) {

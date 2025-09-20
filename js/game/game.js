@@ -1027,7 +1027,7 @@ if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir(tipoSo
 }
 
 // --- Estado Principal y Entidades ---
-export let estadoJuego = null, jugador, animales;
+export let estadoJuego = null, jugador, animales, escombros;
 let teclas = {}, gamepadConectado = false, prevGamepadButtons = [];
 let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
 let __iniciando = false;
@@ -1117,6 +1117,7 @@ function reiniciar(nivelDeInicio = 1) {
     jugador.direccion = 1; // 1 para derecha, -1 para izquierda
     Levels.initLevel(nivelDeInicio);
     
+    escombros = [];
     animales = [];
     proyectilesEnemigos = [];
     particulasCasquillos = [];
@@ -3361,6 +3362,115 @@ function dibujarSonar() {
         sonarCtx.moveTo(centerX, centerY);
         sonarCtx.lineTo(centerX + Math.cos(laserAngle) * SONAR_RADIUS, centerY + Math.sin(laserAngle) * SONAR_RADIUS);
         sonarCtx.stroke();
+    }
+
+    // --- NUEVO: Dibujar escombros y rocas ---
+    sonarCtx.fillStyle = 'rgba(160, 140, 120, 0.7)'; // Color marrón/gris para rocas
+    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    sonarCtx.shadowBlur = 4;
+    for (const e of escombros) {
+        const dx = e.x - jugador.x;
+        const dy = e.y - jugador.y;
+        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const size = clamp((e.tamano || e.size) / 20, 2, 5); // Tamaño del ping basado en el tamaño del escombro
+            sonarCtx.fillRect(pingX - size / 2, pingY - size / 2, size, size);
+        }
+    }
+
+    // --- NUEVO: Dibujar láseres enemigos (del jefe) ---
+    if (estadoJuego.jefe && estadoJuego.jefe.lasers) {
+        const pulse = 0.7 + Math.sin(time * 20) * 0.3;
+        sonarCtx.strokeStyle = `rgba(255, 120, 120, ${pulse})`;
+        sonarCtx.shadowColor = 'rgba(255, 120, 120, 1)';
+        sonarCtx.shadowBlur = 8;
+        sonarCtx.lineWidth = 1.5;
+
+        for (const laser of estadoJuego.jefe.lasers) {
+            const dx1 = laser.x - jugador.x;
+            const dy1 = laser.y - jugador.y;
+            
+            if (Math.hypot(dx1, dy1) < SONAR_WORLD_RADIUS) {
+                const startPingX = centerX + (dx1 / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                const startPingY = centerY + (dy1 / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                let endPingX, endPingY;
+
+                if (laser.tipo === 'sweep') {
+                    const endWorldX = laser.x + Math.cos(laser.currentAngle) * laser.length;
+                    const endWorldY = laser.y + Math.sin(laser.currentAngle) * laser.length;
+                    endPingX = centerX + ((endWorldX - jugador.x) / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                    endPingY = centerY + ((endWorldY - jugador.y) / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                } else { // snipe
+                    endPingX = centerX + ((laser.targetX - jugador.x) / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                    endPingY = centerY + ((laser.targetY - jugador.y) / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                }
+                sonarCtx.beginPath();
+                sonarCtx.moveTo(startPingX, startPingY);
+                sonarCtx.lineTo(endPingX, endPingY);
+                sonarCtx.stroke();
+            }
+        }
+    }
+
+    // --- NUEVO: Dibujar ataques del Kraken (Nivel 3) ---
+    if (estadoJuego.nivel === 3 && estadoJuego.jefe) {
+        const jefe = estadoJuego.jefe;
+
+        // 1. Proyectiles de Tinta
+        sonarCtx.fillStyle = 'rgba(50, 50, 50, 0.8)';
+        sonarCtx.shadowColor = 'black';
+        sonarCtx.shadowBlur = 6;
+        for (const ink of estadoJuego.proyectilesTinta) {
+            const dx = ink.x - jugador.x;
+            const dy = ink.y - jugador.y;
+            if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+                const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                sonarCtx.beginPath();
+                sonarCtx.arc(pingX, pingY, 4, 0, Math.PI * 2);
+                sonarCtx.fill();
+            }
+        }
+
+        // 2. Ataque de Barrido/Rayo
+        if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
+            const ataque = jefe.datosAtaque;
+            const attackWorldY = ataque.y;
+            const dy = attackWorldY - jugador.y;
+            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+
+            if (ataque.carga > 0) { // Fase de advertencia (rayo)
+                const pulse = 0.5 + Math.sin(time * 15) * 0.5;
+                sonarCtx.strokeStyle = `rgba(255, 80, 80, ${pulse})`;
+                sonarCtx.lineWidth = 3;
+                sonarCtx.shadowColor = 'red';
+                sonarCtx.shadowBlur = 10;
+                
+                sonarCtx.beginPath();
+                sonarCtx.moveTo(centerX - SONAR_RADIUS, pingY);
+                sonarCtx.lineTo(centerX + SONAR_RADIUS, pingY);
+                sonarCtx.stroke();
+
+            } else { // Fase de barrido (tentáculo)
+                const tentacleWorldX = W - ataque.progreso * (W + 200);
+                const dx = tentacleWorldX - jugador.x;
+                const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+                
+                const pulse = 1.0 + Math.sin(time * 10) * 0.2;
+                const pingSize = 12 * pulse;
+
+                sonarCtx.fillStyle = 'rgba(255, 60, 60, 0.9)';
+                sonarCtx.shadowColor = sonarCtx.fillStyle;
+                sonarCtx.shadowBlur = 12;
+
+                sonarCtx.save();
+                sonarCtx.translate(pingX, pingY);
+                sonarCtx.rotate(Math.PI / 4); // Forma de diamante
+                sonarCtx.fillRect(-pingSize / 2, -pingSize / 2, pingSize, pingSize);
+                sonarCtx.restore();
+            }
+        }
     }
 
     sonarCtx.shadowBlur = 0;

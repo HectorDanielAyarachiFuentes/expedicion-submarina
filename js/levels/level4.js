@@ -2,13 +2,11 @@
 'use strict';
 
 // Importamos todo lo que necesitamos, incluyendo proyectiles y torpedos
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion } from '../game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, escombros } from '../game/game.js';
 import { 
     torpedos, proyectiles 
 } from '../game/armas/weapons.js';
 
-// --- ESTADO Y ENTIDADES DEL NIVEL 4 ---
-let escombros = [];
 let spawnTimer = 0;
 
 // --- FUNCIONES DEL NIVEL 4 ---
@@ -47,7 +45,7 @@ function proyectilColisionaConEscombro(proyectil, escombro) {
 
 export function init() {
     console.log("Inicializando Nivel 4: Campo de Escombros");
-    escombros = [];
+    escombros.length = 0;
     spawnTimer = 1.5;
     // Limpiar el jefe del nivel anterior
     estadoJuego.jefe = null;

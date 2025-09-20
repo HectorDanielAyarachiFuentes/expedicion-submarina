@@ -1,13 +1,11 @@
 'use strict';
 
 // Importamos lo que necesitamos de game.js
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarParticula, particulasBurbujas, proyectilesEnemigos } from '../game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarParticula, particulasBurbujas, proyectilesEnemigos, escombros } from '../game/game.js';
 import { 
     torpedos, proyectiles 
 } from '../game/armas/weapons.js';
 
-// --- ESTADO Y ENTIDADES DEL NIVEL 5 ---
-let escombros = [];
 let corrientes = [];
 
 let spawnTimerEscombros = 0;
@@ -125,7 +123,7 @@ export function init() {
     console.log("Inicializando Nivel 5: El Colapso de la Fosa (HIPERREALISTA)");
     crearFormasSVGComplejas();
     
-    escombros = [];
+    escombros.length = 0;
     corrientes = [];
     proyectilesEnemigos = [];
     
