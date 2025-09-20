@@ -93,6 +93,7 @@ const levelDesc = document.getElementById('levelDesc');
 const startBtn = document.getElementById('start');
 const restartBtn = document.getElementById('restart');
 const titleEl = document.getElementById('gameOverTitle');
+const captainImage = document.getElementById('captainImage');
 const brandLogo = document.getElementById('brandLogo');
 const welcomeMessage = document.getElementById('welcomeMessage');
 const promptEl = document.getElementById('prompt');
@@ -3568,8 +3569,13 @@ export function perderJuego() {
 function mostrarPantallaGameOver() {
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none';
-    if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none'; 
-    if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; }
+    if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none';
+    if (titleEl) {
+        titleEl.style.display = 'block';
+        titleEl.textContent = 'Fin de la expedición';
+        titleEl.style.color = '';
+    }
+    if (captainImage) captainImage.style.display = 'block';
     if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion;
     if (statDepth) statDepth.textContent = 'PROFUNDIDAD MÁXIMA: ' + estadoJuego.profundidad_m + ' m';
     if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
@@ -3606,6 +3612,7 @@ function ganarJuego() {
     if (levelTransition) levelTransition.style.display = 'none'; if (welcomeMessage) welcomeMessage.style.display = 'none';
     if (promptEl) promptEl.style.display = 'none';
     if (brandLogo) brandLogo.style.display = 'none';
+    if (captainImage) captainImage.style.display = 'none';
     if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = '¡VICTORIA!'; titleEl.style.color = '#ffdd77'; }
     // if (finalP) finalP.textContent = '¡Has conquistado las profundidades!'; // Elemento 'finalP' no existe
     if (statScore) statScore.textContent = 'PUNTUACIÓN FINAL: ' + estadoJuego.puntuacion;
@@ -3654,6 +3661,7 @@ function mostrarVistaMenuPrincipal(desdePausa) {
     if (welcomeMessage) welcomeMessage.style.display = 'block';
     if (promptEl) promptEl.style.display = 'block';
     if (titleEl) titleEl.style.display = 'none';
+    if (captainImage) captainImage.style.display = 'block';
     if (finalStats) finalStats.style.display = 'none';
     if (startBtn) startBtn.style.display = 'inline-block';
     if (restartBtn) restartBtn.style.display = 'none';
