@@ -99,6 +99,7 @@ const promptEl = document.getElementById('prompt');
 const finalStats = document.getElementById('finalStats');
 const statScore = document.getElementById('statScore');
 const statDepth = document.getElementById('statDepth');
+const statDistance = document.getElementById('statDistance');
 const statSpecimens = document.getElementById('statSpecimens');
 const muteBtn = document.getElementById('muteBtn');
 const helpBtn = document.getElementById('helpBtn');
@@ -119,6 +120,8 @@ const hudObjectiveText = document.getElementById('hud-objective-text');
 // --- Referencias a Elementos del HUD dinámico (NUEVOS) ---
 const statScoreValue = document.getElementById('statScoreValue');
 const statDepthValue = document.getElementById('statDepthValue');
+const statSpeedValue = document.getElementById('statSpeedValue'); // >>> NUEVO: Para la velocidad
+const statDistanceValue = document.getElementById('statDistanceValue'); // >>> NUEVO: Para la distancia recorrida
 const statRecordValue = document.getElementById('statRecordValue');
 const statLivesContainer = document.getElementById('statLivesContainer');
 const statWeaponValue = document.getElementById('statWeaponValue');
@@ -997,6 +1000,8 @@ function reiniciar(nivelDeInicio = 1) {
         boostMaxEnergia: 100,
         boostEnfriamiento: 0,
         unlimitedBoost: false, // Para Nivel 10
+        velocidad_actual: 0, // Velocidad actual en px/s
+        velocidad_mostrada_kmh: 0, // Para el efecto del tacómetro
         distanciaRecorrida: 0, // Para Nivel 10
         laserEnergia: 100,
         laserMaxEnergia: 100,
@@ -1485,9 +1490,12 @@ function actualizar(dt) {
     if (estadoJuego.enfriamientoArma > 0) estadoJuego.enfriamientoArma -= dt;
     estadoJuego.teclasActivas = teclas;
     
-    const progresoProfundidad = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1);
-    estadoJuego.profundidad_m = Math.max(estadoJuego.profundidad_m, Math.floor(lerp(0, 3900, progresoProfundidad)));
-    
+    // --- LÓGICA DE PROFUNDIDAD CORREGIDA ---
+    // La profundidad ahora se basa en la posición Y del jugador, no en el tiempo.
+    // Esto hace que solo cambie cuando el jugador se mueve verticalmente.
+    const MAX_PROFUNDIDAD = 4000; // Profundidad máxima en metros para el fondo del mapa.
+    estadoJuego.profundidad_m = Math.floor((jugador.y / H) * MAX_PROFUNDIDAD);
+
     // --- Procesamiento de la Entrada del Jugador (Movimiento) ---
     let vx = 0, vy = 0;
     if (teclas['ArrowUp']) vy -= 1;
@@ -1509,6 +1517,16 @@ function actualizar(dt) {
         const burbujaY = jugador.y + offset * Math.sin(finalAngle);
         generarBurbujaPropulsion(burbujaX, burbujaY, isLevel5, -jugador.direccion);
     }
+
+    // --- LÓGICA DE VELOCIDAD ACTUAL ---
+    let currentSpeed = 0;
+    if (len > 0) { // Si hay input de movimiento
+        currentSpeed = JUGADOR_VELOCIDAD;
+        if (estadoJuego.boostActivo) {
+            currentSpeed += Weapons.WEAPON_CONFIG.boost.fuerza;
+        }
+    }
+    estadoJuego.velocidad_actual = currentSpeed;
     
     // --- Animación de la Hélice ---
     const isMoving = len > 0;
@@ -2313,6 +2331,15 @@ function actualizar(dt) {
         if (estadoJuego.slowMoTimer <= 0) {
             estadoJuego.velocidadJuego = 1.0;
         }
+    }
+
+    // --- LÓGICA DE DISTANCIA RECORRIDA ---
+    // Se calcula de forma genérica para todos los niveles, excepto para el 10 que tiene su propia lógica.
+    if (estadoJuego.nivel !== 10) {
+        const cameraDeltaX = estadoJuego.cameraX - estadoJuego.prevCameraX;
+        // >>> CORRECCIÓN: Contar la distancia tanto hacia adelante como hacia atrás <<<
+        // Usamos el valor absoluto del cambio de la cámara para sumar siempre la distancia recorrida.
+        estadoJuego.distanciaRecorrida += Math.abs(cameraDeltaX) / 50; // Escala de 50px por metro
     }
 
     comprobarCompletadoNivel();
@@ -3248,6 +3275,32 @@ function dibujarHUD() {
     // Actualizar estadísticas de texto
     if (statScoreValue) statScoreValue.textContent = String(s.puntuacion || 0);
     if (statDepthValue) statDepthValue.textContent = `${Math.floor(s.profundidad_m || 0)} m`;
+    if (statDistanceValue) {
+        const dist = s.distanciaRecorrida || 0;
+        if (dist < 1000) {
+            statDistanceValue.textContent = `${Math.floor(dist)} m`;
+        } else {
+            statDistanceValue.textContent = `${(dist / 1000).toFixed(2)} km`;
+        }
+    }
+    if (statSpeedValue) {
+        // --- LÓGICA DEL VELOCÍMETRO MEJORADA ---
+ 
+        // 1. Calcular la velocidad real/objetivo en km/h
+        const speed_px_s = s.velocidad_actual || 0;
+        const target_speed_km_h = (speed_px_s / 50) * 3.6;
+ 
+        // 2. Interpolar la velocidad mostrada hacia la velocidad objetivo para un efecto suave
+        // Aumentamos un poco el factor de lerp para que la aguja sea más responsiva.
+        s.velocidad_mostrada_kmh = lerp(s.velocidad_mostrada_kmh, target_speed_km_h, 0.12);
+ 
+        // --- CORRECCIÓN: Eliminar oscilación y añadir "enganche" a la velocidad final ---
+        // Si la diferencia es muy pequeña, igualamos al objetivo para que "clave" la velocidad.
+        if (Math.abs(s.velocidad_mostrada_kmh - target_speed_km_h) < 0.1) {
+            s.velocidad_mostrada_kmh = target_speed_km_h;
+        }
+        statSpeedValue.textContent = `${Math.floor(Math.max(0, s.velocidad_mostrada_kmh))} km/h`;
+    }
     if (statRecordValue) statRecordValue.textContent = String(puntuacionMaxima);
 
     // Actualizar vidas (corazones)
@@ -3488,9 +3541,13 @@ export function perderJuego() {
 function mostrarPantallaGameOver() {
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none';
-    if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none';
-    if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; } // prettier-ignore
-    if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion; if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m'; if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
+    if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none'; 
+    if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = 'Fin de la expedición'; titleEl.style.color = ''; }
+    if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion;
+    if (statDepth) statDepth.textContent = 'PROFUNDIDAD MÁXIMA: ' + estadoJuego.profundidad_m + ' m';
+    if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
+    const distanciaKm = (estadoJuego.distanciaRecorrida / 1000).toFixed(2);
+    if (statDistance) statDistance.textContent = 'DISTANCIA RECORRIDA: ' + distanciaKm + ' km';
     if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none';
     if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block';
     modoSuperposicion = 'gameover';
@@ -3524,9 +3581,11 @@ function ganarJuego() {
     if (brandLogo) brandLogo.style.display = 'none';
     if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = '¡VICTORIA!'; titleEl.style.color = '#ffdd77'; }
     // if (finalP) finalP.textContent = '¡Has conquistado las profundidades!'; // Elemento 'finalP' no existe
-    if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion;
-    if (statDepth) statDepth.textContent = 'PROFUNDIDAD: ' + estadoJuego.profundidad_m + ' m';
-    if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
+    if (statScore) statScore.textContent = 'PUNTUACIÓN FINAL: ' + estadoJuego.puntuacion;
+    if (statDepth) statDepth.textContent = 'PROFUNDIDAD MÁXIMA: ' + estadoJuego.profundidad_m + ' m';
+    if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES TOTALES: ' + estadoJuego.rescatados;
+    const distanciaKm = (estadoJuego.distanciaRecorrida / 1000).toFixed(2);
+    if (statDistance) statDistance.textContent = 'DISTANCIA TOTAL: ' + distanciaKm + ' km';
     if (finalStats) finalStats.style.display = 'block';
     if (mainMenuContent) mainMenuContent.style.display = 'block';
     if (levelSelectContent) levelSelectContent.style.display = 'none';
