@@ -3300,6 +3300,13 @@ function dibujarHUD() {
             s.velocidad_mostrada_kmh = target_speed_km_h;
         }
         statSpeedValue.textContent = `${Math.floor(Math.max(0, s.velocidad_mostrada_kmh))} km/h`;
+
+        // --- NUEVO: Cambiar color si el impulso está activo ---
+        if (s.boostActivo) {
+            statSpeedValue.classList.add('boosting');
+        } else {
+            statSpeedValue.classList.remove('boosting');
+        }
     }
     if (statRecordValue) statRecordValue.textContent = String(puntuacionMaxima);
 

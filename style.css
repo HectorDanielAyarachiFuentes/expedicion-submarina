@@ -272,6 +272,13 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     color: var(--accent-yellow);
     font-size: clamp(0.8rem, 2vw, 1rem);
     text-align: right; /* Alinea los valores a la derecha */
+    transition: color 0.2s ease-out, text-shadow 0.2s ease-out; /* Transición suave */
+}
+
+/* NUEVO: Estilo para el velocímetro cuando el impulso está activo */
+#game-stats-overlay .stat-value.boosting {
+    color: var(--accent-blue); /* Azul brillante */
+    text-shadow: 0 0 8px var(--accent-blue); /* Resplandor */
 }
 
 .stat-divider {
