@@ -1,7 +1,7 @@
 'use strict';
 
 // Importaciones del motor del juego
-import { estadoJuego, jugador, S, W, H, ctx } from '../game/game.js';
+import { estadoJuego, jugador, S, W, H, ctx, generarAnimal } from '../game/game.js';
 
 // --- ESTADO DEL NIVEL 10 ---
 let levelState = {};
@@ -58,6 +58,7 @@ export function init() {
         powerUpRecogido: false,
         completado: false,
         fallado: false,
+        spawnTimer: 2.0, // Temporizador para la aparición de vida marina.
     };
 
     // Crear y posicionar el barril nuclear
@@ -100,6 +101,23 @@ export function update(dt, vx = 0, vy = 0) {
     if (levelState.powerUpRecogido) {
         // Actualizar temporizador
         levelState.tiempoRestante -= dt;
+
+        // --- NUEVO: Lógica de spawn de vida marina ---
+        // Solo aparecen criaturas después de que la carrera ha comenzado.
+        levelState.spawnTimer -= dt;
+        if (levelState.spawnTimer <= 0) {
+            const r = Math.random();
+            let tipoAnimal;
+            if (r < 0.35) {
+                tipoAnimal = 'shark'; // Los tiburones son rápidos, encajan bien.
+            } else if (r < 0.55) {
+                tipoAnimal = 'orca'; // Las orcas también son rápidas y agresivas.
+            } else {
+                tipoAnimal = 'rojo'; // Enemigos genéricos para rellenar.
+            }
+            generarAnimal(false, tipoAnimal);
+            levelState.spawnTimer = 1.0 + Math.random() * 1.5; // Siguiente spawn en 1-2.5s.
+        }
 
         // Calcular distancia recorrida
         const forwardSpeed = Math.max(0, vx);
