@@ -113,6 +113,24 @@ canvas {
         -5px 0 15px -5px var(--accent-yellow);
 }
 
+/* Estilo simétrico para el pod derecho */
+#status-right.hud-pod {
+    background: linear-gradient(240deg, rgba(0, 59, 142, 0.7), rgba(6, 19, 31, 0.5) 70%);
+    border-style: solid;
+    border-width: 2px;
+    border-image-source: linear-gradient(to bottom, var(--accent-blue), transparent);
+    border-image-slice: 1;
+    border-right: 5px solid var(--accent-yellow);
+    border-left-width: 2px;
+    border-radius: 10px 0 0 10px;
+    padding: 10px 15px 10px 20px;
+    clip-path: polygon(5% 0, 100% 0, 100% 100%, 0 100%);
+    box-shadow: 
+        inset 0 0 15px rgba(126, 203, 255, 0.1),
+        5px 0 15px -5px var(--accent-yellow);
+    gap: 16px; /* Más espacio para los botones hexagonales */
+}
+
 #status-text {
     display: flex;
     flex-direction: column;
@@ -429,21 +447,28 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     flex-direction: column;
     gap: 10px; /* Espacio entre todos los items */
 
-    background-color: rgba(6, 19, 31, 0.5); /* Más transparente */
-    backdrop-filter: blur(12px); /* Más desenfoque */
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--hud-border-color);
-    border-radius: 10px;
-    padding: 12px 16px;
+    /* --- NUEVO ESTILO DIAGONAL PARA COINCIDIR CON EL HUD SUPERIOR --- */
+    background: linear-gradient(300deg, rgba(0, 59, 142, 0.7), rgba(6, 19, 31, 0.5) 70%);
+    border-style: solid;
+    border-width: 2px;
+    border-image-source: linear-gradient(to top, var(--accent-blue), transparent);
+    border-image-slice: 1;
+    border-left: 5px solid var(--accent-yellow);
+    border-radius: 0 10px 10px 0; /* El clip-path se encargará de la esquina superior derecha */
+    padding: 12px 20px 12px 16px; /* Padding ajustado para el corte */
+    clip-path: polygon(0 0, 95% 0, 100% 100%, 0% 100%);
+    box-shadow: 
+        inset 0 0 15px rgba(126, 203, 255, 0.1),
+        -5px 0 15px -5px var(--accent-yellow);
 
     color: var(--text-light);
     font-size: clamp(0.7rem, 1.8vw, 0.9rem);
     text-shadow: 1px 1px 4px rgba(0,0,0,0.7); /* Sombra más oscura para legibilidad */
     
     /* Animación de entrada */
-    transform: translateX(-120%);
-    opacity: 0;
-    animation: slideInHud 0.6s 0.5s ease-out forwards;
+    transform: translateX(-120%); /* La animación se mantiene */
+    opacity: 0; /* La animación se mantiene */
+    animation: slideInHud 0.6s 0.5s ease-out forwards; /* La animación se mantiene */
 }
 
 @keyframes slideInHud {
