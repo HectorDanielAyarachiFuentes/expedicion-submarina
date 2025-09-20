@@ -3751,6 +3751,16 @@ export function gameLoop(t) {
             // Reseteamos la transformación si no está visible para evitar saltos visuales.
             levelSelectImage.style.transform = 'scale(1) rotate(0deg)';
         }
+
+        // Animación de la imagen del capitán en el menú
+        if (captainImage && captainImage.style.display !== 'none') {
+            const scale = 1 + Math.pow(normalizedLevel, 2) * 0.05; // Reacción sutil de hasta 5%
+            const rotation = Math.sin(t / 800) * normalizedLevel * 1.5; // Ligero bamboleo
+            captainImage.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+        } else if (captainImage) {
+            // Resetear si no está visible
+            captainImage.style.transform = 'scale(1) rotate(0deg)';
+        }
     }
 
     let dtAjustado = dt;
