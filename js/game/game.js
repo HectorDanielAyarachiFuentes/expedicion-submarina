@@ -702,7 +702,7 @@ function actualizarParticulas(dt) {
             infligirDanoJugador(1, 'choque_ligero');
             p.vida = 0; // La burbuja explota al impactar, independientemente de si el escudo absorbió el daño
         }
-        if (p.vida <= 0) { particulasBurbujas.splice(i, 1); }
+        if (p.vida <= 0 || p.y < -p.r) { particulasBurbujas.splice(i, 1); }
     }
 }
 
@@ -754,7 +754,6 @@ function actualizarCasquillos(dt) {
     }
 }
 
-function dibujarParticulas() { if (!ctx) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.globalCompositeOperation = 'source-over'; for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); } ctx.strokeStyle = '#aae2ff'; ctx.lineWidth = 1.5; for (const p of particulasBurbujas) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.7; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); }
 function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 0.6) { const velocidadBaseX = isLevel5 ? 0 : 60; const velocidadBaseY = isLevel5 ? 60 : 0; const dispersion = 25; generarParticula(particulasBurbujas, { x: x, y: y, vx: velocidadBaseX + (Math.random() - 0.5) * dispersion, vy: velocidadBaseY + (Math.random() - 0.5) * dispersion - 20, r: Math.random() * 2 + 1, vida: 1 + Math.random() * 1.5, color: '' }); } }
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
 
@@ -1018,7 +1017,7 @@ function reiniciar(nivelDeInicio = 1) {
     delete estadoJuego.darknessOverride; // Limpiamos la oscuridad del nivel 2, si existiera.
 
     jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0, inclinacion: 0 };
-    
+    jugador.direccion = 1; // 1 para derecha, -1 para izquierda
     Levels.initLevel(nivelDeInicio);
     
     animales = [];
@@ -1041,7 +1040,7 @@ function velocidadActual() {
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
 // --- Generación de Enemigos ---
-export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrides = {}) {
+export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrides = {}, direccion = -1) {
     const minY = H * 0.15;
     // Con el sistema de cámara, el jugador puede estar en cualquier 'y', así que generamos en toda la altura.
     const usaCamera = estadoJuego.levelFlags.scrollBackground !== false;
@@ -1069,7 +1068,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         }
     }
 
-    const spawnX = usaCamera ? estadoJuego.cameraX + W + (overrides.ancho || 100) : W + (overrides.ancho || 100);
+    const spawnX = direccion > 0 ? (usaCamera ? estadoJuego.cameraX - (overrides.ancho || 100) : -(overrides.ancho || 100)) : (usaCamera ? estadoJuego.cameraX + W + (overrides.ancho || 100) : W + (overrides.ancho || 100));
 
     if (tipo === 'mierdei') {
         if (!mierdeiListo) return; // Evitar error si la imagen no ha cargado
@@ -1079,7 +1078,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
         }
         animales.push({
-            x: spawnX, y, vx: -velocidad * 0.7, r: anchoDeseado / 2,
+            x: spawnX, y, vx: velocidad * 0.7 * direccion, r: anchoDeseado / 2,
             w: anchoDeseado, h: altoDeseado, capturado: false, tipo: 'mierdei',
             semillaFase: Math.random() * Math.PI * 2, // Kept for floating, might remove later if not needed
             frame: 0, 
@@ -1089,7 +1088,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         const tamano = overrides.ancho || 128;
         velocidad *= 0.9; // Un poco más lentos al patrullar
         animales.push({
-            x: spawnX, y, vx: -velocidad, vy: 0, r: 50, w: tamano, h: tamano,
+            x: spawnX, y, vx: velocidad * direccion, vy: 0, r: 50, w: tamano, h: tamano,
             capturado: false, frame: 0, timerFrame: 0, hp: 60, maxHp: 60,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'shark',
@@ -1107,11 +1106,11 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             const isLeader = (i === 0);
             const tamano = isLeader ? 190 : 170; // El líder es un poco más grande
             const orcaY = y + (i * 80) - ((packSize - 1) * 40); // Espaciarlas verticalmente
-            const orcaX = spawnX + i * 100; // Y un poco horizontalmente
+            const orcaX = spawnX + i * 100 * -direccion; // Y un poco horizontalmente
             const velocidadOrca = (velocidadActual() + 80) * (isLeader ? 1.1 : 1.0);
 
             animales.push({
-                x: orcaX, y: orcaY, vx: -velocidadOrca, vy: 0, r: 60, w: tamano, h: tamano,
+                x: orcaX, y: orcaY, vx: velocidadOrca * direccion, vy: 0, r: 60, w: tamano, h: tamano,
                 capturado: false, frame: 0, timerFrame: 0,
                 semillaFase: Math.random() * Math.PI * 2,
                 tipo: 'orca',
@@ -1133,7 +1132,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         const patrolMinX = spawnX - patrolWidth;
 
         const adultWhale = {
-            x: spawnX, y, vx: -velocidad, vy: 0, r: 100, w: tamano, h: tamano,
+            x: spawnX, y, vx: velocidad * direccion, vy: 0, r: 100, w: tamano, h: tamano,
             capturado: false, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'whale',
@@ -1163,10 +1162,10 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
                 const babyTamano = 140; // Un poco más grande que antes
                 const babyVelocidad = velocidad * 1.4; // Ligeramente más rápidas que la madre
                 const babyY = y + (i === 0 ? -80 : 80) + (Math.random() - 0.5) * 40;
-                const babyX = spawnX + 120 + Math.random() * 80;
+                const babyX = spawnX + (120 + Math.random() * 80) * -direccion;
 
                 animales.push({
-                    x: babyX, y: babyY, vx: -babyVelocidad, vy: 0, r: 55, w: babyTamano, h: babyTamano,
+                    x: babyX, y: babyY, vx: babyVelocidad * direccion, vy: 0, r: 55, w: babyTamano, h: babyTamano,
                     capturado: false, frame: 0, timerFrame: 0,
                     semillaFase: Math.random() * Math.PI * 2, 
                     tipo: 'baby_whale',
@@ -1203,7 +1202,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         // --- FIN SUGERENCIA ---
 
         animales.push({
-            x: spawnX, y, vx: -velocidad, r: 44, w: tamano, h: tamano,
+            x: spawnX, y, vx: velocidad * direccion, r: 44, w: tamano, h: tamano,
             capturado: false, fila, frame: 0, timerFrame: 0,
             semillaFase: Math.random() * Math.PI * 2, tipo: tipo, hp: 1, maxHp: 1,
             patronMovimiento: patronMovimiento, // Propiedad para el nuevo tipo de movimiento
@@ -1495,7 +1494,15 @@ function actualizar(dt) {
     if (len > 0) {
         vx = (vx / len) * JUGADOR_VELOCIDAD;
         vy = (vy / len) * JUGADOR_VELOCIDAD;
-        generarBurbujaPropulsion(jugador.x - 30, jugador.y, estadoJuego.nivel === 5);
+        const isLevel5 = estadoJuego.nivel === 5;
+        // La posición de las burbujas debe considerar la inclinación y dirección
+        const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+        const finalAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
+        const offset = -40; // Detrás del centro del submarino
+
+        const burbujaX = jugador.x + offset * Math.cos(finalAngle);
+        const burbujaY = jugador.y + offset * Math.sin(finalAngle);
+        generarBurbujaPropulsion(burbujaX, burbujaY, isLevel5, -jugador.direccion);
     }
     
     // --- Animación de la Hélice ---
@@ -1514,7 +1521,8 @@ function actualizar(dt) {
     const isLevel5 = estadoJuego.nivel === 5;
     if (estadoJuego.vidas <= 1 && estadoJuego.vidas > 0) {
         // Generar humo desde la parte trasera del submarino
-        const anguloFinal = (isLevel5 ? -Math.PI / 2 : 0) + jugador.inclinacion;
+        const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+        const anguloFinal = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
         const offsetX = -45; // Offset hacia atrás, cerca de la hélice
         const offsetY = (Math.random() - 0.5) * 25; // Un poco de variación vertical
 
@@ -2542,15 +2550,26 @@ function renderizar(dt) {
             const px = jugador.x;
             const py = jugador.y + bobbingY; // Aplicar flotación
 
+            // --- FIX: Definir el ángulo final aquí para que esté disponible en todo el bloque ---
+            const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+            const anguloFinal = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
+
             ctx.save();
             ctx.translate(px, py);
-            const anguloFinal = isLevel5 ? -Math.PI / 2 + jugador.inclinacion : jugador.inclinacion;
-            ctx.rotate(anguloFinal); // prettier-ignore
+            if (isLevel5) {
+                // En el nivel 5, solo rotamos. El ángulo ya está calculado.
+                ctx.rotate(anguloFinal);
+            } else {
+                // En niveles horizontales, volteamos el sprite y aplicamos una rotación corregida.
+                ctx.scale(jugador.direccion, 1);
+                ctx.rotate(jugador.inclinacion * jugador.direccion);
+            }
 
             // --- Dibuja la Hélice ---
             if (propellerReady && propellerImg) {
                 ctx.save();
-                const propOffsetX = -spriteAncho * robotEscala / 2 - 10;
+                // El offset se aplica en el eje X local del submarino, que ya está escalado.
+                const propOffsetX = -spriteAncho * robotEscala / 2 - 10; 
                 ctx.translate(propOffsetX, 0);
                 const propSize = 40;
 
@@ -2589,9 +2608,10 @@ function renderizar(dt) {
 
                 let baseLength = 60 * moveIntensity;
                 let baseWidth = 40 * moveIntensity;
-                
+
                 ctx.save();
                 ctx.translate(px, py);
+                // Ahora podemos usar el `anguloFinal` que definimos antes, que es el ángulo del mundo.
                 ctx.rotate(anguloFinal);
                 ctx.translate(-35, 0); // Posicionar detrás del submarino
 
@@ -3083,7 +3103,17 @@ function dibujarMascaraLuz() {
         const screenPx = jugador.x - Math.round(estadoJuego.cameraX);
         const screenPy = jugador.y - Math.round(estadoJuego.cameraY);
 
-        const px = screenPx; const py = screenPy; const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const ang = anguloBase + jugador.inclinacion; const ux = Math.cos(ang), uy = Math.sin(ang); const vx = -Math.sin(ang), vy = Math.cos(ang); const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11)); const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11));
+        const px = screenPx;
+        const py = screenPy;
+
+        // --- CORRECCIÓN: El ángulo de la luz debe considerar la dirección del jugador ---
+        const anguloBase = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+        const ang = anguloBase + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
+
+        const ux = Math.cos(ang), uy = Math.sin(ang);
+        const vx = -Math.sin(ang), vy = Math.cos(ang);
+        const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11));
+        const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11));
 
         // --- MEJORAS GRÁFICAS ---
         const time = estadoJuego.tiempoTranscurrido;
@@ -3836,6 +3866,31 @@ function renderizarSubmarinoBailarin(t) {
     }
 }
 
+function dibujarParticulas() {
+    if (!ctx) return;
+    ctx.save();
+    // Partículas de polvo y ambiente (detrás de todo)
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
+    
+    // Partículas de explosión (brillantes)
+    for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
+    
+    // Partículas de tinta/humo (oscuras)
+    ctx.globalCompositeOperation = 'source-over';
+    for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
+    
+    // Burbujas (solo contorno)
+    ctx.strokeStyle = '#aae2ff';
+    ctx.lineWidth = 1.5;
+    for (const p of particulasBurbujas) {
+        ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * (p.color === '#b22222' ? 0.9 : 0.7); // Burbujas de sangre más opacas
+        ctx.strokeStyle = p.color === '#b22222' ? '#ff8080' : '#aae2ff'; // Color del borde
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+}
+
 // =================================================================================
 //  11. INICIALIZACIÓN GENERAL Y GESTIÓN DE EVENTOS
 // =================================================================================
@@ -3863,6 +3918,11 @@ export function init() {
     addEventListener('keyup', function (e) {
         teclas[e.key] = false;
         // --- NUEVO: Ocultar panel de ayuda con Escape ---
+        if (e.key === '0') {
+            if (jugador && estadoJuego.enEjecucion) {
+                jugador.direccion *= -1;
+            }
+        }
         if (e.key === 'Escape') {
             if (gameplayHints && gameplayHints.classList.contains('visible')) {
                 gameplayHints.classList.remove('visible');

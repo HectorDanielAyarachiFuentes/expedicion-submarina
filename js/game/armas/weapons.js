@@ -78,11 +78,12 @@ export function initWeapons() {
  */
 function getCannonTransform(baseX, baseY, jugador, estadoJuego) {
     const isLevel5 = estadoJuego.nivel === 5;
-    const finalAngle = (isLevel5 ? -Math.PI / 2 : 0) + jugador.inclinacion;
+    const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+    const finalAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
 
     // El cañón está a un offset del centro del submarino.
     // En el sistema de coordenadas local del submarino (apuntando a la derecha), está en (45, 0).
-    const cannonOffsetX = 45; 
+    const cannonOffsetX = 45;
     const cannonOffsetY = 0;
 
     // Rotamos este offset para encontrar la posición mundial del cañón.
@@ -106,8 +107,9 @@ function getCannonTransform(baseX, baseY, jugador, estadoJuego) {
  */
 function getEjectionPortTransform(baseX, baseY, jugador, estadoJuego) {
     const isLevel5 = estadoJuego.nivel === 5;
-    const finalAngle = (isLevel5 ? -Math.PI / 2 : 0) + jugador.inclinacion;
-
+    const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+    const finalAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
+    
     // El puerto de eyección está en la parte superior del submarino.
     // Coordenadas locales: (0, -25) -> 0 en X, 25 píxeles hacia arriba.
     const portOffsetX = 0;
@@ -236,8 +238,9 @@ export function lanzarTorpedo(ctx) {
 
     // Los torpedos salen de la parte inferior del submarino.
     const isLevel5 = estadoJuego.nivel === 5;
-    const finalAngle = (isLevel5 ? -Math.PI / 2 : 0) + jugador.inclinacion;
-
+    const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+    const finalAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
+    
     // Offset local: debajo del centro del submarino
     const torpedoBayOffsetX = 0;
     const torpedoBayOffsetY = 30; // Debajo del centro
@@ -247,7 +250,7 @@ export function lanzarTorpedo(ctx) {
 
     // El torpedo siempre dispara hacia adelante
     const torpedoAngle = finalAngle;
-
+    
     torpedos.push({ 
         x: px, y: py, w: 20, h: 6, angle: torpedoAngle
     });
@@ -324,26 +327,49 @@ export function updateWeapons(ctx) {
 
     // --- Lógica de Daño del Láser ---
     if (estadoJuego.laserActivo) {
-        const isLevel5 = estadoJuego.nivel === 5;
-        let laserHitbox;
-
-        if (isLevel5) {
-            const laserStartX = jugador.x;
-            const laserStartY = jugador.y - 40;
-            const laserLength = laserStartY;
-            const laserWidth = 10;
-            laserHitbox = { x: laserStartX - laserWidth / 2, y: 0, w: laserWidth, h: laserLength };
-        } else {
-            const laserStartX = jugador.x + 40;
-            const laserStartY = jugador.y;
-            const laserLength = W;
-            const laserWidth = 10;
-            laserHitbox = { x: laserStartX, y: laserStartY - laserWidth / 2, w: laserLength, h: laserWidth };
-        }
+        const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
+        const laserAngle = cannon.angle;
+        const laserStartX = cannon.x;
+        const laserStartY = cannon.y;
+        const laserLength = W * 1.5; // Long enough to cross the screen
+        const laserEndX = laserStartX + Math.cos(laserAngle) * laserLength;
+        const laserEndY = laserStartY + Math.sin(laserAngle) * laserLength;
 
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
-            if (!a.capturado && laserHitbox.x < a.x + a.w / 2 && laserHitbox.x + laserHitbox.w > a.x - a.w / 2 && laserHitbox.y < a.y + a.h / 2 && laserHitbox.y + laserHitbox.h > a.y - a.h / 2) {
+            if (a.capturado) continue;
+
+            // Simple circle-line segment collision
+            const animalRadius = a.r || a.w / 2;
+
+            // Vector from start of laser to animal
+            const toAnimalX = a.x - laserStartX;
+            const toAnimalY = a.y - laserStartY;
+
+            // Vector of the laser beam
+            const laserDX = laserEndX - laserStartX;
+            const laserDY = laserEndY - laserStartY;
+            
+            const laserLenSq = laserDX * laserDX + laserDY * laserDY;
+            
+            // Project animal's center onto the laser line
+            const t = (toAnimalX * laserDX + toAnimalY * laserDY) / laserLenSq;
+            
+            let closestX, closestY;
+            if (t < 0) {
+                closestX = laserStartX;
+                closestY = laserStartY;
+            } else if (t > 1) {
+                closestX = laserEndX;
+                closestY = laserEndY;
+            } else {
+                closestX = laserStartX + t * laserDX;
+                closestY = laserStartY + t * laserDY;
+            }
+
+            const distSq = (a.x - closestX) * (a.x - closestX) + (a.y - closestY) * (a.y - closestY);
+
+            if (distSq < animalRadius * animalRadius) {
                 if (a.hp !== undefined) {
                     if (!a.laserHitTimer || a.laserHitTimer <= 0) {
                         a.hp -= WEAPON_CONFIG.laser.danoPorTick;
