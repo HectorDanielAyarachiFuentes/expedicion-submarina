@@ -133,6 +133,7 @@ const levelSelectContent = document.getElementById('levelSelectContent');
 const levelSelectBtn = document.getElementById('levelSelectBtn');
 const levelSelectorContainer = document.getElementById('level-selector-container');
 const backToMainBtn = document.getElementById('backToMainBtn');
+const levelSelectImage = document.getElementById('levelSelectImage');
 const infoAnimCanvas = document.getElementById('infoAnimCanvas');
 const infoAnimCtx = infoAnimCanvas ? infoAnimCanvas.getContext('2d') : null;
 let animarSubmarino = false;
@@ -3629,18 +3630,28 @@ export function gameLoop(t) {
     const dt = Math.min(0.033, (t - ultimo) / 1000 || 0);
     ultimo = t;
 
-    // --- NUEVO: Animación del logo con la música ---
-    if (logoHUD) {
-        const audioLevel = S.getAudioData();
-        if (typeof audioLevel === 'number') {
-            // Normalizar el nivel de audio (0-255) a un factor de escala
-            // Usamos una curva (potencia) para que la reacción sea más notoria en los picos de graves.
-            const normalizedLevel = audioLevel / 255;
+    // --- Animaciones de UI con la música ---
+    // Obtenemos el nivel de audio una vez por frame para optimizar.
+    const audioLevel = S.getAudioData();
+    if (typeof audioLevel === 'number') {
+        const normalizedLevel = audioLevel / 255;
+
+        // Animación del logo del HUD
+        if (logoHUD) {
             const scale = 1 + Math.pow(normalizedLevel, 2) * 0.15; // Reacción sutil de hasta 15%
             logoHUD.style.transform = `scale(${scale})`;
         }
+
+        // Animación de la imagen de selección de nivel
+        if (levelSelectImage && levelSelectContent && levelSelectContent.style.display !== 'none') {
+            const scale = 1 + Math.pow(normalizedLevel, 2) * 0.08; // Un poco más sutil que el logo
+            const rotation = Math.sin(t / 500) * normalizedLevel * 3; // Ligero bamboleo que depende del ritmo
+            levelSelectImage.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+        } else if (levelSelectImage) {
+            // Reseteamos la transformación si no está visible para evitar saltos visuales.
+            levelSelectImage.style.transform = 'scale(1) rotate(0deg)';
+        }
     }
-    // --- FIN NUEVO ---
 
     let dtAjustado = dt;
     if (estadoJuego) {

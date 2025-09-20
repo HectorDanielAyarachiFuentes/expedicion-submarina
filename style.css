@@ -535,6 +535,18 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     margin: 2rem 0;
 }
 
+.level-select-image {
+    display: block;
+    margin: 1.5rem auto; /* Margen superior/inferior y centrado horizontal */
+    max-width: 250px;
+    width: 60%;
+    border-radius: 10px;
+    border: 3px solid var(--accent-blue);
+    box-shadow: 0 0 15px rgba(126, 203, 255, 0.5);
+    background-color: var(--bg-dark); /* Fondo por si la imagen tiene transparencia */
+    transition: transform 0.1s ease-out; /* Para que la animación del ritmo sea suave */
+}
+
 .levelbtn {
     font-family: 'Press Start 2P', monospace;
     width: 60px;
