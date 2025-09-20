@@ -226,8 +226,8 @@ export function update(dt) {
             if (Math.random() < 0.9) {
                 const explosionX = jefe.x + (Math.random() - 0.5) * jefe.w;
                 const explosionY = jefe.y + (Math.random() - 0.5) * jefe.h;
-                const colores = ['#ff8833', '#dd4444', '#FFFFFF'];
-                generarExplosion(explosionX, explosionY, colores[Math.floor(Math.random() * colores.length)]);
+                const colores = ['#ff8833', '#dd4444', '#FFFFFF']; // prettier-ignore
+                generarExplosion(explosionX, explosionY, colores[Math.floor(Math.random() * colores.length)], 60);
             }
             if (Math.random() < 0.25) {
                 const chunkX = jefe.x + (Math.random() - 0.5) * jefe.w;
@@ -429,7 +429,7 @@ export function update(dt) {
 function recibirDanoJefe(proyectil, cantidad) {
     const jefe = levelState.jefe;
     if (!jefe || jefe.estado === 'muriendo' || jefe.hp <= 0) return;
-    generarExplosion(proyectil.x, proyectil.y, proyectil.color || '#ffdd77');
+    generarExplosion(proyectil.x, proyectil.y, proyectil.color || '#ffdd77', 40);
     jefe.hp -= cantidad;
     jefe.timerGolpe = 0.15; // Para el efecto de parpadeo
     S.reproducir('boss_hit');

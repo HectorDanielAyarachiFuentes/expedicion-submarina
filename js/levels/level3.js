@@ -165,7 +165,7 @@ export function update(dt) {
 
     function recibirDano(proyectil, cantidad) {
         if (!estadoJuego.jefe || estadoJuego.jefe.hp <= 0) return;
-        generarExplosion(proyectil.x, proyectil.y, proyectil.color || '#ff8833');
+        generarExplosion(proyectil.x, proyectil.y, proyectil.color || '#ff8833', 30);
         jefe.hp -= cantidad;
         jefe.timerGolpe = 0.15;
         S.reproducir('boss_hit');

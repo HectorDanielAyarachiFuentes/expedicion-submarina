@@ -381,11 +381,11 @@ export function updateWeapons(ctx) {
                         generarExplosion(a.x, a.y, '#aaffff', a.w);
                         Levels.onKill(a.tipo);
                         animales.splice(j, 1);
-                        estadoJuego.asesinatos++;
+                        estadoJuego.asesinatos++; // prettier-ignore
                         estadoJuego.puntuacion += 500;
                     }
                 } else {
-                    generarExplosion(a.x, a.y, '#ff5555');
+                    generarExplosion(a.x, a.y, '#ff5555', a.w);
                     Levels.onKill(a.tipo);
                     animales.splice(j, 1);
                     estadoJuego.asesinatos++;
@@ -406,7 +406,7 @@ export function updateWeapons(ctx) {
                         generarTrozoBallena(proyectil.x, proyectil.y);
                         generarGotasSangre(proyectil.x, proyectil.y);
                     }
-                    generarExplosion(proyectil.x, proyectil.y, '#dddddd');
+                    generarExplosion(proyectil.x, proyectil.y, '#dddddd', 20);
                     if (a.hp <= 0) {
                         generarExplosion(a.x, a.y, '#aaffff', a.w);
                         Levels.onKill(a.tipo);
@@ -416,7 +416,7 @@ export function updateWeapons(ctx) {
                     }
                     return true;
                 }
-                generarExplosion(a.x, a.y, proyectil.color || '#ff8833');
+                generarExplosion(a.x, a.y, proyectil.color || '#ff8833', a.w);
                 Levels.onKill(a.tipo);
                 animales.splice(j, 1);
                 estadoJuego.asesinatos++;
@@ -511,7 +511,7 @@ export function updateWeapons(ctx) {
             for (let j = animales.length - 1; j >= 0; j--) {
                 const a = animales[j];
                 if (Math.hypot(a.x - m.x, a.y - m.y) < WEAPON_CONFIG.mina.radioExplosion) {
-                    generarExplosion(a.x, a.y, '#ff8833');
+                    generarExplosion(a.x, a.y, '#ff8833', a.w);
                     Levels.onKill(a.tipo);
                     animales.splice(j, 1);
                     estadoJuego.asesinatos++;

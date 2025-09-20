@@ -35,8 +35,8 @@ let phaseHistory = [];
 const CREATURE_TYPES = [
   { name: "Devorador", color: '#FF3355', speed: 200, size: 40, hp: 3, score: 150, behavior: 'vortexSpin', attack: 'blackHole', spawnEffect: () => { S.reproducir('boss_hit'); createShockwave(W / 2, H / 2, 1.5, '#FF3355'); } },
   { name: "Gemelo", color: '#33FF55', speed: 120, size: 35, hp: 2, score: 200, behavior: 'mirrorClone', attack: 'duplicate', spawnEffect: () => S.reproducir('machinegun') },
-  { name: "Cronolord", color: '#3355FF', speed: 80, size: 50, hp: 4, score: 180, behavior: 'timeWarp', attack: 'slowTime', spawnEffect: () => S.reproducir('ink') },
-  { name: "Fragmentador", color: '#FF33FF', speed: 250, size: 25, hp: 1, score: 250, behavior: 'fragment', attack: 'split', spawnEffect: () => { for (let i = 0; i < 3; i++) { setTimeout(() => generarExplosion(Math.random() * W, Math.random() * H, '#FF33FF'), i * 200); } } },
+  { name: "Cronolord", color: '#3355FF', speed: 80, size: 50, hp: 4, score: 180, behavior: 'timeWarp', attack: 'slowTime', spawnEffect: () => S.reproducir('ink') }, // prettier-ignore
+  { name: "Fragmentador", color: '#FF33FF', speed: 250, size: 25, hp: 1, score: 250, behavior: 'fragment', attack: 'split', spawnEffect: () => { for (let i = 0; i < 3; i++) { setTimeout(() => generarExplosion(Math.random() * W, Math.random() * H, '#FF33FF', 40), i * 200); } } },
   { name: "Titán", color: '#FFFF33', speed: 60, size: 80, hp: 8, score: 300, behavior: 'titan', attack: 'quake', spawnEffect: () => { screenShake = 15; S.reproducir('shotgun'); for (let i = 0; i < 5; i++) spawnFallingDebris(true); } }
 ];
 
@@ -236,7 +236,7 @@ export function update(dt) {
             }
         }
         if (Math.hypot(jugador.x - c.x, jugador.y - c.y) < jugador.r + c.size / 2) {
-            generarExplosion(c.x, c.y, c.color);
+            generarExplosion(c.x, c.y, c.color, c.size);
             if (estadoJuego.vidas > 0) estadoJuego.vidas--;
             estadoJuego.animVida = 0.6;
             S.reproducir('choque');

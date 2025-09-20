@@ -38,12 +38,23 @@ canvas {
 #gameCanvas { z-index: 1; }
 #fxCanvas { z-index: 2; pointer-events: none; }
 #hudCanvas { z-index: 3; pointer-events: none; }
+#sonarCanvas { z-index: 4; pointer-events: none; }
+
+/* Contenedor principal para todos los elementos del HUD en HTML */
+#live-hud-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 5;
+    pointer-events: none; /* No interfiere con el juego, los hijos pueden reactivarlos */
+}
 
 /* ========= HUD SUPERIOR (DISEÑO EN LÍNEA ÚNICA) ========= */
 /* El contenedor principal del HUD ahora es solo un espaciador */
 #top-hud {
-    position: fixed;
-    top: 0;
+    /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
+    position: absolute;
+    top: 0; /* La posición se controla con el padding de #status-bar */
     left: 0;
     width: 100%; /* Ocupa todo el ancho para posicionar los pods */
     z-index: 6;
@@ -54,7 +65,8 @@ canvas {
     display: flex;
     justify-content: space-between;
     align-items: flex-start; /* Alinea los pods en la parte superior */
-    padding: 15px; /* Espacio desde los bordes de la pantalla */
+    /* CAMBIO: Padding ajustado para el nuevo visor ovalado */
+    padding: 3vh 5vw;
     box-sizing: border-box;
 }
 
@@ -190,11 +202,12 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 
 /* ===== NUEVO: Panel de Controles Flotante ===== */
 #gameplay-hints {
-    position: fixed;
+    /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
+    position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
-    z-index: 12; /* Por encima de todo */
+    z-index: 7; /* Por encima del HUD, pero debajo de los menús principales */
     
     display: flex;
     flex-wrap: wrap;
@@ -220,10 +233,11 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 
 /* ===== NUEVO: HUD DINÁMICO DE ESTADÍSTICAS (HTML) ===== */
 #game-stats-overlay {
-    position: fixed;
-    bottom: 15px;
-    left: 15px;
-    z-index: 5; /* Por debajo del top-hud, por encima del canvas */
+    /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
+    position: absolute;
+    bottom: 3vh; /* Ajustado para el nuevo visor */
+    left: 3vw;   /* Ajustado para el nuevo visor */
+    z-index: 6;
     pointer-events: none; /* No debe interferir con el juego */
     
     width: 280px; /* Ancho del panel */
@@ -532,8 +546,9 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
 }
 
 #bossHealthContainer {
-    position: fixed;
-    bottom: 20px;
+    /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
+    position: absolute;
+    bottom: 3vh; /* Ajustado para el nuevo visor */
     left: 50%;
     transform: translateX(-50%);
     width: 80%;
@@ -542,7 +557,7 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     background-color: rgba(0,0,0,0.5);
     border: 2px solid var(--accent-red);
     border-radius: 10px;
-    z-index: 5;
+    z-index: 6;
     padding: 2px;
     box-sizing: border-box;
 }

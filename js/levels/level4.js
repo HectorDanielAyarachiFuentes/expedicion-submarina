@@ -79,7 +79,7 @@ export function update(dt) {
         // === LÍNEA CORREGIDA ===
         const dist = Math.hypot(jugador.x - escombro.x, jugador.y - escombro.y);
         if (dist < jugador.r + escombro.tamano / 2) {
-            generarExplosion(escombro.x, escombro.y, '#cccccc');
+            generarExplosion(escombro.x, escombro.y, '#cccccc', escombro.tamano);
             escombros.splice(i, 1);
             if (estadoJuego.vidas > 0) {
                 estadoJuego.vidas--;
@@ -96,7 +96,7 @@ export function update(dt) {
         for (let j = torpedos.length - 1; j >= 0; j--) {
             const t = torpedos[j];
             if (proyectilColisionaConEscombro(t, escombro)) {
-                generarExplosion(escombro.x, escombro.y, '#cccccc');
+                generarExplosion(escombro.x, escombro.y, '#cccccc', escombro.tamano);
                 escombros.splice(i, 1);
                 torpedos.splice(j, 1);
                 estadoJuego.puntuacion += 50;
@@ -109,7 +109,7 @@ export function update(dt) {
         for (let k = proyectiles.length - 1; k >= 0; k--) {
             const p = proyectiles[k];
             if (proyectilColisionaConEscombro(p, escombro)) {
-                generarExplosion(escombro.x, escombro.y, p.color);
+                generarExplosion(escombro.x, escombro.y, p.color, escombro.tamano);
                 escombros.splice(i, 1);
                 proyectiles.splice(k, 1);
                 estadoJuego.puntuacion += 10;

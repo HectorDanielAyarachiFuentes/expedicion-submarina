@@ -84,6 +84,7 @@ export const hud = hudCanvas.getContext('2d');
 const sonarCanvas = document.getElementById('sonarCanvas'), sonarCtx = sonarCanvas.getContext('2d');
 
 // --- Referencias a Elementos del DOM ---
+const liveHudContainer = document.getElementById('live-hud-container');
 // Obtenemos todas las referencias a los elementos HTML para manipular la UI.
 const overlay = document.getElementById('overlay');
 const mainMenu = document.getElementById('mainMenu');
@@ -766,7 +767,24 @@ function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
 
 // --- Generadores de Efectos Especiales ---
-export function generarExplosion(x, y, color = '#ff8833') { for (let i = 0; i < 20; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * 100; generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * 2 + 1, vida: 0.4 + Math.random() * 0.4, color }); } }
+export function generarExplosion(x, y, color = '#ff8833', size = 80) {
+    const numParticulas = clamp(Math.floor(size / 4), 15, 60);
+    for (let i = 0; i < numParticulas; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * (size * 1.5); generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * (size / 30) + 1, vida: 0.4 + Math.random() * 0.4, color }); }
+
+    // --- NUEVO: Sacudida del HUD por explosiones ---
+    if (jugador && estadoJuego && estadoJuego.enEjecucion) {
+        const dist = Math.hypot(x - jugador.x, y - jugador.y);
+        const maxDist = W * 0.8; // Explosiones más lejanas no afectan
+        if (dist < maxDist) {
+            // La intensidad depende del tamaño de la explosión y la proximidad al jugador
+            const proximityFactor = 1 - (dist / maxDist);
+            const sizeFactor = Math.min(size / 200, 1.0); // Normalizar tamaño
+            const intensity = (10 + 50 * sizeFactor) * proximityFactor;
+            triggerHudShake(intensity);
+        }
+    }
+}
+
 export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i = 0; i < 50; i++) { const ang = Math.random() * Math.PI * 2, spd = 20 + Math.random() * size; generarParticula(particulasTinta, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 15 + Math.random() * size * 0.8, vida: 2.5 + Math.random() * 2, color: '#101010' }); } }
 
 const WHALE_DEBRIS_PATHS = [
@@ -775,7 +793,7 @@ const WHALE_DEBRIS_PATHS = [
     new Path2D('M0,0 Q20,-20 35,-5 Q45,10 25,25 Q5,30 0,15 Z'),
     new Path2D('M0,-5 L15,-15 L30,-10 L40,5 L25,15 L10,20 Z')
 ];
-export function generarTrozoBallena(x, y, numTrozos = 3, fuerza = 150) {
+export function generarTrozoBallena(x, y, numTrozos = 3, fuerza = 150, size = 0) {
     for (let i = 0; i < numTrozos + Math.random() * numTrozos; i++) {
         const ang = Math.random() * Math.PI * 2; // Salen en todas direcciones
         const spd = 50 + Math.random() * fuerza;
@@ -933,6 +951,15 @@ export function activarSlowMotion(duracion) {
 }
 
 /**
+ * Activa una sacudida en el HUD. La intensidad se acumula si ocurren varios eventos.
+ * @param {number} intensity - La fuerza de la sacudida.
+ */
+function triggerHudShake(intensity) {
+    if (!estadoJuego) return;
+    // Acumula la intensidad para apilar sacudidas, con un límite para evitar excesos.
+    estadoJuego.hudShakeIntensity = Math.min(60, estadoJuego.hudShakeIntensity + intensity);
+}
+/**
  * Centraliza la lógica de aplicar daño al jugador, teniendo en cuenta el escudo.
  * @param {number} [cantidad=1] - La cantidad de vidas a restar.
  * @param {string} [tipoSonido='choque'] - El sonido a reproducir si el jugador recibe daño.
@@ -954,6 +981,7 @@ export function infligirDanoJugador(cantidad = 1, tipoSonido = 'choque') {
             S.detener('laser_beam'); // El escudo usa el sonido del láser
             S.reproducir('boss_hit'); // Sonido de escudo roto
         }
+        triggerHudShake(8 * cantidad); // Sacudida ligera por impacto en el escudo
         return false; // Daño bloqueado
     }
 
@@ -961,14 +989,18 @@ export function infligirDanoJugador(cantidad = 1, tipoSonido = 'choque') {
     const antes = estadoJuego.vidas;
     if (estadoJuego.vidas > 0) estadoJuego.vidas = Math.max(0, estadoJuego.vidas - cantidad);
     if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir(tipoSonido); }
-    if (estadoJuego.vidas <= 0) perderJuego();
+    if (estadoJuego.vidas <= 0) {
+        perderJuego();
+    } else {
+        triggerHudShake(20 * cantidad); // Sacudida fuerte por daño al casco
+    }
     return true; // Daño aplicado
 }
 
 // --- Estado Principal y Entidades ---
 export let estadoJuego = null, jugador, animales;
 let teclas = {};
-let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false; // prettier-ignore
+let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
 let __iniciando = false;
 let menuFlyBy = null; // Para la animación del submarino en el menú
 const INCLINACION_MAX = Math.PI / 24;
@@ -1021,11 +1053,16 @@ function reiniciar(nivelDeInicio = 1) {
         sonarPingTimer: 0,
         sonarActivo: true,
         sonarToggleCooldown: 0,
+        hudShakeX: 0,
+        hudShakeY: 0,
+        hudShakeIntensity: 0,
     };
     estadoJuego.cameraX = 0;
     estadoJuego.cameraY = 0;
     estadoJuego.prevCameraX = 0;
     
+    pilotos = [];
+    trozosHumanos = [];
     delete estadoJuego.darknessOverride; // Limpiamos la oscuridad del nivel 2, si existiera.
 
     jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0, inclinacion: 0 };
@@ -2288,11 +2325,11 @@ function actualizar(dt) {
             // El impacto físico ocurre de todos modos.
             if (a.tipo === 'whale' || a.tipo === 'baby_whale' || a.tipo === 'shark' || a.tipo === 'orca') {
                 generarBurbujasDeSangre(collisionX, collisionY);
-                generarTrozoBallena(collisionX, collisionY, 4, 120);
+                generarTrozoBallena(collisionX, collisionY, 4, 120, a.w);
                 generarGotasSangre(collisionX, collisionY);
             } else {
                 // Para criaturas más pequeñas, una explosión genérica
-                generarExplosion(collisionX, collisionY, '#ff5e5e');
+                generarExplosion(collisionX, collisionY, '#ff5e5e', a.w);
             }
 
             let damage = 1;
@@ -2408,6 +2445,28 @@ function actualizar(dt) {
     comprobarCompletadoNivel();
 }
 
+/**
+ * Actualiza la posición del HUD para crear el efecto de sacudida.
+ */
+function actualizarLiveHUD() {
+    if (!estadoJuego || !liveHudContainer) return;
+
+    const s = estadoJuego;
+
+    if (s.hudShakeIntensity > 0.1) {
+        // Genera valores aleatorios para la sacudida basados en la intensidad
+        s.hudShakeX = (Math.random() - 0.5) * s.hudShakeIntensity;
+        s.hudShakeY = (Math.random() - 0.5) * s.hudShakeIntensity;
+
+        liveHudContainer.style.transform = `translate(${s.hudShakeX.toFixed(2)}px, ${s.hudShakeY.toFixed(2)}px)`;
+
+        // Reduce la intensidad para que la sacudida se desvanezca
+        s.hudShakeIntensity *= 0.88; // Decaimiento rápido
+    } else if (s.hudShakeIntensity !== 0) {
+        s.hudShakeIntensity = 0;
+        liveHudContainer.style.transform = 'translate(0, 0)';
+    }
+}
 // =================================================================================
 //  9. BUCLE PRINCIPAL DE RENDERIZADO (DRAW)
 // =================================================================================
@@ -3396,6 +3455,7 @@ function dibujarHUD() {
         // --- NUEVO: Cambiar color si el impulso está activo ---
         if (s.boostActivo) {
             statSpeedValue.classList.add('boosting');
+            triggerHudShake(2); // Sacudida continua y suave al usar el impulso
         } else {
             statSpeedValue.classList.remove('boosting');
         }
@@ -3811,8 +3871,13 @@ function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { es
 function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); } // prettier-ignore
 function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { document.body.classList.toggle('immersive'); return; } const el = document.documentElement; try { if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) { if (el.requestFullscreen) return el.requestFullscreen(); if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen(); } else { if (document.exitFullscreen) return document.exitFullscreen(); if (document.webkitExitFullscreen) return document.webkitExitFullscreen(); } } catch (err) { console.warn('Pantalla completa no disponible', err); } }
 
-
-function autoSize() { const topHud = document.getElementById('top-hud'); const alturaTotalHud = topHud ? topHud.offsetHeight : 70; const v = { w: innerWidth, h: innerHeight - alturaTotalHud }; [bgCanvas, cvs, fxCanvas, sonarCanvas, hudCanvas].forEach(c => { if (c) { c.width = v.w; c.height = v.h; } }); W = v.w; H = v.h; calcularCarriles(); if (!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); } }
+/**
+ * Ajusta el tamaño de todos los lienzos (canvas) para que coincidan con el tamaño de la ventana.
+ * Con el nuevo HUD de superposición, los lienzos deben ocupar toda la pantalla.
+ */
+function autoSize() {
+    const v = { w: innerWidth, h: innerHeight }; // Los lienzos ahora ocupan toda la pantalla.
+    [bgCanvas, cvs, fxCanvas, sonarCanvas, hudCanvas].forEach(c => { if (c) { c.width = v.w; c.height = v.h; } }); W = v.w; H = v.h; calcularCarriles(); if (!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); } }
 // ========= Función de Bucle de Juego (se exporta a main.js) =========
 // Este es el corazón del juego, el bucle que se ejecuta continuamente.
 let ultimo = 0;
@@ -3885,6 +3950,8 @@ export function gameLoop(t) {
             actualizarCriaturasMenu(dtAjustado);
             actualizarAnimacionMenu(dtAjustado);
         }
+
+        actualizarLiveHUD();
 
         // Actualiza el polvo de paralaje después de que la cámara se haya movido.
         actualizarPolvoMarino(dtAjustado);
