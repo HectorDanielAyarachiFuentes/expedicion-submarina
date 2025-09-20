@@ -481,6 +481,30 @@ cargarJson('js/json_sprites/ballenabebe.json', function(data) {
     }
 });
 
+export let ORCA_SPRITE_DATA = null;
+export let orcaImg = null, orcaListo = false;
+let orcaImgCargada = false;
+let orcaJsonCargado = false;
+function comprobarOrcaLista() {
+    if (orcaImgCargada && orcaJsonCargado) {
+        orcaListo = true;
+    }
+}
+cargarImagen('img/sprites/orca.png', function (img) { 
+    if (img) { 
+        orcaImg = img; 
+        orcaImgCargada = true;
+        comprobarOrcaLista();
+    } 
+});
+cargarJson('js/json_sprites/orca.json', function(data) {
+    if (data) {
+        ORCA_SPRITE_DATA = data;
+        orcaJsonCargado = true;
+        comprobarOrcaLista();
+    }
+});
+
 let thrusterPattern = null;
 let thrusterPatternReady = false;
 let thrusterPatternOffsetX = 0;
@@ -949,6 +973,7 @@ const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
 const MIERDEi_ANIMATION_SPEED = 0.06;
 const BABYWHALE_ANIMATION_SPEED = 0.07;
+const ORCA_ANIMATION_SPEED = 0.06;
 
 // --- Funciones de Control del Juego ---
 function reiniciar(nivelDeInicio = 1) {
@@ -1035,9 +1060,11 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
     if (puedeSerEspecial) {
         const r = Math.random();
         // La ballena y el tiburón ahora tienen probabilidades independientes y no se bloquean entre sí.
-        if (whaleListo && r < 0.15) { // 15% de probabilidad de que aparezca una familia de ballenas
+        if (whaleListo && r < 0.10) { // 10% de probabilidad de que aparezca una familia de ballenas
             tipo = 'whale';
-        } else if (sharkListo && r > 0.85) { // 15% de probabilidad de que sea un tiburón.
+        } else if (orcaListo && r > 0.80 && r < 0.90) { // 10% de probabilidad de que sea una orca
+            tipo = 'orca';
+        } else if (sharkListo && r > 0.90) { // 10% de probabilidad de que sea un tiburón.
             tipo = 'shark';
         }
     }
@@ -1063,16 +1090,48 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         velocidad *= 0.9; // Un poco más lentos al patrullar
         animales.push({
             x: spawnX, y, vx: -velocidad, vy: 0, r: 50, w: tamano, h: tamano,
-            capturado: false, frame: 0, timerFrame: 0,
+            capturado: false, frame: 0, timerFrame: 0, hp: 60, maxHp: 60,
             semillaFase: Math.random() * Math.PI * 2, 
             tipo: 'shark',
             huntCooldown: 2.0 + Math.random(), // Cooldown inicial antes de la primera caza
             isHunting: false,
             isPackLeader: false,
         });
+    } else if (tipo === 'orca') {
+        if (!orcaListo) return;
+        
+        const packSize = 2 + Math.floor(Math.random() * 2); // Manada de 2 a 3 orcas
+        const packId = `orca_pack_${Date.now()}_${Math.random()}`;
+
+        for (let i = 0; i < packSize; i++) {
+            const isLeader = (i === 0);
+            const tamano = isLeader ? 190 : 170; // El líder es un poco más grande
+            const orcaY = y + (i * 80) - ((packSize - 1) * 40); // Espaciarlas verticalmente
+            const orcaX = spawnX + i * 100; // Y un poco horizontalmente
+            const velocidadOrca = (velocidadActual() + 80) * (isLeader ? 1.1 : 1.0);
+
+            animales.push({
+                x: orcaX, y: orcaY, vx: -velocidadOrca, vy: 0, r: 60, w: tamano, h: tamano,
+                capturado: false, frame: 0, timerFrame: 0,
+                semillaFase: Math.random() * Math.PI * 2,
+                tipo: 'orca',
+                hp: isLeader ? 120 : 80, maxHp: isLeader ? 120 : 80,
+                huntCooldown: 2.0 + Math.random() * 2,
+                isHunting: false, // True when hunting player
+                isHuntingAnimal: false, // True when hunting other animals
+                targetAnimal: null, // The animal it's hunting
+                packId: packId,
+                isPackLeader: isLeader,
+                attackTimer: 0,
+            });
+        }
     } else if (tipo === 'whale') {
         const tamano = overrides.ancho || 250;
         velocidad *= 0.5; // Muy lentas        
+        const patrolWidth = W * (0.8 + Math.random() * 0.4); // Patrullan un área de 80-120% del ancho de la pantalla
+        const patrolMaxX = spawnX;
+        const patrolMinX = spawnX - patrolWidth;
+
         const adultWhale = {
             x: spawnX, y, vx: -velocidad, vy: 0, r: 100, w: tamano, h: tamano,
             capturado: false, frame: 0, timerFrame: 0,
@@ -1089,6 +1148,11 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             // --- NUEVO: Estado de protección ---
             isProtecting: false,
             protectedBaby: null,
+            isPatrolling: true,
+            patrolMinX: patrolMinX,
+            patrolMaxX: patrolMaxX,
+            revengeTarget: null,
+            collisionCooldown: 0,
         };
         animales.push(adultWhale);
 
@@ -1141,7 +1205,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         animales.push({
             x: spawnX, y, vx: -velocidad, r: 44, w: tamano, h: tamano,
             capturado: false, fila, frame: 0, timerFrame: 0,
-            semillaFase: Math.random() * Math.PI * 2, tipo: tipo,
+            semillaFase: Math.random() * Math.PI * 2, tipo: tipo, hp: 1, maxHp: 1,
             patronMovimiento: patronMovimiento, // Propiedad para el nuevo tipo de movimiento
             estadoMovimiento: 'moviendo',      // Estado para la IA de 'pausa_acelera'
             timerMovimiento: 0                 // Temporizador para la IA de 'pausa_acelera'
@@ -1226,6 +1290,13 @@ function actualizarCriaturasMenu(dt) {
                 const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.25);
                 generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 15 + Math.random() * 25, vy: (Math.random() - 0.5) * 15 - 10, r: Math.random() * 1.8 + 0.8, vida: 1.0 + Math.random() * 0.8, color: '' });
             }
+        } else if (a.tipo === 'orca') {
+            // Estela de burbujas para la orca
+            if (Math.random() < 0.25) {
+                const tailX = a.x + a.w / 2;
+                const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.15);
+                generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 35 + Math.random() * 35, vy: (Math.random() - 0.5) * 25 - 10, r: Math.random() * 2.2 + 1.2, vida: 1.0 + Math.random() * 0.8, color: '' });
+            }
         } else if (a.tipo === 'shark') {
             if (a.timerFrame >= SHARK_ANIMATION_SPEED) {
                 a.timerFrame -= SHARK_ANIMATION_SPEED;
@@ -1266,6 +1337,7 @@ function actualizarCriaturasMenu(dt) {
                 const tiposMenu = ['normal'];
                 if (sharkListo) tiposMenu.push('shark');
                 if (whaleListo) tiposMenu.push('whale');
+                if (orcaListo) tiposMenu.push('orca');
                 const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)];
                 // Generar el nuevo animal fuera de la pantalla para que entre suavemente
                 generarAnimal(false, tipoAleatorio, { y: Math.random() * H });
@@ -1709,11 +1781,136 @@ function actualizar(dt) {
                     a.frame = (a.frame + 1) % BABYWHALE_SPRITE_DATA.frames.length;
                 }
             }
-            // Estela de burbujas para la cría
-            if (Math.random() < 0.2) {
-                const tailX = a.x + a.w / 2.2;
-                const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.25);
-                generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 15 + Math.random() * 25, vy: (Math.random() - 0.5) * 15 - 10, r: Math.random() * 1.8 + 0.8, vida: 1.0 + Math.random() * 0.8, color: '' });
+        } else if (a.tipo === 'orca') {
+            a.huntCooldown -= dt;
+            a.attackTimer -= dt;
+
+            // --- Lógica de estado de la Orca ---
+            // 1. Si está cazando un animal, continuar
+            if (a.isHuntingAnimal && a.targetAnimal && animales.includes(a.targetAnimal) && a.targetAnimal.hp > 0) {
+                const target = a.targetAnimal;
+                const angle = Math.atan2(target.y - a.y, target.x - a.x);
+                const speed = 800;
+                a.vx = lerp(a.vx, Math.cos(angle) * speed, dt * 4.0);
+                a.vy = lerp(a.vy, Math.sin(angle) * speed, dt * 4.0);
+                
+                // Ataque al impactar
+                if (Math.hypot(a.x - target.x, a.y - target.y) < a.r + target.r * 0.8) {
+                    if (a.attackTimer <= 0) {
+                        const damage = a.isPackLeader ? 35 : 25;
+                        target.hp -= damage;
+                        a.attackTimer = 0.8;
+                        generarGotasSangre(target.x, target.y);
+                        S.reproducir('boss_hit');
+
+                        // Si la presa es una cría o un pez normal, las ballenas adultas cercanas se enfurecen.
+                        const esPresaProtegida = target.tipo === 'baby_whale' || ['normal', 'rojo', 'aggressive'].includes(target.tipo);
+                        if (esPresaProtegida) {
+                            const AGGRO_RADIUS = W * 0.7; // Radio de "grito de auxilio" de la presa
+                            for (const otherAnimal of animales) {
+                                // Buscar a todas las ballenas adultas en el radio de agresión.
+                                if (otherAnimal.tipo === 'whale') {
+                                    const dist = Math.hypot(a.x - otherAnimal.x, a.y - otherAnimal.y);
+                                    if (dist < AGGRO_RADIUS) {
+                                        // Si la ballena no está ya enfurecida, la enfurecemos.
+                                        if (!otherAnimal.isEnraged) {
+                                            otherAnimal.isEnraged = true;
+                                            otherAnimal.vx *= 2.0; // Aumentar su velocidad
+                                        }
+                                        // Asignar (o reasignar) el objetivo de venganza a la orca atacante.
+                                        otherAnimal.revengeTarget = a; 
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } 
+            // 2. Si está cazando al jugador, continuar
+            else if (a.isHunting) {
+                const angle = Math.atan2(jugador.y - a.y, jugador.x - a.x);
+                const targetVx = Math.cos(angle) * 700;
+                const targetVy = Math.sin(angle) * 700;
+                a.vx = lerp(a.vx, targetVx, dt * 3.0);
+                a.vy = lerp(a.vy, targetVy, dt * 3.0);
+                if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
+                    a.isHunting = false;
+                }
+            }
+            // 3. Si está inactiva, buscar una presa
+            else {
+                // Resetear estados de caza
+                a.isHuntingAnimal = false;
+                a.targetAnimal = null;
+                a.isHunting = false;
+
+                // Movimiento de patrulla
+                a.vx = -(velocidadActual() + 80) * (a.isPackLeader ? 1.1 : 1.0);
+                a.vy = Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + a.semillaFase) * 50;
+
+                // Lógica de búsqueda de presas si no está en cooldown
+                if (a.huntCooldown <= 0) {
+                    let bestTarget = null;
+                    let minDistance = Infinity;
+                    const SIGHT_RADIUS = W * 0.8;
+
+                    // Prioridad 1: Ballenas bebé
+                    for (const other of animales) {
+                        if (other.tipo === 'baby_whale' && other.hp > 0) {
+                            const dist = Math.hypot(a.x - other.x, a.y - other.y);
+                            if (dist < SIGHT_RADIUS && dist < minDistance) {
+                                minDistance = dist;
+                                bestTarget = other;
+                            }
+                        }
+                    }
+
+                    // Prioridad 2: Peces pequeños (si no hay ballenas bebé)
+                    if (!bestTarget) {
+                        minDistance = Infinity;
+                        for (const other of animales) {
+                            if (['normal', 'rojo', 'aggressive'].includes(other.tipo)) {
+                                const dist = Math.hypot(a.x - other.x, a.y - other.y);
+                                if (dist < SIGHT_RADIUS && dist < minDistance) {
+                                    minDistance = dist;
+                                    bestTarget = other;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (bestTarget) {
+                        a.isHuntingAnimal = true;
+                        a.targetAnimal = bestTarget;
+                        a.huntCooldown = 8.0 + Math.random() * 4; // Cooldown largo
+
+                        // Coordinación de manada
+                        if (a.isPackLeader) {
+                            for (const packMate of animales) {
+                                if (packMate.tipo === 'orca' && packMate.packId === a.packId && packMate !== a) {
+                                    packMate.isHuntingAnimal = true;
+                                    packMate.targetAnimal = bestTarget;
+                                }
+                            }
+                        }
+                    } else if (jugador.x < a.x && a.x < W) {
+                        // Prioridad 3: Cazar al jugador si no hay otra presa
+                        a.isHunting = true;
+                        a.huntCooldown = 4.0 + Math.random() * 2;
+                    }
+                }
+            }
+
+            // Movimiento y animación final
+            a.x += a.vx * dt;
+            a.y += a.vy * dt;
+
+            a.timerFrame += dt;
+            if (a.timerFrame >= ORCA_ANIMATION_SPEED) {
+                a.timerFrame -= ORCA_ANIMATION_SPEED;
+                if (ORCA_SPRITE_DATA) {
+                    a.frame = (a.frame + 1) % ORCA_SPRITE_DATA.frames.length;
+                }
             }
         } else if (a.tipo === 'shark') {
             if (a.isHunting) {
@@ -1857,28 +2054,51 @@ function actualizar(dt) {
                 // --- MOVIMIENTO DE PROTECCIÓN ---
                 // La ballena se interpone entre el jugador y la cría.
                 const baby = a.protectedBaby;
-                const dx = jugador.x - baby.x;
-                const dy = jugador.y - baby.y;
-                const dist = Math.hypot(dx, dy);
+                const dxToPlayer = jugador.x - baby.x;
+                const dyToPlayer = jugador.y - baby.y;
+                const distToPlayer = Math.hypot(dxToPlayer, dyToPlayer);
                 
                 // El objetivo es un punto delante de la cría, en la línea hacia el jugador
                 const offset = 120; // A qué distancia se interpone
-                const targetX = baby.x + (dx / dist) * offset;
-                const targetY = baby.y + (dy / dist) * offset;
+                const targetX = baby.x + (dxToPlayer / distToPlayer) * offset;
+                const targetY = baby.y + (dyToPlayer / distToPlayer) * offset;
 
-                // Moverse hacia el objetivo más rápido de lo normal
-                const protectionSpeed = 2.5;
-                a.x = lerp(a.x, targetX, dt * protectionSpeed);
-                a.y = lerp(a.y, targetY, dt * protectionSpeed);
+                // --- CORRECCIÓN: Actualizar vx/vy para que la ballena se voltee ---
+                const angleToTarget = Math.atan2(targetY - a.y, targetX - a.x);
+                const protectionSpeed = 450; // Velocidad de protección
+                a.vx = lerp(a.vx, Math.cos(angleToTarget) * protectionSpeed, dt * 3.0);
+                a.vy = lerp(a.vy, Math.sin(angleToTarget) * protectionSpeed, dt * 3.0);
 
                 // Si está protegiendo, puede intentar un coletazo si el jugador se acerca demasiado a la ballena
                 if (a.tailSwipeCooldown <= 0 && Math.hypot(jugador.x - a.x, jugador.y - a.y) < 200) {
                     a.isTailSwiping = true; a.tailSwipeProgress = 0; a.tailSwipeCooldown = 4.0 + Math.random() * 3.0;
                 }
             } else {
-                a.x += a.vx * dt; // Movimiento normal de patrulla
+                // Movimiento normal de patrulla con rebote en su zona
+                if (a.isPatrolling) {
+                    if ((a.x < a.patrolMinX && a.vx < 0) || (a.x > a.patrolMaxX && a.vx > 0)) {
+                        a.vx *= -1; // Invertir dirección
+                    }
+                }
+                // Movimiento vertical sinusoidal para que no sea tan rígido
+                a.vy = Math.sin(estadoJuego.tiempoTranscurrido * 0.5 + a.semillaFase) * 20;
             }
             // --- FIN SUGERENCIA ---
+
+            if (a.collisionCooldown > 0) a.collisionCooldown -= dt;
+
+            // Si el objetivo de venganza muere o desaparece, volver a la normalidad
+            if (a.revengeTarget && (!animales.includes(a.revengeTarget) || a.revengeTarget.hp <= 0)) {
+                a.revengeTarget = null;
+                a.isEnraged = false; // Se calma
+            }
+
+            // --- APLICAR MOVIMIENTO ---
+            // Solo no se mueve si está en medio de un coletazo
+            if (!a.isTailSwiping) {
+                a.x += a.vx * dt;
+                a.y += a.vy * dt;
+            }
 
             // Efecto de burbujas de la cola
             if (Math.random() < 0.25) { // Controlar la frecuencia para no sobrecargar
@@ -1968,7 +2188,7 @@ function actualizar(dt) {
 
             // Generar efectos visuales de gore, independientemente de si el escudo absorbe el daño.
             // El impacto físico ocurre de todos modos.
-            if (a.tipo === 'whale' || a.tipo === 'baby_whale' || a.tipo === 'shark') {
+            if (a.tipo === 'whale' || a.tipo === 'baby_whale' || a.tipo === 'shark' || a.tipo === 'orca') {
                 generarBurbujasDeSangre(collisionX, collisionY);
                 generarTrozoBallena(collisionX, collisionY, 4, 120);
                 generarGotasSangre(collisionX, collisionY);
@@ -1977,8 +2197,12 @@ function actualizar(dt) {
                 generarExplosion(collisionX, collisionY, '#ff5e5e');
             }
 
+            let damage = 1;
+            if (a.tipo === 'whale') damage = 7;
+            if (a.tipo === 'orca') damage = 3;
+
             // Infligir daño al jugador (el escudo puede absorberlo)
-            infligirDanoJugador(a.tipo === 'whale' ? 7 : 1);
+            infligirDanoJugador(damage);
             Levels.onKill(a.tipo); // Notificar al sistema de niveles que el animal fue "eliminado" por colisión
             animales.splice(i, 1); // El animal se destruye al chocar
             continue;
@@ -2132,6 +2356,39 @@ function renderizar(dt) {
                         ctx.imageSmoothingEnabled = false;
                         if (a.vx > 0) { ctx.scale(-1, 1); }
                         ctx.drawImage(babyWhaleImg, sx, sy, sWidth, sHeight, 
+                            Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
+                    }
+                }
+            }
+            else if (a.tipo === 'orca') {
+                // --- Dibuja la Orca ---
+                ctx.translate(a.x, a.y + offsetFlotante);
+                if (orcaListo && ORCA_SPRITE_DATA) {
+                    // Tinte rojo si está herida o cazando
+                    if (a.isHunting || (a.hp < a.maxHp)) {
+                        ctx.filter = 'hue-rotate(-10deg) brightness(1.2) saturate(1.5)';
+                    }
+
+                    // Barra de vida
+                    if (a.hp < a.maxHp) {
+                        const barW = 80;
+                        const barH = 6;
+                        const barY = -a.h / 2.5 - 15;
+                        ctx.fillStyle = '#555';
+                        ctx.fillRect(-barW / 2, barY, barW, barH);
+                        ctx.fillStyle = '#ff5c5c';
+                        ctx.fillRect(-barW / 2, barY, barW * (a.hp / a.maxHp), barH);
+                    }
+
+                    const frameData = ORCA_SPRITE_DATA.frames[a.frame];
+                    if (frameData) {
+                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
+                        const aspectRatio = sWidth / sHeight;
+                        const dHeight = a.w / aspectRatio;
+                        ctx.imageSmoothingEnabled = false;
+                        // La orca puede moverse en cualquier dirección, así que la volteamos según su vx
+                        if (a.vx > 0) { ctx.scale(-1, 1); }
+                        ctx.drawImage(orcaImg, sx, sy, sWidth, sHeight, 
                             Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
                     }
                 }

@@ -45,7 +45,7 @@
 - **Habilidades Especiales:** Utiliza un impulso de velocidad para esquivar peligros o posicionarte estratégicamente.
 - **Sistema de Partículas Dinámico:** Sumérgete en un mundo vivo con efectos de burbujas, explosiones, humo, estelas de proyectiles y efectos de armas.
 - **Inmersión Profunda:** Fondos con efecto de paralaje y una atmósfera que se oscurece a medida que desciendes.
-- **IA Enemiga Compleja:** Enfréntate a una fauna diversa, desde peces pasivos hasta tiburones cazadores y ballenas con múltiples patrones de ataque.
+- **IA Enemiga Compleja:** Enfréntate a una fauna diversa, desde peces pasivos hasta tiburones cazadores, orcas inteligentes y ballenas con múltiples patrones de ataque.
 - **Jefes Memorables:** Lucha contra el temible Kraken, el caótico Jefe Mierdei y otros peligros que acechan en las profundidades.
 - **Progreso Guardado:** El juego guarda tu puntuación máxima y el nivel más alto desbloqueado en tu navegador usando `localStorage`.
 - **Controles Flexibles:** Juega con teclado en el escritorio o con controles táctiles optimizados en dispositivos móviles.

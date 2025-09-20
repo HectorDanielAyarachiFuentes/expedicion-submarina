@@ -55,9 +55,14 @@ export function update(dt) {
     if (levelState.spawnTimer <= 0) {
         
         // Esta es la segunda pieza de lógica que le pertenece al Nivel 2.
-        // REGLA CLAVE DEL NIVEL: Hay un 30% de probabilidad de que el animal sea agresivo.
-        const esAgresivo = Math.random() < 0.3;
-        const tipoAnimal = esAgresivo ? 'aggressive' : 'normal';
+        // REGLA CLAVE DEL NIVEL: Aparición de enemigos variados.
+        const r = Math.random();
+        let tipoAnimal = 'normal';
+        if (r < 0.15) { // 15% de probabilidad de que sea una orca.
+            tipoAnimal = 'orca';
+        } else if (r < 0.45) { // 30% de probabilidad de que sea agresivo.
+            tipoAnimal = 'aggressive';
+        }
 
         // Le pedimos al motor que cree un animal con el tipo que hemos decidido.
         generarAnimal(false, tipoAnimal);
