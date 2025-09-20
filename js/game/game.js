@@ -534,6 +534,7 @@ function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY =
 // --- Sistema de Partículas ---
 // Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
 export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], particulasCasquillos = [], whaleDebris = [], particulasPolvoMarino = [], pilotos = [];
+let proyectilesEnemigos = [];
 let trozosHumanos = [];
 let escombrosSubmarino = [];
 const SUBMARINE_DEBRIS_PATHS = [
@@ -1032,6 +1033,7 @@ function reiniciar(nivelDeInicio = 1) {
     Levels.initLevel(nivelDeInicio);
     
     animales = [];
+    proyectilesEnemigos = [];
     particulasCasquillos = [];
     Weapons.initWeapons();
     whaleDebris = [];
@@ -1074,6 +1076,8 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             tipo = 'whale';
         } else if (orcaListo && r > 0.80 && r < 0.90) { // 10% de probabilidad de que sea una orca
             tipo = 'orca';
+        } else if (r > 0.70 && r < 0.80) { // 10% de probabilidad para el nuevo enemigo
+            tipo = 'disparador';
         } else if (sharkListo && r > 0.90) { // 10% de probabilidad de que sea un tiburón.
             tipo = 'shark';
         }
@@ -1081,6 +1085,21 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
 
     const spawnX = direccion > 0 ? (usaCamera ? estadoJuego.cameraX - (overrides.ancho || 100) : -(overrides.ancho || 100)) : (usaCamera ? estadoJuego.cameraX + W + (overrides.ancho || 100) : W + (overrides.ancho || 100));
 
+    if (tipo === 'disparador') {
+        if (!criaturasListas) return; // Necesita la hoja de sprites de criaturas
+        const tamano = 96;
+        velocidad *= 0.4; // Se mueve más lento que los enemigos normales
+        animales.push({
+            x: spawnX, y, vx: velocidad * direccion, r: 44, w: tamano, h: tamano,
+            capturado: false,
+            fila: 3, // Usaremos la fila 4 (índice 3) de la hoja de sprites, asumiendo que existe y es adecuada.
+            frame: 0, timerFrame: 0,
+            semillaFase: Math.random() * Math.PI * 2,
+            tipo: 'disparador',
+            hp: 15, maxHp: 15, // Más resistente que un pez normal
+            shootCooldown: 1.5 + Math.random() * 2, // Cooldown de disparo inicial
+        });
+    }
     if (tipo === 'mierdei') {
         if (!mierdeiListo) return; // Evitar error si la imagen no ha cargado
         const anchoDeseado = overrides.ancho || 100;
@@ -1765,6 +1784,29 @@ function actualizar(dt) {
         if (a.laserHitTimer > 0) a.laserHitTimer -= dt;
         
         // --- IA y Movimiento Específico por Tipo de Enemigo ---        
+        if (a.tipo === 'disparador') {
+            // Movimiento: Flota en su sitio con un ligero vaivén vertical
+            a.x += a.vx * dt;
+            a.y += Math.sin(estadoJuego.tiempoTranscurrido * 1.2 + a.semillaFase) * 60 * dt;
+
+            // Lógica de disparo
+            a.shootCooldown -= dt;
+            if (a.shootCooldown <= 0 && jugador.x < a.x) { // Solo dispara si el jugador está delante
+                const angulo = Math.atan2(jugador.y - a.y, jugador.x - a.x);
+                const velocidadProyectil = 450;
+                proyectilesEnemigos.push({
+                    x: a.x, y: a.y,
+                    vx: Math.cos(angulo) * velocidadProyectil, vy: Math.sin(angulo) * velocidadProyectil,
+                    r: 8, color: '#9dffb0', // Un color verde-azulado para distinguirlo
+                    vida: 4.0 // 4 segundos de vida
+                });
+                S.reproducir('disparo_enemigo');
+                a.shootCooldown = 2.0 + Math.random() * 1.5; // Resetea el cooldown
+            }
+
+            // Animación
+            a.timerFrame += dt; if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
+        } else
         if (a.tipo === 'baby_whale') {
             // --- NUEVO: Lógica de huida ---
             const FLEE_RADIUS = 250;
@@ -2271,6 +2313,26 @@ function actualizar(dt) {
         }
     }
     
+    // --- Actualización de Proyectiles Enemigos ---
+    for (let i = proyectilesEnemigos.length - 1; i >= 0; i--) {
+        const p = proyectilesEnemigos[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.vida) p.vida -= dt;
+
+        // Colisión con el jugador
+        if (Math.hypot(jugador.x - p.x, jugador.y - p.y) < jugador.r + p.r) {
+            infligirDanoJugador(1, 'choque_ligero');
+            generarExplosion(p.x, p.y, p.color);
+            proyectilesEnemigos.splice(i, 1);
+            continue;
+        }
+
+        // Limpieza si sale de pantalla o se acaba su vida
+        if ((p.vida && p.vida <= 0) || p.y < -p.r || p.y > H + p.r || p.x < estadoJuego.cameraX - p.r || p.x > estadoJuego.cameraX + W + p.r) {
+            proyectilesEnemigos.splice(i, 1);
+        }
+    }
     // --- Actualización de Otros Proyectiles y Efectos ---
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dt; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
 
@@ -2556,6 +2618,9 @@ function renderizar(dt) {
                 // --- Dibuja las Criaturas Genéricas ---
                 if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
                 if (a.tipo === 'rojo') ctx.filter = 'sepia(1) saturate(5) hue-rotate(-40deg)';
+                if (a.tipo === 'disparador') {
+                    ctx.filter = 'hue-rotate(90deg) saturate(3) brightness(1.3)';
+                }
                 if (a.tipo === 'dorado') ctx.filter = 'brightness(1.5) saturate(3) hue-rotate(15deg)';
 
                 if (criaturasListas && cFilas > 0) {
@@ -2567,6 +2632,19 @@ function renderizar(dt) {
                     ctx.beginPath();
                     ctx.arc(a.x, a.y + offsetFlotante, a.r, 0, Math.PI * 2);
                     ctx.fill();
+                }
+
+                // Barra de vida para el disparador (dibujada después del sprite)
+                if (a.tipo === 'disparador' && a.hp < a.maxHp) {
+                    const barW = 60;
+                    const barH = 5;
+                    const barX = a.x - barW / 2;
+                    const barY = a.y + offsetFlotante - a.h / 2 - 15;
+                    const hpRatio = a.hp / a.maxHp;
+                    ctx.fillStyle = '#555';
+                    ctx.fillRect(barX, barY, barW, barH);
+                    ctx.fillStyle = hpRatio > 0.5 ? '#5cff5c' : (hpRatio > 0.2 ? '#ffc95c' : '#ff5c5c');
+                    ctx.fillRect(barX, barY, barW * hpRatio, barH);
                 }
             }
             ctx.restore();
@@ -2815,6 +2893,19 @@ function renderizar(dt) {
                 ctx.restore();
             }
         }
+
+        // --- Dibuja Proyectiles Enemigos ---
+        ctx.save();
+        for (const p of proyectilesEnemigos) {
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+
 
         // --- Dibuja los Proyectiles ---
         ctx.fillStyle = '#101010';
