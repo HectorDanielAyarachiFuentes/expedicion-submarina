@@ -10,6 +10,7 @@ import * as Level6 from './level6.js';
 import * as Level7 from './level7.js';
 import * as Level8 from './level8.js';
 import * as Level9 from './level9.js';
+import * as Level10 from './level10.js';
 
 // Importamos dependencias de game.js
 import { estadoJuego, dificultadBase, animales, S, generarGotasSangre } from '../game/game.js';
@@ -25,7 +26,8 @@ export const CONFIG_NIVELES = [
   { nombre: 'NIVEL 6: EL VORTEX DE LAS PROFUNDIDADES', objetivo: 'Sobrevive 120 segundos', meta: 120, tipo: 'survive', speedMultiplier: 0 }, // Velocidad controlada por el nivel
   { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Supera el desafío.", meta: 1, tipo: 'boss', speedMultiplier: 1.2 },
   { nombre: "NIVEL 8: ABISMO PROFUNDO", objetivo: "Supera los desafíos del abismo", meta: 25, tipo: 'boss', speedMultiplier: 1.5 },
-  { nombre: "NIVEL 9: EL ASESINO DE BALLENAS", objetivo: "Completa la cacería", meta: 1, tipo: 'boss', speedMultiplier: 1.1 }
+  { nombre: "NIVEL 9: EL ASESINO DE BALLENAS", objetivo: "Completa la cacería", meta: 1, tipo: 'boss', speedMultiplier: 1.1 },
+  { nombre: "NIVEL 10: CARRERA NUCLEAR", objetivo: "Recorre 5km en menos de 5 minutos", meta: 5000, tipo: 'distancia', speedMultiplier: 1.0 }
 ];
 
 // 3. MAPA DE MÓDULOS DE NIVEL
@@ -41,6 +43,7 @@ const levelModules = {
     7: Level7,
     8: Level8,
     9: Level9,
+    10: Level10,
 };
 
 // Guardamos una referencia al módulo del nivel que está activo
@@ -70,11 +73,13 @@ export function initLevel(nivel) {
 /**
  * Llama a la función 'update' del módulo de nivel activo.
  * @param {number} dt - Delta time.
+ * @param {number} vx - Player velocity x.
+ * @param {number} vy - Player velocity y.
  */
-export function updateLevel(dt) {
+export function updateLevel(dt, vx, vy) {
     if (activeLevelModule && typeof activeLevelModule.update === 'function') {
         try {
-            activeLevelModule.update(dt);
+            activeLevelModule.update(dt, vx, vy);
         } catch (e) {
             console.error(`Error en el update() del nivel activo:`, e);
         }
@@ -185,11 +190,3 @@ export function getLevelSpeed() {
     let spd = 260 + (520 - 260) * dificultadBase();
     return spd * multiNivel;
 }
-
-/*
- * NOTA SOBRE getLevelSpawnPeriod():
- * He eliminado esta función. Como cada módulo de nivel (level1.js, level2.js, etc.)
- * ahora controla su propia lógica de aparición de enemigos, ya no es necesario
- * que el gestor de niveles tenga una función genérica para esto. Esto hace que
- * el diseño sea más limpio y que cada nivel sea verdaderamente autónomo.
- */

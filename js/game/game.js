@@ -76,9 +76,11 @@ function cargarJson(url, cb) {
 // --- Lienzos (Canvas) ---
 // Cada canvas representa una capa del juego para optimizar el renderizado.
 const bgCanvas = document.getElementById('bgCanvas'), bgCtx = bgCanvas.getContext('2d');
-export const cvs = document.getElementById('gameCanvas'), ctx = cvs.getContext('2d');
+export const cvs = document.getElementById('gameCanvas');
+export const ctx = cvs.getContext('2d');
 const fxCanvas = document.getElementById('fxCanvas'), fx = fxCanvas.getContext('2d');
-const hudCanvas = document.getElementById('hudCanvas'), hud = hudCanvas.getContext('2d');
+export const hudCanvas = document.getElementById('hudCanvas');
+export const hud = hudCanvas.getContext('2d');
 const sonarCanvas = document.getElementById('sonarCanvas'), sonarCtx = sonarCanvas.getContext('2d');
 
 // --- Referencias a Elementos del DOM ---
@@ -994,6 +996,8 @@ function reiniciar(nivelDeInicio = 1) {
         boostEnergia: 100,
         boostMaxEnergia: 100,
         boostEnfriamiento: 0,
+        unlimitedBoost: false, // Para Nivel 10
+        distanciaRecorrida: 0, // Para Nivel 10
         laserEnergia: 100,
         laserMaxEnergia: 100,
         laserActivo: false,
@@ -1535,7 +1539,7 @@ function actualizar(dt) {
 
 
     // Llama a la lógica de actualización del nivel actual
-    Levels.updateLevel(dt);
+    Levels.updateLevel(dt, vx, vy);
     
     // Aplicar el movimiento calculado a partir de las teclas
     jugador.x += vx * dt;
@@ -1676,7 +1680,9 @@ function actualizar(dt) {
 
     // --- NUEVO: Lógica de efectos de cámara para el impulso ---
     if (estadoJuego.boostActivo) {
-        estadoJuego.boostEnergia -= Weapons.WEAPON_CONFIG.boost.consumo * dt;
+        if (!estadoJuego.unlimitedBoost) {
+            estadoJuego.boostEnergia -= Weapons.WEAPON_CONFIG.boost.consumo * dt;
+        }
         estadoJuego.screenShake = 5; // Activa el temblor de pantalla
         estadoJuego.cameraZoom = 0.95; // Activa el zoom out
         
