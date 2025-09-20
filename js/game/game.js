@@ -3273,6 +3273,98 @@ function dibujarSonar() {
         }
     }
     
+    // --- NUEVO: Dibujar pings de proyectiles ---
+    sonarCtx.shadowBlur = 5;
+
+    // Proyectiles del jugador (balas)
+    sonarCtx.fillStyle = 'rgba(200, 220, 255, 0.9)';
+    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    for (const p of Weapons.proyectiles) {
+        const dx = p.x - jugador.x;
+        const dy = p.y - jugador.y;
+        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const angle = Math.atan2(p.vy, p.vx);
+            sonarCtx.save();
+            sonarCtx.translate(pingX, pingY);
+            sonarCtx.rotate(angle);
+            sonarCtx.fillRect(-2, -1, 4, 2);
+            sonarCtx.restore();
+        }
+    }
+
+    // Torpedos del jugador
+    sonarCtx.fillStyle = 'rgba(170, 230, 255, 1.0)';
+    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    for (const t of Weapons.torpedos) {
+        const dx = t.x - jugador.x;
+        const dy = t.y - jugador.y;
+        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            sonarCtx.save();
+            sonarCtx.translate(pingX, pingY);
+            sonarCtx.rotate(t.angle);
+            sonarCtx.fillRect(-3, -1.5, 6, 3);
+            sonarCtx.restore();
+        }
+    }
+
+    // Proyectiles enemigos
+    sonarCtx.fillStyle = 'rgba(255, 150, 150, 0.9)';
+    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    for (const p of proyectilesEnemigos) {
+        const dx = p.x - jugador.x;
+        const dy = p.y - jugador.y;
+        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            sonarCtx.beginPath();
+            sonarCtx.arc(pingX, pingY, 2, 0, Math.PI * 2);
+            sonarCtx.fill();
+        }
+    }
+
+    // Minas del jugador
+    sonarCtx.fillStyle = 'rgba(255, 180, 50, 0.9)';
+    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    for (const m of Weapons.minas) {
+        const dx = m.x - jugador.x;
+        const dy = m.y - jugador.y;
+        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
+            
+            // Efecto de pulso/parpadeo
+            const pulse = Math.floor(time * 3) % 2; // Parpadea
+            if (pulse === 0) continue;
+
+            const size = 4;
+            sonarCtx.fillRect(pingX - size / 2, pingY - size / 2, size, size);
+        }
+    }
+
+    // Láser del jugador
+    if (estadoJuego.laserActivo) {
+        const isLevel5 = estadoJuego.nivel === 5;
+        const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+        const laserAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
+        
+        const pulse = 0.8 + Math.sin(time * 40) * 0.2; // Pulso de intensidad
+
+        sonarCtx.strokeStyle = `rgba(255, 100, 100, ${pulse})`;
+        sonarCtx.shadowColor = 'rgba(255, 100, 100, 1)';
+        sonarCtx.lineWidth = 3;
+        
+        sonarCtx.beginPath();
+        sonarCtx.moveTo(centerX, centerY);
+        sonarCtx.lineTo(centerX + Math.cos(laserAngle) * SONAR_RADIUS, centerY + Math.sin(laserAngle) * SONAR_RADIUS);
+        sonarCtx.stroke();
+    }
+
+    sonarCtx.shadowBlur = 0;
+
     sonarCtx.restore(); // Quita el clipping
 
     // --- 6. Borde exterior y acentos ---
