@@ -2050,6 +2050,28 @@ function actualizar(dt) {
                 if (a.tailSwipeProgress >= 1) {
                     a.isTailSwiping = false;
                 }
+            } else if (a.revengeTarget) {
+                // --- LÓGICA DE VENGANZA ---
+                const target = a.revengeTarget;
+                const angle = Math.atan2(target.y - a.y, target.x - a.x);
+                const revengeSpeed = 500; // Velocidad de venganza
+                a.vx = lerp(a.vx, Math.cos(angle) * revengeSpeed, dt * 3.5);
+                a.vy = lerp(a.vy, Math.sin(angle) * revengeSpeed, dt * 3.5);
+
+                // Colisión y daño al objetivo de venganza (la orca)
+                if (a.collisionCooldown <= 0 && Math.hypot(a.x - target.x, a.y - target.y) < a.r + target.r * 0.8) {
+                    const damage = 40; // Fuerte daño por embestida
+                    target.hp -= damage;
+                    a.collisionCooldown = 1.0; // Enfriamiento para no infligir daño en cada frame
+                    S.reproducir('choque');
+                    generarGotasSangre(target.x, target.y, 20);
+
+                    // Si el objetivo muere, dejar de perseguirlo
+                    if (target.hp <= 0) {
+                        a.revengeTarget = null;
+                        a.isEnraged = false; // Se calma
+                    }
+                }
             } else if (a.isProtecting && a.protectedBaby) {
                 // --- MOVIMIENTO DE PROTECCIÓN ---
                 // La ballena se interpone entre el jugador y la cría.
