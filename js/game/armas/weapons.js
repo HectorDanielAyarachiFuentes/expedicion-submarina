@@ -125,7 +125,7 @@ function getEjectionPortTransform(baseX, baseY, jugador, estadoJuego) {
 // --- Funciones de Disparo ---
 
 function dispararGarfio(ctx) {
-    const { jugador, estadoJuego, S, W, generarRafagaBurbujasDisparo, Levels } = ctx;
+    const { jugador, estadoJuego, S, W, generarRafagaBurbujasDisparo, Levels, triggerVibration } = ctx;
     if (!jugador || jugador.garra || !estadoJuego || estadoJuego.bloqueoEntrada > 0) return;
 
     const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
@@ -136,10 +136,11 @@ function dispararGarfio(ctx) {
 
     jugador.garra = { x: cannon.x, y: cannon.y, dx, dy, velocidad: WEAPON_CONFIG.garra.velocidad, fase: 'ida', golpeado: null, alcance: W * WEAPON_CONFIG.garra.alcance, recorrido: 0 };
     S.reproducir('arpon');
+    triggerVibration(120, 0.1, 0.6);
 }
 
 function dispararShotgun(ctx) {
-    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo, generarCasquillo } = ctx;
+    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo, generarCasquillo, triggerVibration } = ctx;
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return; // prettier-ignore
 
     const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
@@ -160,11 +161,12 @@ function dispararShotgun(ctx) {
     }
     estadoJuego.enfriamientoArma = config.enfriamiento;
     S.reproducir('shotgun');
+    triggerVibration(200, 0.8, 1.0);
     setTimeout(() => S.reproducir('reload'), 500);
 }
 
 function dispararMetralleta(ctx) {
-    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo, generarCasquillo } = ctx;
+    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo, generarCasquillo, triggerVibration } = ctx;
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
     const config = WEAPON_CONFIG.metralleta;
     const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
@@ -192,6 +194,9 @@ function dispararMetralleta(ctx) {
         proyectiles.push({ x: cannon.x + offsetX, y: cannon.y + offsetY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 12, h: 2, color: '#ff6363', vida: config.vidaProyectil });
     }
     estadoJuego.enfriamientoArma = config.enfriamiento;
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => triggerVibration(40, 0.4, 0.2), i * 60);
+    }
     let soundCount = 0;
     const soundInterval = setInterval(() => { S.reproducir('machinegun'); soundCount++; if (soundCount >= 5) clearInterval(soundInterval); }, 60);
     setTimeout(() => S.reproducir('reload'), 800);
@@ -226,7 +231,7 @@ export function disparar(ctx) {
 }
 
 export function lanzarTorpedo(ctx) {
-    const { estadoJuego, jugador, S, generarCasquillo } = ctx;
+    const { estadoJuego, jugador, S, generarCasquillo, triggerVibration } = ctx;
     if (!estadoJuego || !estadoJuego.enEjecucion || estadoJuego.enfriamientoTorpedo > 0) return;
 
     // --- NUEVO: Expulsar un casquillo al lanzar un torpedo ---
@@ -256,13 +261,14 @@ export function lanzarTorpedo(ctx) {
     });
     estadoJuego.enfriamientoTorpedo = WEAPON_CONFIG.torpedo.enfriamiento;
     S.reproducir('torpedo');
+    triggerVibration(180, 0.3, 0.9);
 }
 
 
 // --- Lógica de Actualización ---
 
 export function updateWeapons(ctx) {
-    const { dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels, generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas, puntosPorRescate } = ctx;
+    const { dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels, generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas, puntosPorRescate, triggerVibration } = ctx;
 
     // --- Lógica del Garfio ---
     if (jugador.garra) { 
@@ -498,6 +504,14 @@ export function updateWeapons(ctx) {
         if (explotar) {
             generarExplosion(m.x, m.y, '#ff9933', WEAPON_CONFIG.mina.radioExplosion / 2);
             S.reproducir('explosion_grande');
+
+            // --- NUEVO: Vibración por explosión de mina ---
+            const dist = Math.hypot(m.x - jugador.x, m.y - jugador.y);
+            const vibrationRadius = WEAPON_CONFIG.mina.radioExplosion * 2.0;
+            if (dist < vibrationRadius) {
+                const intensity = 1.0 - (dist / vibrationRadius);
+                triggerVibration(500, intensity, intensity);
+            }
 
             const numBurbujas = 35 + Math.floor(Math.random() * 15);
             for (let k = 0; k < numBurbujas; k++) {

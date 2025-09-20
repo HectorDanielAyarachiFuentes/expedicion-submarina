@@ -105,6 +105,7 @@ const statDistance = document.getElementById('statDistance');
 const statSpecimens = document.getElementById('statSpecimens');
 const muteBtn = document.getElementById('muteBtn');
 const helpBtn = document.getElementById('helpBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 const infoBtn = document.getElementById('infoBtn');
 const githubBtn = document.getElementById('githubBtn');
 const fsBtn = document.getElementById('fsBtn');
@@ -118,6 +119,14 @@ const bossHealthBar = document.getElementById('bossHealthBar');
 const gameplayHints = document.getElementById('gameplay-hints');
 const hudLevelText = document.getElementById('hud-level-text');
 const hudObjectiveText = document.getElementById('hud-objective-text');
+
+// --- Referencias a Elementos de Overlay de Desconexión ---
+const controllerDisconnectOverlay = document.getElementById('controller-disconnect-overlay');
+const resumeWithKeyboardButton = document.getElementById('resume-with-keyboard-btn');
+// --- NUEVO: Referencias a Elementos de Prompt de Conexión ---
+const controllerConnectPrompt = document.getElementById('controller-connect-prompt');
+const useGamepadButton = document.getElementById('use-gamepad-btn');
+const stayOnKeyboardButton = document.getElementById('stay-on-keyboard-btn');
 
 // --- Referencias a Elementos del HUD dinámico (NUEVOS) ---
 const statScoreValue = document.getElementById('statScoreValue');
@@ -334,9 +343,29 @@ export const S = (function () {
         return bassBins > 0 ? sum / bassBins : 0;
     }
     function setSilenciado(m) { for (const k in a) { try { a[k].element.muted = !!m; } catch (e) { } } _silenciado = !!m; }
+
+/**
+ * Activa la vibración en el mando de juego conectado, si existe.
+ * @param {number} duration Duración de la vibración en milisegundos.
+ * @param {number} [weak=1.0] Intensidad del motor de vibración débil (0.0 a 1.0).
+ * @param {number} [strong=1.0] Intensidad del motor de vibración fuerte (0.0 a 1.0).
+ */
+function triggerVibration(duration, weak = 1.0, strong = 1.0) {
+    if (!gamepadConectado || !estadoJuego || !estadoJuego.enEjecucion) return;
+
+    const gamepads = navigator.getGamepads();
+    if (!gamepads[0] || !gamepads[0].vibrationActuator) return;
+
+    gamepads[0].vibrationActuator.playEffect('dual-rumble', {
+        startDelay: 0,
+        duration: duration,
+        weakMagnitude: weak,
+        strongMagnitude: strong
+    }).catch(e => { /* No hacer nada si falla, es una característica no esencial. */ });
+}
     function estaSilenciado() { return _silenciado; }
     function alternarSilenciado() { setSilenciado(!estaSilenciado()); } 
-    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, startPlaylist, playRandomWhaleSong, getAudioData };
+    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, startPlaylist, playRandomWhaleSong, getAudioData, triggerVibration };
 })();
 
 // =================================================================================
@@ -534,8 +563,7 @@ function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY =
 
 // --- Sistema de Partículas ---
 // Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
-export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], particulasCasquillos = [], whaleDebris = [], particulasPolvoMarino = [], pilotos = [];
-let proyectilesEnemigos = [];
+export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], particulasCasquillos = [], whaleDebris = [], particulasPolvoMarino = [], pilotos = [], proyectilesEnemigos = [];
 let trozosHumanos = [];
 let escombrosSubmarino = [];
 const SUBMARINE_DEBRIS_PATHS = [
@@ -982,13 +1010,14 @@ export function infligirDanoJugador(cantidad = 1, tipoSonido = 'choque') {
             S.reproducir('boss_hit'); // Sonido de escudo roto
         }
         triggerHudShake(8 * cantidad); // Sacudida ligera por impacto en el escudo
+        S.triggerVibration(100, 0.8, 0.2); // Vibración de impacto en escudo
         return false; // Daño bloqueado
     }
 
     // Si no hay escudo, el jugador recibe el daño.
     const antes = estadoJuego.vidas;
     if (estadoJuego.vidas > 0) estadoJuego.vidas = Math.max(0, estadoJuego.vidas - cantidad);
-    if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir(tipoSonido); }
+if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir(tipoSonido); S.triggerVibration(300, 1.0, 1.0); }
     if (estadoJuego.vidas <= 0) {
         perderJuego();
     } else {
@@ -999,7 +1028,7 @@ export function infligirDanoJugador(cantidad = 1, tipoSonido = 'choque') {
 
 // --- Estado Principal y Entidades ---
 export let estadoJuego = null, jugador, animales;
-let teclas = {};
+let teclas = {}, gamepadConectado = false, prevGamepadButtons = [];
 let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
 let __iniciando = false;
 let menuFlyBy = null; // Para la animación del submarino en el menú
@@ -1054,8 +1083,27 @@ function reiniciar(nivelDeInicio = 1) {
         sonarActivo: true,
         sonarToggleCooldown: 0,
         hudShakeX: 0,
+        juegoPausadoPorConexionMando: false, // <-- NUEVO
+        juegoPausadoPorDesconexion: false,
         hudShakeY: 0,
         hudShakeIntensity: 0,
+        nivelSeleccionadoIndex: 0, // Para el menú de niveles con mando
+        gamepadStickX: 0, // Para el stick del mando en menús
+        // --- NUEVO: Propiedades para optimización del HUD ---
+        _prevPuntuacion: -1,
+        _prevProfundidad: -1,
+        _prevDistancia: -1,
+        _prevVelocidad: -1,
+        _prevVidas: -1,
+        _prevArma: '',
+        _prevTorpedo: '',
+        _prevAsesinatos: -1,
+        _prevBoostPercent: -1,
+        _prevLaserPercent: -1,
+        _prevShieldPercent: -1,
+        _prevJefeHp: -1,
+        _prevMisionTexto: '',
+        _prevMisionProgreso: '',
     };
     estadoJuego.cameraX = 0;
     estadoJuego.cameraY = 0;
@@ -1137,7 +1185,8 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             shootCooldown: 1.5 + Math.random() * 2, // Cooldown de disparo inicial
         });
     }
-    if (tipo === 'mierdei') {
+    // prettier-ignore
+    else if (tipo === 'mierdei') {
         if (!mierdeiListo) return; // Evitar error si la imagen no ha cargado
         const anchoDeseado = overrides.ancho || 100;
         let altoDeseado = anchoDeseado; // Asumir cuadrado por defecto
@@ -1288,7 +1337,8 @@ function disparar() {
         W,
         generarRafagaBurbujasDisparo,
         generarCasquillo,
-        Levels
+        Levels,
+        triggerVibration: S.triggerVibration
     };
     Weapons.disparar(fireContext);
 }
@@ -1298,7 +1348,8 @@ function lanzarTorpedo() {
         estadoJuego,
         jugador,
         S,
-        generarCasquillo
+        generarCasquillo,
+        triggerVibration: S.triggerVibration
     };
     Weapons.lanzarTorpedo(torpedoContext);
 }
@@ -3034,52 +3085,34 @@ function renderizar(dt) {
     // Se restaura el contexto principal (que incluye la cámara, zoom y shake)
     ctx.restore();
 
-    // --- Dibuja Efectos de Pantalla (fuera de la cámara) ---
+    // --- Dibuja Efectos de Pantalla y Actualiza HUD (fuera de la cámara) ---
     dibujarSonar();
     dibujarMascaraLuz();
     dibujarPolvoMarino(); // Dibuja el polvo/plancton en el canvas de efectos
-    dibujarHUD();
+    actualizarHTMLHUD(); // ANTES: dibujarHUD()
 }
 
 // --- Funciones de Renderizado Auxiliares ---
-/**
- * Dibuja el fondo y el primer plano con efecto de paralaje,
- * asegurando que las imágenes mantengan su proporción.
- */
 function dibujarFondoParallax() {
     if (!estadoJuego || !bgCtx) return;
 
-    // 1. Limpiar el canvas y dibujar el color de fondo base
     bgCtx.fillStyle = '#06131f';
     bgCtx.fillRect(0, 0, W, H);
 
-    // 2. Dibujar la capa de fondo (background)
     if (bgListo && bgAncho > 0) {
         bgCtx.imageSmoothingEnabled = false;
-        
-        // Calcular el alto y ancho manteniendo la proporción para que cubra la altura del canvas
         const ratio = bgAncho / bgAlto;
         const alturaDibujoBg = H;
         const anchoDibujoBg = alturaDibujoBg * ratio;
-
-        // --- CORRECCIÓN: Asegurar que el offset para el bucle sea siempre positivo ---
-        // El operador de módulo (%) en JS puede devolver números negativos.
-        // Esta fórmula asegura un resultado positivo, evitando huecos en el
-        // lado izquierdo de la pantalla cuando el offset es negativo.
         const bgOffsetLooping = ((bgOffset % anchoDibujoBg) + anchoDibujoBg) % anchoDibujoBg;
-
-        // Dibujar las imágenes necesarias para cubrir la pantalla
         for (let x = -bgOffsetLooping; x < W; x += anchoDibujoBg) {
             bgCtx.drawImage(bgImg, Math.round(x), 0, anchoDibujoBg, alturaDibujoBg);
         }
     }
 
-    // 3. Dibujar la capa de primer plano (foreground)
     if (fgListo && fgAncho > 0 && fgAlto > 0) {
-        // El primer plano se alinea abajo y no se escala, para que el suelo siempre esté en su sitio.
         const yBase = H - fgAlto;
         const fgOffsetLooping = ((fgOffset % fgAncho) + fgAncho) % fgAncho;
-
         for (let xx = -fgOffsetLooping; xx < W; xx += fgAncho) {
             bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto);
         }
@@ -3088,9 +3121,6 @@ function dibujarFondoParallax() {
 
 const SONAR_SWEEP_SPEED = 3.0; // Radianes por segundo
 
-/**
- * Dibuja la superposición del efecto de sonar en su propio canvas.
- */
 function dibujarSonar() {
     if (!sonarCtx || !estadoJuego || !estadoJuego.enEjecucion || !estadoJuego.sonarActivo) {
         if (sonarCtx) sonarCtx.clearRect(0, 0, W, H);
@@ -3219,16 +3249,12 @@ function dibujarPolvoMarino() {
     // creando un efecto volumétrico mucho más realista.
 }
 
-/**
- * Dibuja el submarino de la animación del menú si está activo.
- */
 function dibujarAnimacionMenu() {
     if (!menuFlyBy || !menuFlyBy.active || !robotListo) return;
 
     ctx.save();
     ctx.translate(menuFlyBy.x, menuFlyBy.y);
 
-    // Voltear el sprite si va de izquierda a derecha (el sprite mira a la derecha)
     if (menuFlyBy.vx < 0) {
         ctx.scale(-1, 1);
     }
@@ -3253,14 +3279,12 @@ function dibujarCasquillos() {
         const alpha = Math.min(1, c.vida / (c.vidaMax * 0.5)); // Se desvanecen
         ctx.globalAlpha = alpha;
 
-        // Dibujar un rectángulo simple para el casquillo
         ctx.fillStyle = c.color;
         ctx.strokeStyle = '#a17b3a'; // Contorno más oscuro
         ctx.lineWidth = 1;
         ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
         ctx.strokeRect(-c.w / 2, -c.h / 2, c.w, c.h);
 
-        // Pequeño círculo oscuro para la apertura
         ctx.fillStyle = '#3b2e1e';
         ctx.beginPath(); ctx.arc(c.w / 2 - 1, 0, c.h / 3, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
@@ -3291,7 +3315,6 @@ function dibujarMascaraLuz() {
         const px = screenPx;
         const py = screenPy;
 
-        // --- CORRECCIÓN: El ángulo de la luz debe considerar la dirección del jugador ---
         const anguloBase = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
         const ang = anguloBase + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
 
@@ -3300,14 +3323,11 @@ function dibujarMascaraLuz() {
         const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11));
         const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11));
 
-        // --- MEJORAS GRÁFICAS ---
         const time = estadoJuego.tiempoTranscurrido;
         let flicker = 1.0 + Math.sin(time * 20) * 0.02; // Parpadeo sutil
 
-        // --- NUEVO: Parpadeo por consumo de energía ---
         let powerDrawAlpha = 1.0;
         if (estadoJuego.laserActivo || estadoJuego.shieldActivo) {
-            // Un parpadeo rápido y errático que afecta la intensidad (alpha)
             powerDrawAlpha = 0.75 + Math.sin(time * 70) * 0.25; // Varía entre 0.5 y 1.0
         }
 
@@ -3317,7 +3337,6 @@ function dibujarMascaraLuz() {
 
         const conePath = new Path2D(); conePath.moveTo(ax, ay); conePath.lineTo(pTopX, pTopY); conePath.lineTo(pBotX, pBotY); conePath.closePath();
 
-        // 1. Dibujar el cono principal para cortar la oscuridad
         fx.globalCompositeOperation = 'destination-out';
         let g = fx.createLinearGradient(ax, ay, endx, endy);
         g.addColorStop(0.00, `rgba(255,255,255,${1.0 * powerDrawAlpha})`);
@@ -3326,7 +3345,6 @@ function dibujarMascaraLuz() {
         fx.fillStyle = g;
         fx.fill(conePath);
 
-        // 2. Dibujar el halo en la base
         const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54 * flicker);
         rg.addColorStop(0, `rgba(255,255,255,${1.0 * powerDrawAlpha})`);
         rg.addColorStop(1, 'rgba(255,255,255,0.0)');
@@ -3335,10 +3353,8 @@ function dibujarMascaraLuz() {
         fx.arc(ax, ay, 54 * flicker, 0, Math.PI * 2);
         fx.fill();
 
-        // 3. Dibujar efectos adicionales (resplandor, rayos, partículas)
         fx.globalCompositeOperation = 'lighter';
 
-        // Resplandor suave general
         const gGlow = fx.createLinearGradient(ax, ay, endx, endy);
         gGlow.addColorStop(0.00, `rgba(200,220,255,${0.15 * powerDrawAlpha})`);
         gGlow.addColorStop(0.60, `rgba(200,220,255,${0.06 * powerDrawAlpha})`);
@@ -3346,7 +3362,6 @@ function dibujarMascaraLuz() {
         fx.fillStyle = gGlow;
         fx.fill(conePath);
 
-        // Lens Flare en el origen
         const flareRadius = 25 * flicker;
         const flareGradient = fx.createRadialGradient(ax, ay, 0, ax, ay, flareRadius);
         flareGradient.addColorStop(0, `rgba(255, 255, 230, ${0.4 * powerDrawAlpha})`);
@@ -3357,7 +3372,6 @@ function dibujarMascaraLuz() {
         fx.arc(ax, ay, flareRadius, 0, Math.PI * 2);
         fx.fill();
 
-        // Rayos volumétricos (God Rays)
         const numRays = 5;
         for (let i = 0; i < numRays; i++) {
             const rayAngleOffset = (Math.sin(time * 0.5 + i * 2) * 0.5 + 0.5) * (theta * 2) - theta;
@@ -3377,7 +3391,6 @@ function dibujarMascaraLuz() {
             fx.stroke();
         }
 
-        // 4. Dibujar partículas de polvo solo dentro del cono de luz
         fx.save();
         fx.clip(conePath); // ¡Magia! Solo se dibujará dentro del cono.
         for (const p of particulasPolvoMarino) {
@@ -3393,181 +3406,159 @@ function dibujarMascaraLuz() {
     }
 }
 
-function dibujarHUD() {
-    // Esta función es compleja. Se encarga de actualizar todo el texto y las barras de la UI.
-    if (!estadoJuego || !hudLevelText || !hudObjectiveText || !statScoreValue) return; // Comprobación mínima
-
-    if (estadoJuego.enEjecucion) {
-        hudLevelText.textContent = `NIVEL ${estadoJuego.nivel}`;
-
-        const mision = Levels.getEstadoMision();
-        if (mision) {
-            // Actualizar el contenido del objetivo de la misión
-            hudObjectiveText.innerHTML = `<span class="mission-title">${mision.texto}</span> ${mision.progreso}`;
-        } else {
-            const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
-            let textoObjetivo = '';
-            if (configNivel.tipo === 'capture') { textoObjetivo = `CAPTURAS: ${estadoJuego.rescatados} / ${configNivel.meta}`; } 
-            else if (configNivel.tipo === 'survive') { textoObjetivo = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - estadoJuego.valorObjetivoNivel)}s`; } 
-            else if (configNivel.tipo === 'boss') { textoObjetivo = configNivel.objetivo.toUpperCase(); }
-            hudObjectiveText.textContent = textoObjetivo;
-        }
-    } else {
-        hudObjectiveText.textContent = ''; // Limpiar si no está en ejecución
-    }
-
-    // Clear the hudCanvas as we are moving drawing logic to HTML
-    if (hud) hud.clearRect(0, 0, W, H);
-
-    if (!estadoJuego.enEjecucion) return; // No actualizar stats si el juego no está en ejecución
-
+/**
+ * OPTIMIZACIÓN: Actualiza los elementos HTML del HUD solo cuando sus valores cambian.
+ * Esto evita la manipulación constante del DOM, que es una operación costosa.
+ */
+function actualizarHTMLHUD() {
+    if (!estadoJuego || !estadoJuego.enEjecucion) return;
     const s = estadoJuego;
 
-    // Actualizar estadísticas de texto
-    if (statScoreValue) statScoreValue.textContent = String(s.puntuacion || 0);
-    if (statDepthValue) statDepthValue.textContent = `${Math.floor(s.profundidad_m || 0)} m`;
-    if (statDistanceValue) {
-        const dist = s.distanciaRecorrida || 0;
-        if (dist < 1000) {
-            statDistanceValue.textContent = `${Math.floor(dist)} m`;
-        } else {
-            statDistanceValue.textContent = `${(dist / 1000).toFixed(2)} km`;
-        }
+    // --- Misión y Nivel ---
+    const mision = Levels.getEstadoMision();
+    let objetivoHTML;
+    if (mision) {
+        hudLevelText.innerHTML = `<span class="mission-title">${mision.texto}</span>`;
+        objetivoHTML = mision.progreso;
+    } else {
+        hudLevelText.textContent = `NIVEL ${s.nivel}`;
+        const configNivel = Levels.CONFIG_NIVELES[s.nivel - 1];
+        if (configNivel.tipo === 'capture') { objetivoHTML = `CAPTURAS: ${s.rescatados} / ${configNivel.meta}`; } 
+        else if (configNivel.tipo === 'survive') { objetivoHTML = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - s.valorObjetivoNivel)}s`; } 
+        else if (configNivel.tipo === 'boss') { objetivoHTML = configNivel.objetivo.toUpperCase(); }
+        else { objetivoHTML = ''; }
     }
-    if (statSpeedValue) {
-        // --- LÓGICA DEL VELOCÍMETRO MEJORADA ---
- 
-        // 1. Calcular la velocidad real/objetivo en km/h
-        const speed_px_s = s.velocidad_actual || 0;
-        const target_speed_km_h = (speed_px_s / 50) * 3.6;
- 
-        // 2. Interpolar la velocidad mostrada hacia la velocidad objetivo para un efecto suave
-        // Aumentamos un poco el factor de lerp para que la aguja sea más responsiva.
-        s.velocidad_mostrada_kmh = lerp(s.velocidad_mostrada_kmh, target_speed_km_h, 0.12);
- 
-        // --- CORRECCIÓN: Eliminar oscilación y añadir "enganche" a la velocidad final ---
-        // Si la diferencia es muy pequeña, igualamos al objetivo para que "clave" la velocidad.
-        if (Math.abs(s.velocidad_mostrada_kmh - target_speed_km_h) < 0.1) {
-            s.velocidad_mostrada_kmh = target_speed_km_h;
-        }
-        statSpeedValue.textContent = `${Math.floor(Math.max(0, s.velocidad_mostrada_kmh))} km/h`;
-
-        // --- NUEVO: Cambiar color si el impulso está activo ---
-        if (s.boostActivo) {
-            statSpeedValue.classList.add('boosting');
-            triggerHudShake(2); // Sacudida continua y suave al usar el impulso
-        } else {
-            statSpeedValue.classList.remove('boosting');
-        }
+    if (objetivoHTML !== s._prevMisionProgreso) {
+        hudObjectiveText.innerHTML = objetivoHTML;
+        s._prevMisionProgreso = objetivoHTML;
     }
-    if (statRecordValue) statRecordValue.textContent = String(puntuacionMaxima);
 
-    // Actualizar vidas (corazones)
-    if (statLivesContainer) {
-        statLivesContainer.innerHTML = ''; // Limpiar corazones anteriores
-        const maxHearts = 5; // Número máximo de corazones a mostrar
-        const currentLives = Math.min(s.vidas, maxHearts); // Limitar a maxHearts para visualización
+    // --- Puntuación ---
+    if (s.puntuacion !== s._prevPuntuacion) {
+        statScoreValue.textContent = String(s.puntuacion || 0);
+        s._prevPuntuacion = s.puntuacion;
+    }
 
+    // --- Profundidad ---
+    const profundidadActual = Math.floor(s.profundidad_m || 0);
+    if (profundidadActual !== s._prevProfundidad) {
+        statDepthValue.textContent = `${profundidadActual} m`;
+        s._prevProfundidad = profundidadActual;
+    }
+
+    // --- Distancia ---
+    const distActual = Math.floor(s.distanciaRecorrida || 0);
+    if (distActual !== s._prevDistancia) {
+        statDistanceValue.textContent = distActual < 1000 ? `${distActual} m` : `${(distActual / 1000).toFixed(2)} km`;
+        s._prevDistancia = distActual;
+    }
+
+    // --- Velocidad ---
+    const speed_px_s = s.velocidad_actual || 0;
+    const target_speed_km_h = (speed_px_s / 50) * 3.6;
+    s.velocidad_mostrada_kmh = lerp(s.velocidad_mostrada_kmh, target_speed_km_h, 0.12);
+    if (Math.abs(s.velocidad_mostrada_kmh - target_speed_km_h) < 0.1) s.velocidad_mostrada_kmh = target_speed_km_h;
+    const velActual = Math.floor(Math.max(0, s.velocidad_mostrada_kmh));
+    if (velActual !== s._prevVelocidad) {
+        statSpeedValue.textContent = `${velActual} km/h`;
+        s._prevVelocidad = velActual;
+    }
+    if (s.boostActivo) { statSpeedValue.classList.add('boosting'); triggerHudShake(2); } 
+    else { statSpeedValue.classList.remove('boosting'); }
+
+    // --- Récord (solo se actualiza una vez al inicio) ---
+    if (s._prevPuntuacion === -1) {
+        statRecordValue.textContent = String(puntuacionMaxima);
+    }
+
+    // --- Vidas ---
+    if (s.vidas !== s._prevVidas) {
+        statLivesContainer.innerHTML = '';
+        const maxHearts = 5;
+        const currentLives = Math.min(s.vidas, maxHearts);
         for (let i = 0; i < maxHearts; i++) {
             const heart = document.createElement('span');
             heart.classList.add('heart-icon');
-            if (i < currentLives) {
-                heart.classList.add('filled');
-            }
+            if (i < currentLives) heart.classList.add('filled');
             statLivesContainer.appendChild(heart);
         }
-        // Si hay más vidas de las que se muestran, añadir un indicador numérico
         if (s.vidas > maxHearts) {
             const extraLives = document.createElement('span');
             extraLives.classList.add('extra-lives');
             extraLives.textContent = `+${s.vidas - maxHearts}`;
             statLivesContainer.appendChild(extraLives);
         }
+        s._prevVidas = s.vidas;
     }
 
-    // Actualizar estado del arma
-    if (statWeaponValue) {
-        let armaTexto = s.armaActual.toUpperCase();
-        let weaponStatusClass = '';
-
-        if (s.armaActual === 'escopeta' || s.armaActual === 'metralleta' || s.armaActual === 'mina') {
-            if (s.enfriamientoArma > 0) {
-                armaTexto += " (RECARGA)";
-                weaponStatusClass = 'reloading';
-            } else {
-                armaTexto += " (LISTA)";
-                weaponStatusClass = 'ready';
-            }
-        } else {
-            weaponStatusClass = 'ready'; // Garra y láser siempre "listos" en este contexto
-        }
+    // --- Arma ---
+    const armaTexto = `${s.armaActual.toUpperCase()} ${s.enfriamientoArma > 0 ? '(RECARGA)' : '(LISTA)'}`;
+    if (armaTexto !== s._prevArma) {
         statWeaponValue.textContent = armaTexto;
-        statWeaponValue.className = `stat-value weapon-status ${weaponStatusClass}`;
-
-        // Animación de cambio de arma
-        if (s.armaCambiandoTimer > 0) {
-            statWeaponValue.style.animation = 'weaponChangeAnim 0.3s forwards';
-        } else {
-            statWeaponValue.style.animation = 'none';
-        }
+        statWeaponValue.className = `stat-value weapon-status ${s.enfriamientoArma > 0 ? 'reloading' : 'ready'}`;
+        if (s.armaCambiandoTimer > 0) statWeaponValue.style.animation = 'weaponChangeAnim 0.3s forwards';
+        else statWeaponValue.style.animation = 'none';
+        s._prevArma = armaTexto;
     }
 
-    // Actualizar estado del torpedo
-    if (statTorpedoValue) {
-        const torpedoListo = s.enfriamientoTorpedo <= 0;
-        statTorpedoValue.textContent = torpedoListo ? 'LISTO' : 'RECARGANDO';
-        statTorpedoValue.className = `stat-value weapon-status ${torpedoListo ? 'ready' : 'reloading'}`;
+    // --- Torpedo ---
+    const torpedoTexto = s.enfriamientoTorpedo <= 0 ? 'LISTO' : 'RECARGANDO';
+    if (torpedoTexto !== s._prevTorpedo) {
+        statTorpedoValue.textContent = torpedoTexto;
+        statTorpedoValue.className = `stat-value weapon-status ${torpedoTexto === 'LISTO' ? 'ready' : 'reloading'}`;
+        s._prevTorpedo = torpedoTexto;
     }
 
-    // Actualizar rango de asesino
-    if (statAssassinValue) {
+    // --- Rango ---
+    if (s.asesinatos !== s._prevAsesinatos) {
         const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0];
         statAssassinValue.textContent = rango.titulo;
+        s._prevAsesinatos = s.asesinatos;
     }
 
-    // Actualizar barras de progreso
-    if (boostProgressBar) {
-        boostProgressBar.style.width = `${(s.boostEnergia / s.boostMaxEnergia) * 100}%`;
-        boostProgressBar.classList.toggle('reloading', s.boostEnfriamiento > 0);
+    // --- Barras de Progreso ---
+    const boostPercent = (s.boostEnergia / s.boostMaxEnergia) * 100;
+    if (boostPercent !== s._prevBoostPercent) {
+        boostProgressBar.style.width = `${boostPercent}%`;
+        s._prevBoostPercent = boostPercent;
+    }
+    boostProgressBar.classList.toggle('reloading', s.boostEnfriamiento > 0);
+    boostProgressBar.classList.toggle('low-energy', s.boostEnergia > 0 && s.boostEnergia < s.boostMaxEnergia * 0.25 && s.boostEnfriamiento <= 0);
 
-        // --- NUEVO: Lógica de parpadeo con energía baja ---
-        const lowEnergyThreshold = s.boostMaxEnergia * 0.25; // 25%
-        // Parpadea si la energía es baja Y no está en enfriamiento (porque 'reloading' ya tiene un estilo rojo)
-        boostProgressBar.classList.toggle('low-energy', s.boostEnergia > 0 && s.boostEnergia < lowEnergyThreshold && s.boostEnfriamiento <= 0);
+    const laserPercent = (s.laserEnergia / s.laserMaxEnergia) * 100;
+    if (laserPercent !== s._prevLaserPercent) {
+        laserProgressBar.style.width = `${laserPercent}%`;
+        s._prevLaserPercent = laserPercent;
     }
-    if (laserProgressBar) {
-        laserProgressBar.style.width = `${(s.laserEnergia / s.laserMaxEnergia) * 100}%`;
-        laserProgressBar.classList.toggle('active', s.laserActivo);
-    }
-    if (shieldProgressBar) {
+    laserProgressBar.classList.toggle('active', s.laserActivo);
+
+    const shieldPercent = (s.shieldEnergia / s.shieldMaxEnergia) * 100;
+    if (shieldPercent !== s._prevShieldPercent) {
+        shieldProgressBar.style.width = `${shieldPercent}%`;
         const shieldRatio = s.shieldEnergia / s.shieldMaxEnergia;
-        shieldProgressBar.style.width = `${shieldRatio * 100}%`;
-
-        // Clases para efectos visuales (no color)
-        shieldProgressBar.classList.toggle('reloading', s.shieldEnfriamiento > 0);
-        shieldProgressBar.classList.toggle('active', s.shieldActivo);
-        shieldProgressBar.classList.toggle('hit', s.shieldHitTimer > 0);
-
-        // --- NUEVO: Lógica de color gradual ---
-        // Se elimina la clase 'low-energy' en favor de un color que cambia dinámicamente.
-        shieldProgressBar.classList.remove('low-energy');
         if (s.shieldEnfriamiento <= 0) {
-            // El matiz (hue) va de 195 (cian/azul) a 0 (rojo) a medida que baja la energía.
             const hue = shieldRatio * 195;
             shieldProgressBar.style.background = `linear-gradient(to right, hsl(${hue}, 100%, 65%), hsl(${hue}, 100%, 45%))`;
         } else {
-            // Si está recargando, se elimina el estilo inline para que la clase .reloading de CSS tome el control.
             shieldProgressBar.style.background = '';
         }
+        s._prevShieldPercent = shieldPercent;
     }
-    
-    // Lógica de la barra de vida del jefe (se mantiene en HTML)
-    if (s.jefe && s.jefe.hp !== undefined && s.jefe.maxHp !== undefined) {
-        if (bossHealthContainer) bossHealthContainer.style.display = 'block';
-        const hpProgress = clamp(s.jefe.hp / s.jefe.maxHp, 0, 1);
-        if (bossHealthBar) bossHealthBar.style.width = (hpProgress * 100) + '%';
-    } else {
-        if (bossHealthContainer && bossHealthContainer.style.display !== 'none') bossHealthContainer.style.display = 'none';
+    shieldProgressBar.classList.toggle('reloading', s.shieldEnfriamiento > 0);
+    shieldProgressBar.classList.toggle('active', s.shieldActivo);
+    shieldProgressBar.classList.toggle('hit', s.shieldHitTimer > 0);
+
+    // --- Barra de vida del jefe ---
+    const jefeHp = s.jefe ? s.jefe.hp : -1;
+    if (jefeHp !== s._prevJefeHp) {
+        if (jefeHp > -1) {
+            bossHealthContainer.style.display = 'block';
+            const hpProgress = clamp(jefeHp / s.jefe.maxHp, 0, 1);
+            bossHealthBar.style.width = `${hpProgress * 100}%`;
+        } else {
+            bossHealthContainer.style.display = 'none';
+        }
+        s._prevJefeHp = jefeHp;
     }
 }
 // =================================================================================
@@ -3867,6 +3858,17 @@ function poblarSelectorDeNiveles() {
     });
 }
 
+/**
+ * Actualiza la clase 'selected' en los botones de nivel según el índice guardado.
+ */
+function actualizarSeleccionNivelVisual() {
+    if (!levelSelectorContainer || !estadoJuego) return;
+    const botonesNivel = levelSelectorContainer.querySelectorAll('.levelbtn:not(:disabled)');
+    botonesNivel.forEach((btn, index) => {
+        btn.classList.toggle('selected', index === estadoJuego.nivelSeleccionadoIndex);
+    });
+}
+
 function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.classList.remove('visible'); } }
 function puedeUsarPantallaCompleta() { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled); } // prettier-ignore
 function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { document.body.classList.toggle('immersive'); return; } const el = document.documentElement; try { if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) { if (el.requestFullscreen) return el.requestFullscreen(); if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen(); } else { if (document.exitFullscreen) return document.exitFullscreen(); if (document.webkitExitFullscreen) return document.webkitExitFullscreen(); } } catch (err) { console.warn('Pantalla completa no disponible', err); } }
@@ -3885,39 +3887,7 @@ export function gameLoop(t) {
     // Calcula el delta time (dt) para un movimiento consistente independientemente de los FPS.
     const dt = Math.min(0.033, (t - ultimo) / 1000 || 0);
     ultimo = t;
-
-    // --- Animaciones de UI con la música ---
-    // Obtenemos el nivel de audio una vez por frame para optimizar.
-    const audioLevel = S.getAudioData();
-    if (typeof audioLevel === 'number') {
-        const normalizedLevel = audioLevel / 255;
-
-        // Animación del logo del HUD
-        if (logoHUD) {
-            const scale = 1 + Math.pow(normalizedLevel, 2) * 0.15; // Reacción sutil de hasta 15%
-            logoHUD.style.transform = `scale(${scale})`;
-        }
-
-        // Animación de la imagen de selección de nivel
-        if (levelSelectImage && levelSelectContent && levelSelectContent.style.display !== 'none') {
-            const scale = 1 + Math.pow(normalizedLevel, 2) * 0.08; // Un poco más sutil que el logo
-            const rotation = Math.sin(t / 500) * normalizedLevel * 3; // Ligero bamboleo que depende del ritmo
-            levelSelectImage.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
-        } else if (levelSelectImage) {
-            // Reseteamos la transformación si no está visible para evitar saltos visuales.
-            levelSelectImage.style.transform = 'scale(1) rotate(0deg)';
-        }
-
-        // Animación de la imagen del capitán en el menú
-        if (captainImage && captainImage.style.display !== 'none') {
-            const scale = 1 + Math.pow(normalizedLevel, 2) * 0.05; // Reacción sutil de hasta 5%
-            const rotation = Math.sin(t / 800) * normalizedLevel * 1.5; // Ligero bamboleo
-            captainImage.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
-        } else if (captainImage) {
-            // Resetear si no está visible
-            captainImage.style.transform = 'scale(1) rotate(0deg)';
-        }
-    }
+    actualizarGamepad(); // <<< NUEVO: Leer la entrada del mando en cada frame
 
     let dtAjustado = dt;
     if (estadoJuego) {
@@ -3938,7 +3908,8 @@ export function gameLoop(t) {
         const weaponUpdateContext = {
             dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels,
             generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas,
-            puntosPorRescate
+        puntosPorRescate,
+        triggerVibration: S.triggerVibration
         };
         Weapons.updateWeapons(weaponUpdateContext);
 
@@ -3965,6 +3936,130 @@ export function gameLoop(t) {
     }
     // Solicita al navegador que vuelva a llamar a esta función en el próximo frame.
     requestAnimationFrame(gameLoop);
+}
+/**
+ * Lee el estado del gamepad conectado y traduce sus entradas a acciones del juego.
+ */
+function actualizarGamepad() {
+    if (!gamepadConectado) return;
+    const gamepads = navigator.getGamepads();
+    const gp = gamepads[0];
+    if (!gp) return;
+
+    // --- Lógica de Menú (si el overlay está visible) ---
+    if (overlay && overlay.style.display !== 'none') {
+        actualizarGamepadMenu(gp);
+    } 
+    // --- Lógica Durante el Juego ---
+    else if (estadoJuego && estadoJuego.enEjecucion) {
+        actualizarGamepadJuego(gp);
+    }
+
+    // --- Lógica Global del Gamepad (se aplica en cualquier estado) ---
+    const isNewPress = (index) => gp.buttons[index].pressed && !prevGamepadButtons[index];
+    if (isNewPress(9)) { // Start -> Pausa / Reanudar
+        abrirMenuPausaDesdeMando();
+    }
+    if (isNewPress(8)) { // Select/Back -> Mostrar/Ocultar Controles
+        if (helpBtn) helpBtn.click();
+    }
+
+    // Guardar estado de botones para el próximo frame
+    prevGamepadButtons = gp.buttons.map(b => b.pressed);
+}
+
+function actualizarGamepadMenu(gp) {
+    const isNewPress = (index) => gp.buttons[index].pressed && !prevGamepadButtons[index];
+
+    // --- Menú Principal / Pausa / Game Over ---
+    if (mainMenuContent && mainMenuContent.style.display !== 'none') {
+        if (isNewPress(7)) { // RT -> Sumergirse / Reintentar
+            if (startBtn && startBtn.style.display !== 'none') startBtn.click();
+            else if (restartBtn && restartBtn.style.display !== 'none') restartBtn.click();
+        }
+        if (isNewPress(6)) { // LT -> Niveles
+            if (levelSelectBtn && levelSelectBtn.style.display !== 'none') levelSelectBtn.click();
+        }
+    }
+    
+    // --- Selector de Niveles ---
+    else if (levelSelectContent && levelSelectContent.style.display !== 'none') {
+        const botonesNivel = levelSelectorContainer.querySelectorAll('.levelbtn:not(:disabled)');
+        const axisX = gp.axes[0];
+        const STICK_DEAD_ZONE = 0.6;
+
+        const movedLeft = isNewPress(14) || (axisX < -STICK_DEAD_ZONE && estadoJuego.gamepadStickX >= -STICK_DEAD_ZONE);
+        const movedRight = isNewPress(15) || (axisX > STICK_DEAD_ZONE && estadoJuego.gamepadStickX <= STICK_DEAD_ZONE);
+
+        if (movedLeft) {
+            if (botonesNivel.length > 0) {
+                estadoJuego.nivelSeleccionadoIndex = (estadoJuego.nivelSeleccionadoIndex - 1 + botonesNivel.length) % botonesNivel.length;
+                actualizarSeleccionNivelVisual();
+            }
+        }
+        if (movedRight) {
+             if (botonesNivel.length > 0) {
+                estadoJuego.nivelSeleccionadoIndex = (estadoJuego.nivelSeleccionadoIndex + 1) % botonesNivel.length;
+                actualizarSeleccionNivelVisual();
+            }
+        }
+        if (isNewPress(0)) { // A -> Seleccionar Nivel
+            if (botonesNivel[estadoJuego.nivelSeleccionadoIndex]) {
+                botonesNivel[estadoJuego.nivelSeleccionadoIndex].click();
+            }
+        }
+        if (isNewPress(1)) { // B -> Volver
+            if (backToMainBtn) backToMainBtn.click();
+        }
+        estadoJuego.gamepadStickX = axisX; // Guardar estado del stick para el próximo frame
+    }
+}
+
+function actualizarGamepadJuego(gp) {
+    const DEAD_ZONE = 0.25;
+    let axisX = gp.axes[0];
+    let axisY = gp.axes[1];
+
+    // Fallback to D-pad if left stick is not moving
+    if (Math.abs(axisX) < DEAD_ZONE && Math.abs(axisY) < DEAD_ZONE) {
+        if (gp.buttons[12] && gp.buttons[12].pressed) { // D-pad Up
+            axisY = -1;
+        } else if (gp.buttons[13] && gp.buttons[13].pressed) { // D-pad Down
+            axisY = 1;
+        }
+        if (gp.buttons[14] && gp.buttons[14].pressed) { // D-pad Left
+            axisX = -1;
+        } else if (gp.buttons[15] && gp.buttons[15].pressed) { // D-pad Right
+            axisX = 1;
+        }
+    }
+
+    teclas['ArrowUp'] = axisY < -DEAD_ZONE;
+    teclas['ArrowDown'] = axisY > DEAD_ZONE;
+    teclas['ArrowLeft'] = axisX < -DEAD_ZONE;
+    teclas['ArrowRight'] = axisX > DEAD_ZONE;
+
+    teclas[' '] = gp.buttons[0].pressed; // A -> Disparar / Láser
+    teclas['b'] = gp.buttons[1].pressed; // B -> Impulso (Boost)
+    teclas['v'] = gp.buttons[3].pressed; // Y -> Escudo (Shield)
+
+    const isNewPress = (index) => gp.buttons[index].pressed && !prevGamepadButtons[index];
+    if (isNewPress(2)) { teclas['x'] = true; } // X -> Torpedo
+    if (isNewPress(5)) { teclas['c'] = true; } // RB -> Cambiar Arma
+}
+
+function abrirMenuPausaDesdeMando() {
+    // Esta función es un wrapper para asegurar que solo se active durante el juego
+    if (estadoJuego && estadoJuego.enEjecucion) {
+        abrirMenuPrincipal();
+    } else if (estadoJuego && estadoJuego.faseJuego === 'pause') {
+        // Si ya está en pausa, reanuda el juego (simula click en "Sumergirse")
+        if (startBtn) startBtn.click();
+    } else if (modoSuperposicion === 'menu' || modoSuperposicion === 'gameover') {
+        // Si estamos en el menú principal, el botón Start también inicia el juego
+        if (startBtn && startBtn.style.display !== 'none') startBtn.click();
+        else if (restartBtn && restartBtn.style.display !== 'none') restartBtn.click();
+    }
 }
 
 function actualizarAnimacionMuerte(dt, originalDt) {
@@ -4131,18 +4226,6 @@ function renderizarSubmarinoBailarin(t) {
     infoAnimCtx.drawImage(robotImg, -dw / 2, -dh / 2, dw, dh);
     infoAnimCtx.restore();
 
-    // --- NUEVO: Animar foto de perfil con la música ---
-    const creatorPicContainer = document.querySelector('.profile-pic-container');
-    if (creatorPicContainer && S.getAudioData) { // Comprobar que la función exista
-        const audioLevel = S.getAudioData();
-        if (typeof audioLevel === 'number') {
-            // Normalizar el nivel de audio (0-255) a un factor de escala
-            const scale = 1 + (audioLevel / 255) * 0.08; // Reacción sutil de hasta 8%
-            const rotation = Math.sin(tiempo * 0.5) * 1.5; // Un bamboleo lento
-
-            creatorPicContainer.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
-        }
-    }
 }
 
 function dibujarParticulas() {
@@ -4192,6 +4275,45 @@ export function init() {
         chasingSharks: [],
         fireCooldown: 0
     };
+
+    // --- NUEVO: Eventos para conectar/desconectar el mando ---
+    window.addEventListener('gamepadconnected', (e) => {
+        console.log(`¡Mando conectado! ID: ${e.gamepad.id}`);
+        gamepadConectado = true;
+        // Inicializamos el estado de los botones
+        prevGamepadButtons = e.gamepad.buttons.map(() => false);
+
+        // >>> NUEVO: Reanudar el juego si estaba pausado por desconexión <<<
+        if (estadoJuego && estadoJuego.juegoPausadoPorDesconexion) {
+            estadoJuego.enEjecucion = true; // Reanudar el juego
+            estadoJuego.juegoPausadoPorDesconexion = false; // Quitar la bandera
+            S.bucle('music'); // Reanudar la música
+            if (controllerDisconnectOverlay) {
+                controllerDisconnectOverlay.style.display = 'none';
+            }
+        } else {
+            // Comportamiento original: Mostrar los controles si no se están mostrando ya
+            if (helpBtn && !gameplayHints.classList.contains('visible')) {
+                helpBtn.click();
+            }
+        }
+    });
+    window.addEventListener('gamepaddisconnected', (e) => {
+        console.log(`Mando desconectado. ID: ${e.gamepad.id}`);
+        gamepadConectado = false;
+
+        // >>> NUEVO: Pausar el juego y mostrar mensaje si se está jugando <<<
+        if (estadoJuego && estadoJuego.enEjecucion) {
+            estadoJuego.enEjecucion = false; // Pausar el juego
+            estadoJuego.juegoPausadoPorDesconexion = true; // Poner una bandera
+            S.pausar('music'); // Pausar la música del juego
+            S.detener('boost'); // Detener sonidos en bucle
+            S.detener('laser_beam');
+            if (controllerDisconnectOverlay) {
+                controllerDisconnectOverlay.style.display = 'grid';
+            }
+        }
+    });
 
     addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
     addEventListener('keyup', function (e) {
@@ -4261,6 +4383,10 @@ export function init() {
             if (mainMenuContent) mainMenuContent.style.display = 'none';
             if (levelSelectContent) levelSelectContent.style.display = 'block';
             poblarSelectorDeNiveles();
+            // >>> NUEVO: Establecer la selección inicial para el mando <<<
+            const botonesDisponibles = levelSelectorContainer.querySelectorAll('.levelbtn:not(:disabled)');
+            estadoJuego.nivelSeleccionadoIndex = botonesDisponibles.length - 1; // Empezar en el último nivel desbloqueado
+            actualizarSeleccionNivelVisual();
         };
     }
     if (backToMainBtn) {
@@ -4274,6 +4400,11 @@ export function init() {
     if (helpBtn) {
         helpBtn.onclick = function () {
             if (gameplayHints) gameplayHints.classList.toggle('visible');
+        };
+    }
+    if (pauseBtn) {
+        pauseBtn.onclick = function() {
+            abrirMenuPrincipal(); // Esta función ya maneja la lógica de pausar el juego
         };
     }
     if (muteBtn) { muteBtn.onclick = function () { S.alternarSilenciado(); actualizarIconos(); }; }
@@ -4329,6 +4460,55 @@ export function init() {
     
     // --- 4. OTROS EVENTOS DE UI ---
     if (logoHUD) { logoHUD.addEventListener('click', abrirMenuPrincipal); }
+
+    // >>> CORRECCIÓN: Lógica para el botón de "Volver al Juego" (desconexión) <<<
+    if (resumeWithKeyboardButton) {
+        resumeWithKeyboardButton.onclick = () => {
+            if (estadoJuego && estadoJuego.juegoPausadoPorDesconexion) {
+                estadoJuego.enEjecucion = true;
+                estadoJuego.juegoPausadoPorDesconexion = false;
+                S.bucle('music');
+                if (controllerDisconnectOverlay) {
+                    controllerDisconnectOverlay.style.display = 'none';
+                }
+            }
+        };
+    }
+
+    // >>> NUEVO: Lógica para los botones del prompt de conexión de mando <<<
+    if (useGamepadButton) {
+        useGamepadButton.onclick = () => {
+            if (estadoJuego && estadoJuego.juegoPausadoPorConexionMando) {
+                gamepadConectado = true; // ACTIVAR MANDO
+                const gamepads = navigator.getGamepads();
+                if (gamepads[0]) {
+                    prevGamepadButtons = gamepads[0].buttons.map(() => false);
+                }
+                
+                estadoJuego.enEjecucion = true;
+                estadoJuego.juegoPausadoPorConexionMando = false;
+                S.bucle('music');
+                if (controllerConnectPrompt) {
+                    controllerConnectPrompt.style.display = 'none';
+                }
+            }
+        };
+    }
+    if (stayOnKeyboardButton) {
+        stayOnKeyboardButton.onclick = () => {
+            if (estadoJuego && estadoJuego.juegoPausadoPorConexionMando) {
+                gamepadConectado = false; // MANTENER MANDO DESACTIVADO (para esta sesión)
+                
+                estadoJuego.enEjecucion = true;
+                estadoJuego.juegoPausadoPorConexionMando = false;
+                S.bucle('music');
+                if (controllerConnectPrompt) {
+                    controllerConnectPrompt.style.display = 'none';
+                }
+            }
+        };
+    }
+
     if (closeInfo) {
         closeInfo.onclick = function () {
             S.detener('theme_main');
@@ -4344,10 +4524,6 @@ export function init() {
             if (a_creditos_intervalo) {
                 clearInterval(a_creditos_intervalo);
                 a_creditos_intervalo = null;
-            }
-            const creatorPicContainer = document.querySelector('.profile-pic-container');
-            if (creatorPicContainer) {
-                creatorPicContainer.style.transform = 'scale(1) rotate(0deg)';
             }
         };
     }

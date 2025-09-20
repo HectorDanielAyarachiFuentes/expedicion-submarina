@@ -1,7 +1,7 @@
 'use strict';
 
 // Importamos lo que necesitamos de game.js
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarParticula, particulasBurbujas } from '../game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarParticula, particulasBurbujas, proyectilesEnemigos } from '../game/game.js';
 import { 
     torpedos, proyectiles 
 } from '../game/armas/weapons.js';
@@ -9,7 +9,6 @@ import {
 // --- ESTADO Y ENTIDADES DEL NIVEL 5 ---
 let escombros = [];
 let corrientes = [];
-let proyectilesEnemigos = [];
 
 let spawnTimerEscombros = 0;
 let spawnTimerCorrientes = 0;
@@ -259,8 +258,9 @@ export function update(dt) {
             if (escombro.tiempoDisparo <= 0) {
                 const angulo = Math.atan2(jugador.y - escombro.y, jugador.x - escombro.x);
                 proyectilesEnemigos.push({
-                    x: escombro.x, y: escombro.y,
-                    vx: Math.cos(angulo) * 350, vy: Math.sin(angulo) * 350, r: 5
+                    x: escombro.x, y: escombro.y, r: 5,
+                    vx: Math.cos(angulo) * 350, vy: Math.sin(angulo) * 350,
+                    nearMissTriggered: false
                 });
                 S.reproducir('disparo_enemigo');
                 escombro.tiempoDisparo = 2.0 + Math.random();
