@@ -3127,46 +3127,74 @@ function dibujarSonar() {
         return;
     }
 
-    const SONAR_COLOR_FAINT = 'rgba(100, 255, 150, 0.3)';
-    const SONAR_COLOR_BORDER = 'rgba(126, 203, 255, 0.4)';
-
     sonarCtx.clearRect(0, 0, W, H);
     sonarCtx.save();
 
     // --- 1. Definir el centro y radio del sonar (MINIMAPA) ---
-    const SONAR_RADIUS = 90; // Radio en píxeles del minimapa
+    const SONAR_RADIUS = 100; // Radio en píxeles del minimapa
     const SONAR_WORLD_RADIUS = 2800; // Radio en unidades del juego que cubre el sonar
-    const PADDING = 20;
+    const PADDING = 25;
     const centerX = W - SONAR_RADIUS - PADDING;
     const centerY = H - SONAR_RADIUS - PADDING;
+    const time = estadoJuego.tiempoTranscurrido;
 
-    // --- 2. Dibujar el fondo y la retícula ---
-    // Fondo oscuro semitransparente
-    sonarCtx.fillStyle = 'rgba(6, 19, 31, 0.75)';
-    sonarCtx.beginPath();
-    sonarCtx.arc(centerX, centerY, SONAR_RADIUS, 0, Math.PI * 2);
-    sonarCtx.fill();
+    // --- 2. Crear la forma base (Octágono) ---
+    const octagonPath = new Path2D();
+    const sides = 8;
+    for (let i = 0; i < sides; i++) {
+        const angle = (i / sides) * Math.PI * 2 - Math.PI / sides;
+        const x = centerX + SONAR_RADIUS * Math.cos(angle);
+        const y = centerY + SONAR_RADIUS * Math.sin(angle);
+        if (i === 0) {
+            octagonPath.moveTo(x, y);
+        } else {
+            octagonPath.lineTo(x, y);
+        }
+    }
+    octagonPath.closePath();
 
+    // --- 3. Dibujar el fondo y la retícula ---
+    sonarCtx.save();
+    sonarCtx.clip(octagonPath); // Todo lo que se dibuje a partir de ahora estará dentro del octágono
+
+    const bgGrad = sonarCtx.createLinearGradient(centerX - SONAR_RADIUS, centerY - SONAR_RADIUS, centerX + SONAR_RADIUS, centerY + SONAR_RADIUS);
+    bgGrad.addColorStop(0, 'rgba(0, 59, 142, 0.7)');
+    bgGrad.addColorStop(1, 'rgba(6, 19, 31, 0.5)');
+    sonarCtx.fillStyle = bgGrad;
+    sonarCtx.fill(octagonPath);
+    
     // Retícula (círculos y líneas)
-    sonarCtx.strokeStyle = SONAR_COLOR_FAINT;
+    sonarCtx.strokeStyle = 'rgba(126, 203, 255, 0.2)';
     sonarCtx.lineWidth = 1;
-    for (let i = 1; i <= 3; i++) { // 3 círculos concéntricos
+    sonarCtx.setLineDash([2, 4]); // Líneas discontinuas
+    for (let i = 1; i <= 3; i++) { // 3 octágonos concéntricos
+        const radius = SONAR_RADIUS * (i / 3);
         sonarCtx.beginPath();
-        sonarCtx.arc(centerX, centerY, SONAR_RADIUS * (i / 3), 0, Math.PI * 2);
+        for (let j = 0; j < sides; j++) {
+            const angle = (j / sides) * Math.PI * 2 - Math.PI / sides;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            if (j === 0) sonarCtx.moveTo(x, y);
+            else sonarCtx.lineTo(x, y);
+        }
+        sonarCtx.closePath();
         sonarCtx.stroke();
     }
-    for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
+    sonarCtx.setLineDash([]); // Resetear
+
+    sonarCtx.lineWidth = 0.5;
+    for (let i = 0; i < sides; i++) {
+        const angle = (i / sides) * Math.PI * 2 - Math.PI / sides;
         sonarCtx.beginPath();
         sonarCtx.moveTo(centerX, centerY);
         sonarCtx.lineTo(centerX + Math.cos(angle) * SONAR_RADIUS, centerY + Math.sin(angle) * SONAR_RADIUS);
         sonarCtx.stroke();
     }
 
-    // --- 3. Dibujar el barrido (sweep) ---
-    const sweepAngle = (estadoJuego.tiempoTranscurrido * SONAR_SWEEP_SPEED) % (Math.PI * 2);
+    // --- 4. Dibujar el barrido (sweep) ---
+    const sweepAngle = (time * SONAR_SWEEP_SPEED) % (Math.PI * 2);
     const grad = sonarCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, SONAR_RADIUS);
-    grad.addColorStop(0, 'rgba(120, 255, 170, 0.4)');
+    grad.addColorStop(0, 'rgba(120, 255, 170, 0.3)');
     grad.addColorStop(0.8, 'rgba(100, 255, 150, 0.05)');
     grad.addColorStop(1, 'rgba(100, 255, 150, 0)');
     sonarCtx.fillStyle = grad;
@@ -3176,11 +3204,22 @@ function dibujarSonar() {
     sonarCtx.closePath();
     sonarCtx.fill();
 
-    // --- 4. Dibujar los "pings" de los enemigos y el jugador ---
+    // Línea principal del barrido
+    sonarCtx.strokeStyle = 'rgba(170, 255, 200, 0.9)';
+    sonarCtx.lineWidth = 2;
+    sonarCtx.beginPath();
+    sonarCtx.moveTo(centerX, centerY);
+    sonarCtx.lineTo(centerX + Math.cos(sweepAngle) * SONAR_RADIUS, centerY + Math.sin(sweepAngle) * SONAR_RADIUS);
+    sonarCtx.stroke();
+
+    // --- 5. Dibujar los "pings" de los enemigos y el jugador ---
     // El jugador está siempre en el centro del minimapa.
     sonarCtx.fillStyle = '#87CEEB'; // Color del jugador
-    sonarCtx.fillRect(centerX - 5, centerY - 1, 10, 2); // Cruz horizontal
-    sonarCtx.fillRect(centerX - 1, centerY - 5, 2, 10); // Cruz vertical
+    sonarCtx.shadowColor = '#87CEEB';
+    sonarCtx.shadowBlur = 8;
+    sonarCtx.fillRect(centerX - 6, centerY - 1.5, 12, 3); // Cruz horizontal
+    sonarCtx.fillRect(centerX - 1.5, centerY - 6, 3, 12); // Cruz vertical
+    sonarCtx.shadowBlur = 0;
 
     for (const a of animales) {
         const dx = a.x - jugador.x;
@@ -3188,23 +3227,34 @@ function dibujarSonar() {
         const dist = Math.hypot(dx, dy);
 
         if (dist < SONAR_WORLD_RADIUS) {
-            // Convertir coordenadas del mundo relativas al jugador a coordenadas del minimapa
             const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
             const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
 
-            // Asegurarse de que el ping no se salga del círculo
-            const distFromCenter = Math.hypot(pingX - centerX, pingY - centerY);
-            if (distFromCenter > SONAR_RADIUS) continue;
-
-            const isHostile = a.hp !== undefined || a.tipo === 'shark' || a.tipo === 'mega_whale' || a.tipo === 'mierdei';
+            const isHostile = a.hp !== undefined || a.tipo === 'shark' || a.tipo === 'mega_whale' || a.tipo === 'mierdei' || a.tipo === 'orca';
             const isBoss = a.tipo === 'mega_whale' || (estadoJuego.jefe && a === estadoJuego.jefe);
+            
+            const pulse = 1.0 + Math.sin(time * 5 + pingX) * 0.2;
+            const pingSize = (isBoss ? 6 : (isHostile ? 4 : 3)) * pulse;
 
             sonarCtx.fillStyle = isHostile ? 'rgba(255, 80, 80, 0.9)' : 'rgba(100, 255, 150, 0.9)';
-            sonarCtx.beginPath();
-            sonarCtx.arc(pingX, pingY, isBoss ? 6 : (isHostile ? 4 : 3), 0, Math.PI * 2);
-            sonarCtx.fill();
+            sonarCtx.shadowColor = sonarCtx.fillStyle;
+            sonarCtx.shadowBlur = 10;
+
+            sonarCtx.save();
+            sonarCtx.translate(pingX, pingY);
+            
+            if (isHostile) { // Dibujar como diamante
+                sonarCtx.rotate(Math.PI / 4);
+                sonarCtx.fillRect(-pingSize / 2, -pingSize / 2, pingSize, pingSize);
+            } else { // Dibujar como círculo
+                sonarCtx.beginPath();
+                sonarCtx.arc(0, 0, pingSize / 2, 0, Math.PI * 2);
+                sonarCtx.fill();
+            }
+            sonarCtx.restore();
         }
     }
+    sonarCtx.shadowBlur = 0;
     
     // Si hay un jefe, marcarlo de forma especial
     if (estadoJuego.jefe) {
@@ -3214,30 +3264,35 @@ function dibujarSonar() {
         if (dist < SONAR_WORLD_RADIUS) {
             const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
             const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const distFromCenter = Math.hypot(pingX - centerX, pingY - centerY);
-            if (distFromCenter <= SONAR_RADIUS) {
-                sonarCtx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
-                sonarCtx.lineWidth = 2;
-                sonarCtx.strokeRect(pingX - 7, pingY - 7, 14, 14);
-            }
+            
+            sonarCtx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+            sonarCtx.lineWidth = 2;
+            const pulse = 1.0 + Math.sin(time * 3) * 0.1;
+            const size = 16 * pulse;
+            sonarCtx.strokeRect(pingX - size / 2, pingY - size / 2, size, size);
         }
     }
+    
+    sonarCtx.restore(); // Quita el clipping
 
-    // --- 5. Máscara circular y borde ---
-    // Máscara para que nada se salga del círculo
-    sonarCtx.globalCompositeOperation = 'destination-in';
-    sonarCtx.beginPath();
-    sonarCtx.arc(centerX, centerY, SONAR_RADIUS, 0, Math.PI * 2);
-    sonarCtx.fillStyle = 'black'; // El color no importa, solo la forma
-    sonarCtx.fill();
-    sonarCtx.globalCompositeOperation = 'source-over';
-
-    // Borde exterior
-    sonarCtx.strokeStyle = SONAR_COLOR_BORDER;
+    // --- 6. Borde exterior y acentos ---
+    sonarCtx.strokeStyle = 'rgba(126, 203, 255, 0.6)';
     sonarCtx.lineWidth = 2;
+    sonarCtx.stroke(octagonPath);
+
+    // Acento amarillo, como en el HUD
+    sonarCtx.strokeStyle = 'rgba(255, 221, 119, 1)';
+    sonarCtx.shadowColor = 'rgba(255, 221, 119, 0.7)';
+    sonarCtx.shadowBlur = 10;
+    sonarCtx.lineWidth = 4;
     sonarCtx.beginPath();
-    sonarCtx.arc(centerX, centerY, SONAR_RADIUS, 0, Math.PI * 2);
+    // Dibujar el acento en el lado derecho
+    const angle1 = (0 / sides) * Math.PI * 2 - Math.PI / sides;
+    const angle2 = (1 / sides) * Math.PI * 2 - Math.PI / sides;
+    sonarCtx.moveTo(centerX + SONAR_RADIUS * Math.cos(angle1), centerY + SONAR_RADIUS * Math.sin(angle1));
+    sonarCtx.lineTo(centerX + SONAR_RADIUS * Math.cos(angle2), centerY + SONAR_RADIUS * Math.sin(angle2));
     sonarCtx.stroke();
+    sonarCtx.shadowBlur = 0;
 
     sonarCtx.restore();
 }
