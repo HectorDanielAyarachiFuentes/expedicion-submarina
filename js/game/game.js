@@ -4399,7 +4399,11 @@ export function init() {
     // --- 3. BOTONES DE LA BARRA DE HUD SUPERIOR ---
     if (helpBtn) {
         helpBtn.onclick = function () {
-            if (gameplayHints) gameplayHints.classList.toggle('visible');
+            if (gameplayHints) {
+                // Alternar la clase 'gamepad-active' según si hay un mando conectado
+                gameplayHints.classList.toggle('gamepad-active', gamepadConectado);
+                gameplayHints.classList.toggle('visible');
+            }
         };
     }
     if (pauseBtn) {

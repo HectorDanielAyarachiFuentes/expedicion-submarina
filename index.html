@@ -81,36 +81,112 @@
         </div>
 
         <div id="gameplay-hints">
-            <div class="hint hint-grid" data-hint-type="movement">
-                <span>MOVER</span>
-                <kbd class="key-icon key-arrow-up"></kbd>
-                <kbd class="key-icon key-arrow-left"></kbd>
-                <kbd class="key-icon key-arrow-down"></kbd>
-                <kbd class="key-icon key-arrow-right"></kbd>
+            <h3>Controles de la Expedición</h3>
+
+            <!-- Controles de Teclado -->
+            <div id="keyboard-controls" class="controls-section">
+                <div class="control-group">
+                    <h4>Movimiento</h4>
+                    <div class="control-item">
+                        <span class="control-label">Mover Submarino</span>
+                        <div class="keys">
+                            <kbd class="key-icon key-arrow-up"></kbd>
+                            <kbd class="key-icon key-arrow-left"></kbd>
+                            <kbd class="key-icon key-arrow-down"></kbd>
+                            <kbd class="key-icon key-arrow-right"></kbd>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h4>Combate</h4>
+                    <div class="control-item">
+                        <span class="control-label">Disparar Arma</span>
+                        <kbd class="key-icon key-spacebar">ESPACIO</kbd>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Lanzar Torpedo</span>
+                        <kbd class="key-icon text-key">X</kbd>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Cambiar Arma</span>
+                        <kbd class="key-icon text-key">C</kbd>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h4>Habilidades</h4>
+                    <div class="control-item">
+                        <span class="control-label">Impulso</span>
+                        <kbd class="key-icon text-key">B</kbd>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Escudo</span>
+                        <kbd class="key-icon text-key">V</kbd>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h4>Sistema</h4>
+                    <div class="control-item">
+                        <span class="control-label">Pausa / Menú</span>
+                        <kbd class="key-icon text-key">ESC</kbd>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Sonar</span>
+                        <kbd class="key-icon text-key">M</kbd>
+                    </div>
+                </div>
             </div>
-            <div class="hint" data-hint-type="all">
-                <span>DISPARAR</span>
-                <kbd class="key-icon key-spacebar"></kbd>
+
+            <!-- Controles de Mando (Gamepad) -->
+            <div id="gamepad-controls" class="controls-section">
+                <div class="control-group">
+                    <h4>Movimiento</h4>
+                    <div class="control-item">
+                        <span class="control-label">Mover Submarino</span>
+                        <div class="keys">
+                            <div class="gamepad-icon ls-icon" title="Stick Izquierdo"></div>
+                            <div class="gamepad-icon dpad-icon" title="Cruceta"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h4>Combate</h4>
+                    <div class="control-item">
+                        <span class="control-label">Disparar Arma</span>
+                        <div class="gamepad-icon xbox-a">A</div>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Lanzar Torpedo</span>
+                        <div class="gamepad-icon xbox-x">X</div>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Cambiar Arma</span>
+                        <div class="gamepad-icon xbox-rb">RB</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h4>Habilidades</h4>
+                    <div class="control-item">
+                        <span class="control-label">Impulso</span>
+                        <div class="gamepad-icon xbox-b">B</div>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Escudo</span>
+                        <div class="gamepad-icon xbox-y">Y</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h4>Sistema</h4>
+                    <div class="control-item"><span class="control-label">Pausa / Menú</span><div class="gamepad-icon xbox-menu" title="Botón Menú"></div></div>
+                    <div class="control-item"><span class="control-label">Ver Controles</span><div class="gamepad-icon xbox-view" title="Botón Vista"></div></div>
+                </div>
             </div>
-            <div class="hint" data-hint-type="all">
-                <span>ARMA</span>
-                <kbd class="key-icon text-key">C</kbd>
-            </div>
-            <div class="hint" data-hint-type="all">
-                <span>TORPEDO</span>
-                <kbd class="key-icon text-key">X</kbd>
-            </div>
-            <div class="hint" data-hint-type="all">
-                <span>IMPULSO</span>
-                <kbd class="key-icon text-key">B</kbd>
-            </div>
-            <div class="hint" data-hint-type="all">
-                <span>SONAR</span>
-                <kbd class="key-icon text-key">M</kbd>
-            </div>
-            <div class="hint" data-hint-type="all">
-                <span>ESCUDO</span>
-                <kbd class="key-icon text-key">V</kbd>
+
+            <p class="close-hint">Presiona <kbd class="key-icon text-key">ESC</kbd> o el botón de ayuda para cerrar.</p>
+        </div>
+
+        <div id="game-stats-overlay">
+            <div class="stat-item">
+                <span class="stat-label">PUNTOS</span>
             </div>
         </div>
 
