@@ -35,6 +35,40 @@ const a_creditos_imagenes = [
 let a_creditos_intervalo = null;
 let a_creditos_imagen_actual = 0;
 
+// --- NUEVO: Canvas Offscreen para optimización de renderizado ---
+let offscreenCanvas = null;
+let offscreenCtx = null;
+
+/**
+ * Inicializa un canvas oculto que se usará para operaciones de renderizado
+ * que son costosas, como aplicar tintes a los sprites.
+ */
+function inicializarCanvasOffscreen() {
+    if (!offscreenCanvas) {
+        offscreenCanvas = document.createElement('canvas');
+        offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+    }
+}
+
+/**
+ * Dibuja un sprite con un tinte de color. Es mucho más rápido que usar ctx.filter.
+ * @param {CanvasImageSource} img La imagen/spritesheet a dibujar.
+ * @param {number} sx Source X. @param {number} sy Source Y.
+ * @param {number} sWidth Source Width. @param {number} sHeight Source Height.
+ * @param {number} dx Destination X. @param {number} dy Destination Y.
+ * @param {number} dWidth Destination Width. @param {number} dHeight Destination Height.
+ * @param {string} tintColor El color del tinte (e.g., 'rgba(255, 0, 0, 0.5)').
+ */
+function dibujarSpriteConTinte(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, tintColor) {
+    if (!offscreenCtx || !offscreenCanvas) { ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight); return; }
+    if (offscreenCanvas.width < sWidth || offscreenCanvas.height < sHeight) { offscreenCanvas.width = sWidth; offscreenCanvas.height = sHeight; }
+    offscreenCtx.clearRect(0, 0, sWidth, sHeight);
+    offscreenCtx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+    offscreenCtx.globalCompositeOperation = 'source-atop';
+    offscreenCtx.fillStyle = tintColor; offscreenCtx.fillRect(0, 0, sWidth, sHeight);
+    offscreenCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(offscreenCanvas, 0, 0, sWidth, sHeight, dx, dy, dWidth, dHeight);
+}
 // --- Funciones Matemáticas y de Utilidad ---
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 export function lerp(a, b, t) { return a + (b - a) * t; }
@@ -1051,6 +1085,7 @@ const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
 const MIERDEi_ANIMATION_SPEED = 0.06;
 const BABYWHALE_ANIMATION_SPEED = 0.07;
 const ORCA_ANIMATION_SPEED = 0.06;
+const SONAR_SWEEP_SPEED = 2.0; // Radianes por segundo para el barrido del sonar
 
 // --- Funciones de Control del Juego ---
 function reiniciar(nivelDeInicio = 1) {
@@ -1110,6 +1145,8 @@ function reiniciar(nivelDeInicio = 1) {
         hudShakeY: 0,
         hudShakeIntensity: 0,
         nivelSeleccionadoIndex: 0, // Para el menú de niveles con mando
+        sonarUpdateTimer: 0, // Para optimización del sonar
+        sonarPings: [],      // Para optimización del sonar
         gamepadStickX: 0, // Para el stick del mando en menús
         // --- NUEVO: Propiedades para optimización del HUD ---
         _prevPuntuacion: -1,
@@ -2569,6 +2606,108 @@ function actualizarLiveHUD() {
         liveHudContainer.style.transform = 'translate(0, 0)';
     }
 }
+
+/**
+ * OPTIMIZACIÓN: Calcula las posiciones de los pings del sonar y las guarda en caché.
+ * Esta función es costosa y se llama a una frecuencia reducida (throttled) desde `actualizar`.
+ */
+function actualizarSonarPings() {
+    if (!estadoJuego) return;
+
+    estadoJuego.sonarPings = []; // Limpiar pings anteriores
+    const SONAR_WORLD_RADIUS = 2800;
+
+    // Jugador (siempre en el centro)
+    estadoJuego.sonarPings.push({ tipo: 'jugador' });
+
+    // Animales
+    for (const a of animales) {
+        const dx = a.x - jugador.x; const dy = a.y - jugador.y;
+        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+            const isHostile = a.hp !== undefined || a.tipo === 'shark' || a.tipo === 'mega_whale' || a.tipo === 'mierdei' || a.tipo === 'orca';
+            const isBoss = a.tipo === 'mega_whale' || (estadoJuego.jefe && a === estadoJuego.jefe);
+            estadoJuego.sonarPings.push({ tipo: 'animal', dx, dy, isHostile, isBoss });
+        }
+    }
+    
+    // Jefe (si existe y no está en la lista de animales)
+    if (estadoJuego.jefe && !animales.includes(estadoJuego.jefe)) {
+        const dx = estadoJuego.jefe.x - jugador.x; const dy = estadoJuego.jefe.y - jugador.y;
+        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+            estadoJuego.sonarPings.push({ tipo: 'animal', dx, dy, isHostile: true, isBoss: true });
+        }
+    }
+
+    // Proyectiles y Minas
+    const proyectilGrupos = [
+        { lista: Weapons.proyectiles, tipo: 'proyectil_jugador' },
+        { lista: Weapons.torpedos, tipo: 'torpedo_jugador' },
+        { lista: proyectilesEnemigos, tipo: 'proyectil_enemigo' },
+        { lista: Weapons.minas, tipo: 'mina' }
+    ];
+    for (const grupo of proyectilGrupos) {
+        for (const p of grupo.lista) {
+            const dx = p.x - jugador.x; const dy = p.y - jugador.y;
+            if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+                const pingData = { tipo: grupo.tipo, dx, dy };
+                if (p.vx !== undefined) { pingData.vx = p.vx; pingData.vy = p.vy; }
+                if (p.angle !== undefined) pingData.angle = p.angle;
+                estadoJuego.sonarPings.push(pingData);
+            }
+        }
+    }
+
+    // Escombros
+    for (const e of escombros) {
+        const dx = e.x - jugador.x; const dy = e.y - jugador.y;
+        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+            estadoJuego.sonarPings.push({ tipo: 'escombro', dx, dy, tamano: (e.tamano || e.size) });
+        }
+    }
+    
+    // Ataques especiales (Láser, Kraken)
+    if (estadoJuego.laserActivo) {
+        const isLevel5 = estadoJuego.nivel === 5;
+        const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+        const laserAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
+        estadoJuego.sonarPings.push({ tipo: 'laser_jugador', angle: laserAngle });
+    }
+    if (estadoJuego.jefe && estadoJuego.jefe.lasers) {
+        for (const laser of estadoJuego.jefe.lasers) {
+            const dx1 = laser.x - jugador.x; const dy1 = laser.y - jugador.y;
+            if (Math.hypot(dx1, dy1) < SONAR_WORLD_RADIUS) {
+                let endWorldX, endWorldY;
+                if (laser.tipo === 'sweep') {
+                    endWorldX = laser.x + Math.cos(laser.currentAngle) * laser.length;
+                    endWorldY = laser.y + Math.sin(laser.currentAngle) * laser.length;
+                } else { // snipe
+                    endWorldX = laser.targetX; endWorldY = laser.targetY;
+                }
+                const dx2 = endWorldX - jugador.x; const dy2 = endWorldY - jugador.y;
+                estadoJuego.sonarPings.push({ tipo: 'laser_enemigo', dx1, dy1, dx2, dy2 });
+            }
+        }
+    }
+    if (estadoJuego.nivel === 3 && estadoJuego.jefe) {
+        for (const ink of estadoJuego.proyectilesTinta) {
+            const dx = ink.x - jugador.x; const dy = ink.y - jugador.y;
+            if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
+                estadoJuego.sonarPings.push({ tipo: 'tinta_kraken', dx, dy });
+            }
+        }
+        if (estadoJuego.jefe.estado === 'attacking_smash' && estadoJuego.jefe.datosAtaque) {
+            const ataque = estadoJuego.jefe.datosAtaque;
+            const dy = ataque.y - jugador.y;
+            if (ataque.carga > 0) {
+                estadoJuego.sonarPings.push({ tipo: 'rayo_kraken', dy });
+            } else {
+                const tentacleWorldX = W - ataque.progreso * (W + 200);
+                const dx = tentacleWorldX - jugador.x;
+                estadoJuego.sonarPings.push({ tipo: 'barrido_kraken', dx, dy });
+            }
+        }
+    }
+}
 // =================================================================================
 //  9. BUCLE PRINCIPAL DE RENDERIZADO (DRAW)
 // =================================================================================
@@ -2682,18 +2821,18 @@ function renderizar(dt) {
                 }
             }
             else if (a.tipo === 'mierdei') {
-                // --- Dibuja el Mierdei ---
-                ctx.translate(a.x, a.y + offsetFlotante);
                 if (mierdeiListo && MIERDEI_SPRITE_DATA) {
+                    // --- Dibuja el Mierdei ---
+                    ctx.translate(a.x, a.y + offsetFlotante);
                     const frameData = MIERDEI_SPRITE_DATA.frames[a.frame];
                     if (frameData) {
                         const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
                         const aspectRatio = sWidth / sHeight;
                         const dHeight = a.w / aspectRatio;
                         ctx.imageSmoothingEnabled = false;
-                        if (a.vx > 0) { ctx.scale(-1, 1); }
-                        ctx.drawImage(mierdeiImg, sx, sy, sWidth, sHeight, 
-                            Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
+                        const dir = a.vx > 0 ? -1 : 1;
+                        ctx.scale(dir, 1);
+                        ctx.drawImage(mierdeiImg, sx, sy, sWidth, sHeight, Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
                     }
                 }
             } else if (a.tipo === 'shark') {
@@ -2701,12 +2840,12 @@ function renderizar(dt) {
                 ctx.translate(a.x, a.y);
 
                 // Efecto visual para la caza en manada
+                let tint = null;
                 if (a.isHunting) {
-                    // Un tinte rojizo y más brillante para indicar furia
-                    ctx.filter = 'hue-rotate(-20deg) brightness(1.3) saturate(2)';
+                    tint = 'rgba(255, 0, 0, 0.3)';
                 } else {
                     // Para que se vean mejor en el fondo oscuro, aumentamos su brillo.
-                    ctx.filter = 'brightness(1.5)';
+                    // No tint
                 }
                 if (sharkListo && SHARK_SPRITE_DATA) {
                     const frameData = SHARK_SPRITE_DATA.frames[a.frame];
@@ -2720,10 +2859,14 @@ function renderizar(dt) {
                         if (a.vx > 0) {
                             ctx.scale(-1, 1);
                         }
-                        ctx.drawImage(sharkImg, 
-                            sx, sy, sWidth, sHeight, 
-                            Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight
-                        );
+                        const dx = Math.round(-a.w / 2);
+                        const dy = Math.round(-dHeight / 2);
+
+                        if (tint) {
+                            dibujarSpriteConTinte(sharkImg, sx, sy, sWidth, sHeight, dx, dy, a.w, dHeight, tint);
+                        } else {
+                            ctx.drawImage(sharkImg, sx, sy, sWidth, sHeight, dx, dy, a.w, dHeight);
+                        }
                     }
                 }
             } else if (a.tipo === 'whale') {
@@ -2745,8 +2888,9 @@ function renderizar(dt) {
                 }
                 // --- FIN SUGERENCIA ---
 
+                let tint = null;
                 if (a.isEnraged) {
-                    ctx.filter = 'hue-rotate(-25deg) brightness(1.4) saturate(3)';
+                    tint = 'rgba(255, 0, 0, 0.35)';
                 }
                 if (whaleListo && WHALE_SPRITE_DATA) {
                     const frameData = WHALE_SPRITE_DATA.frames[a.frame];
@@ -2756,7 +2900,13 @@ function renderizar(dt) {
                         const dHeight = a.w / aspectRatio;
                         ctx.imageSmoothingEnabled = false;
                         if (a.vx > 0) { ctx.scale(-1, 1); }
-                        ctx.drawImage(whaleImg, sx, sy, sWidth, sHeight, Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
+                        const dx = Math.round(-a.w / 2);
+                        const dy = Math.round(-dHeight / 2);
+                        if (tint) {
+                            dibujarSpriteConTinte(whaleImg, sx, sy, sWidth, sHeight, dx, dy, a.w, dHeight, tint);
+                        } else {
+                            ctx.drawImage(whaleImg, sx, sy, sWidth, sHeight, dx, dy, a.w, dHeight);
+                        }
                     }
                 }
                 // Barra de vida para la ballena
@@ -2777,18 +2927,24 @@ function renderizar(dt) {
 
             } else {
                 // --- Dibuja las Criaturas Genéricas ---
-                if (a.tipo === 'aggressive') ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
-                if (a.tipo === 'rojo') ctx.filter = 'sepia(1) saturate(5) hue-rotate(-40deg)';
-                if (a.tipo === 'disparador') {
-                    ctx.filter = 'hue-rotate(90deg) saturate(3) brightness(1.3)';
-                }
-                if (a.tipo === 'dorado') ctx.filter = 'brightness(1.5) saturate(3) hue-rotate(15deg)';
+                let tint = null;
+                if (a.tipo === 'aggressive') tint = 'rgba(0, 100, 255, 0.4)';
+                if (a.tipo === 'rojo') tint = 'rgba(255, 50, 50, 0.5)';
+                if (a.tipo === 'disparador') tint = 'rgba(0, 255, 200, 0.4)';
+                if (a.tipo === 'dorado') tint = 'rgba(255, 220, 100, 0.5)';
 
                 if (criaturasListas && cFilas > 0) {
                     const sx = (a.frame % 2) * cFrameAncho, sy = (a.fila % cFilas) * cFrameAlto;
                     ctx.imageSmoothingEnabled = false;
-                    ctx.drawImage(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, Math.round(a.x - a.w / 2), Math.round(a.y + offsetFlotante - a.h / 2), a.w, a.h);
+                    const dx = Math.round(a.x - a.w / 2);
+                    const dy = Math.round(a.y + offsetFlotante - a.h / 2);
+                    if (tint) {
+                        dibujarSpriteConTinte(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, dx, dy, a.w, a.h, tint);
+                    } else {
+                        ctx.drawImage(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, dx, dy, a.w, a.h);
+                    }
                 } else {
+                    // Fallback si la spritesheet no está lista
                     ctx.fillStyle = a.tipo === 'aggressive' ? '#ff5e5e' : '#ffd95e';
                     ctx.beginPath();
                     ctx.arc(a.x, a.y + offsetFlotante, a.r, 0, Math.PI * 2);
@@ -3170,8 +3326,6 @@ function dibujarFondoParallax() {
     }
 }
 
-const SONAR_SWEEP_SPEED = 3.0; // Radianes por segundo
-
 function dibujarSonar() {
     if (!sonarCtx || !estadoJuego || !estadoJuego.enEjecucion || !estadoJuego.sonarActivo) {
         if (sonarCtx) sonarCtx.clearRect(0, 0, W, H);
@@ -3181,7 +3335,7 @@ function dibujarSonar() {
     sonarCtx.clearRect(0, 0, W, H);
     sonarCtx.save();
 
-    // --- 1. Definir el centro y radio del sonar (MINIMAPA) ---
+    // --- 1. Definir el centro y radio del sonar ---
     const SONAR_RADIUS = 100; // Radio en píxeles del minimapa
     const SONAR_WORLD_RADIUS = 2800; // Radio en unidades del juego que cubre el sonar
     const PADDING = 25;
@@ -4887,6 +5041,7 @@ export function init() {
     // --- 7. INICIALIZACIÓN FINAL DEL JUEGO ---
     autoSize();
     S.init();
+    inicializarCanvasOffscreen(); // >>> NUEVO: Inicializar el canvas para tintes
     actualizarIconos();
     reiniciar();
     mostrarVistaMenuPrincipal(false);
