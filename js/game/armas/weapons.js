@@ -6,6 +6,7 @@
 export let proyectiles = [];
 export let torpedos = [];
 export let minas = [];
+export let muzzleFlashes = []; // NUEVO: Para los fogonazos
 
 export const WEAPON_ORDER = ['garra', 'escopeta', 'gatling', 'laser', 'mina'];
 
@@ -69,6 +70,7 @@ export function initWeapons() {
     proyectiles = [];
     torpedos = [];
     minas = [];
+    muzzleFlashes = [];
 }
 
 /**
@@ -475,6 +477,19 @@ export function updateWeapons(ctx) {
                 const angulo = mount.angle + (Math.random() - 0.5) * gatlingConfig.dispersion;
                 const velocidad = gatlingConfig.velocidadProyectil;
                 
+                // --- NUEVO: Generar Fogonazo y Humo ---
+                muzzleFlashes.push({
+                    x: muzzleX, y: muzzleY,
+                    angle: angulo,
+                    size: 25 + Math.random() * 15,
+                    vida: 0.08, vidaMax: 0.08 // Vida muy corta para un flash rápido
+                });
+                generarParticula(particulasBurbujas, { // Reutilizamos burbujas para el humo
+                    x: muzzleX, y: muzzleY,
+                    vx: Math.cos(angulo) * 150 + (Math.random() - 0.5) * 50, vy: Math.sin(angulo) * 150 + (Math.random() - 0.5) * 50,
+                    r: 8 + Math.random() * 10, vida: 0.6, color: 'rgba(100, 100, 100, 0.5)'
+                });
+
                 proyectiles.push({ x: muzzleX, y: muzzleY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 14, h: 4, color: '#ffdd77', vida: gatlingConfig.vidaProyectil });
 
                 if (generarCasquillo) {
@@ -499,6 +514,16 @@ export function updateWeapons(ctx) {
         S.detener('gatling_spinup');
         S.detener('gatling_fire');
     }
+
+    // --- NUEVO: Actualizar Fogonazos ---
+    for (let i = muzzleFlashes.length - 1; i >= 0; i--) {
+        const flash = muzzleFlashes[i];
+        flash.vida -= dtAjustado;
+        if (flash.vida <= 0) {
+            muzzleFlashes.splice(i, 1);
+        }
+    }
+
 
     // --- Lógica de Colisión de Proyectiles ---
     function chequearColisionProyectil(proyectil) {
@@ -703,6 +728,33 @@ export function drawWeapons(dCtx) {
                 ctx.fillRect(barrelX, barrelY - 2.5, barrelLength, 5);
             }
         }
+        ctx.restore();
+    }
+
+    // --- NUEVO: Dibuja los Fogonazos ---
+    for (const flash of muzzleFlashes) {
+        ctx.save();
+        ctx.translate(flash.x, flash.y);
+        ctx.rotate(flash.angle + Math.random() * 0.5 - 0.25); // Rotación aleatoria para dinamismo
+
+        const alpha = (flash.vida / flash.vidaMax);
+        const size = flash.size * alpha;
+
+        // Gradiente para un efecto más brillante en el centro
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+        grad.addColorStop(0, `rgba(255, 255, 220, ${alpha})`);
+        grad.addColorStop(0.3, `rgba(255, 220, 180, ${alpha * 0.8})`);
+        grad.addColorStop(1, `rgba(255, 180, 100, 0)`);
+        ctx.fillStyle = grad;
+
+        // Dibujar una estrella de 4 puntas
+        ctx.beginPath();
+        ctx.moveTo(0, -size);
+        ctx.lineTo(size * 0.3, 0);
+        ctx.lineTo(0, size);
+        ctx.lineTo(-size * 0.3, 0);
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
     }
 
