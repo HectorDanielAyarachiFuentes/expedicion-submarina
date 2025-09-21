@@ -151,6 +151,29 @@ function getEjectionPortTransform(baseX, baseY, jugador, estadoJuego) {
     return { x: portX, y: portY, angle: finalAngle };
 }
 
+/**
+ * Genera un efecto de chispas al impactar una bala.
+ * @param {number} x - Posición X del impacto.
+ * @param {number} y - Posición Y del impacto.
+ * @param {number} impactAngle - Ángulo de la bala que impacta.
+ * @param {object} ctx - El contexto de `updateWeapons` que contiene `generarParticula` y `particulasExplosion`.
+ */
+function generarImpactoBala(x, y, impactAngle, ctx) {
+    const { generarParticula, particulasExplosion } = ctx;
+    const numChispas = 8 + Math.floor(Math.random() * 5);
+    const dispersion = Math.PI / 2; // 90 grados de cono de chispas
+
+    for (let i = 0; i < numChispas; i++) {
+        // Las chispas rebotan en la dirección opuesta al impacto
+        const anguloSalida = impactAngle + Math.PI + (Math.random() - 0.5) * dispersion;
+        const velocidad = 200 + Math.random() * 250;
+        const vida = 0.2 + Math.random() * 0.3;
+        const radio = 1 + Math.random() * 2;
+        
+        generarParticula(particulasExplosion, { x, y, vx: Math.cos(anguloSalida) * velocidad, vy: Math.sin(anguloSalida) * velocidad, r: radio, vida: vida, color: ['#ffffff', '#ffdd77', '#ffb733'][Math.floor(Math.random() * 3)] });
+    }
+}
+
 // --- Funciones de Disparo ---
 
 function dispararGarfio(ctx) {
@@ -186,7 +209,8 @@ function dispararShotgun(ctx) {
         const angulo = cannon.angle + (Math.random() - 0.5) * config.dispersion;
         const velocidad = config.velocidadProyectil.min + Math.random() * (config.velocidadProyectil.max - config.velocidadProyectil.min);
         const vida = config.vidaProyectil.min + Math.random() * (config.vidaProyectil.max - config.vidaProyectil.min);
-        proyectiles.push({ x: cannon.x, y: cannon.y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 8, h: 3, color: '#ffb733', vida: vida });
+        // Añadimos vidaMax para el efecto tracer
+        proyectiles.push({ x: cannon.x, y: cannon.y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 8, h: 3, color: '#ffb733', vida: vida, vidaMax: vida });
     }
     estadoJuego.enfriamientoArma = config.enfriamiento;
     S.reproducir('shotgun');
@@ -271,7 +295,7 @@ export function lanzarTorpedo(ctx) {
 // --- Lógica de Actualización ---
 
 export function updateWeapons(ctx) {
-    const { dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels, generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas, puntosPorRescate, triggerVibration, teclas, generarCasquillo } = ctx;
+    const { dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels, generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas, particulasExplosion, puntosPorRescate, triggerVibration, teclas, generarCasquillo } = ctx;
 
     // --- Lógica del Garfio ---
     if (jugador.garra) { 
@@ -490,7 +514,7 @@ export function updateWeapons(ctx) {
                     r: 8 + Math.random() * 10, vida: 0.6, color: 'rgba(100, 100, 100, 0.5)'
                 });
 
-                proyectiles.push({ x: muzzleX, y: muzzleY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 14, h: 4, color: '#ffdd77', vida: gatlingConfig.vidaProyectil });
+                proyectiles.push({ x: muzzleX, y: muzzleY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 14, h: 4, color: '#ffdd77', vida: gatlingConfig.vidaProyectil, vidaMax: gatlingConfig.vidaProyectil });
 
                 if (generarCasquillo) {
                     const port = getEjectionPortTransform(jugador.x, jugador.y, jugador, estadoJuego);
@@ -526,7 +550,7 @@ export function updateWeapons(ctx) {
 
 
     // --- Lógica de Colisión de Proyectiles ---
-    function chequearColisionProyectil(proyectil) {
+    function chequearColisionProyectil(proyectil, ctx) {
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
             if (!a.capturado && proyectil.x < a.x + a.w / 2 && proyectil.x + (proyectil.w || 0) > a.x - a.w / 2 && proyectil.y < a.y + a.h / 2 && proyectil.y + (proyectil.h || 0) > a.y - a.h / 2) {
@@ -537,7 +561,8 @@ export function updateWeapons(ctx) {
                         generarTrozoBallena(proyectil.x, proyectil.y);
                         generarGotasSangre(proyectil.x, proyectil.y);
                     }
-                    generarExplosion(proyectil.x, proyectil.y, '#dddddd', 20);
+                    const impactAngle = Math.atan2(proyectil.vy, proyectil.vx);
+                    generarImpactoBala(proyectil.x, proyectil.y, impactAngle, ctx);
                     if (a.hp <= 0) {
                         generarExplosion(a.x, a.y, '#aaffff', a.w);
                         Levels.onKill(a.tipo);
@@ -576,7 +601,7 @@ export function updateWeapons(ctx) {
             torpedos.splice(i, 1); 
             continue; 
         }
-        if (chequearColisionProyectil(t)) {
+        if (chequearColisionProyectil(t, ctx)) {
             torpedos.splice(i, 1);
         }
     }
@@ -601,7 +626,7 @@ export function updateWeapons(ctx) {
             proyectiles.splice(i, 1);
             continue;
         }
-        if (chequearColisionProyectil(p)) {
+        if (chequearColisionProyectil(p, ctx)) {
             proyectiles.splice(i, 1);
         }
     }
@@ -879,20 +904,42 @@ export function drawWeapons(dCtx) {
         ctx.restore();
     }
 
-    // --- Dibuja Proyectiles ---
+    // --- Dibuja Proyectiles (con efecto Tracer) ---
     for (const p of proyectiles) {
+        // Los proyectiles del menú no necesitan el efecto complejo
+        if (p.isMenuEffect) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            ctx.restore();
+            continue;
+        }
+
         ctx.save();
-        ctx.translate(p.x, p.y);
+        
+        const tailLength = p.w * 3.5; // La cola es 3.5 veces el largo de la bala
         const angle = Math.atan2(p.vy, p.vx);
+        
+        // Mover el canvas al punto de la punta de la bala
+        ctx.translate(p.x, p.y);
         ctx.rotate(angle);
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 8;
-        const grad = ctx.createLinearGradient(-p.w / 2, 0, p.w / 2, 0);
-        grad.addColorStop(0, p.color);
-        grad.addColorStop(0.8, p.color);
-        grad.addColorStop(1, 'white');
+
+        // Crear el gradiente para la estela
+        const grad = ctx.createLinearGradient(0, 0, -tailLength, 0); // Gradiente hacia atrás
+        const alpha = p.vida / (p.vidaMax || 1.0); // Desvanecer con la vida
+        
+        grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`); // Punta brillante
+        grad.addColorStop(0.3, `rgba(255, 221, 119, ${alpha * 0.8})`); // Cuerpo de la bala
+        grad.addColorStop(1, `rgba(255, 235, 205, 0)`); // Cola transparente
+
         ctx.fillStyle = grad;
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.shadowColor = '#ffdd77';
+        ctx.shadowBlur = 12;
+
+        // Dibujar la estela como un rectángulo alargado
+        ctx.fillRect(-tailLength, -p.h / 2, tailLength, p.h);
+
         ctx.restore();
     }
 

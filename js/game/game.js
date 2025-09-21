@@ -4199,7 +4199,7 @@ export function gameLoop(t) {
         // Actualiza las armas siempre, para efectos de menú y de juego.
         const weaponUpdateContext = {
             dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels,
-            generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas,
+            generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas, particulasExplosion,
             puntosPorRescate,
             teclas, generarCasquillo,
         triggerVibration: S.triggerVibration
