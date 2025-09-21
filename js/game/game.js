@@ -823,17 +823,20 @@ const WHALE_DEBRIS_PATHS = [
     new Path2D('M0,0 Q20,-20 35,-5 Q45,10 25,25 Q5,30 0,15 Z'),
     new Path2D('M0,-5 L15,-15 L30,-10 L40,5 L25,15 L10,20 Z')
 ];
-export function generarTrozoBallena(x, y, numTrozos = 3, fuerza = 150, size = 0) {
-    for (let i = 0; i < numTrozos + Math.random() * numTrozos; i++) {
+export function generarTrozoBallena(x, y, numTrozos = 1, fuerza = 150, size = 0) {
+    // --- OPTIMIZACIÓN: Limitar la frecuencia de generación de trozos ---
+    if (estadoJuego && estadoJuego.chunkGenerationCooldown > 0) return;
+    if (estadoJuego) estadoJuego.chunkGenerationCooldown = 0.1; // Máximo ~10 veces por segundo
+
+    for (let i = 0; i < numTrozos; i++) {
         const ang = Math.random() * Math.PI * 2; // Salen en todas direcciones
         const spd = 50 + Math.random() * fuerza;
         const vida = 1.5 + Math.random() * 1.5;
         const coloresCarne = ['#ab4e52', '#8e3a46', '#6d2e37']; // Tonos de carne/sangre
         whaleDebris.push({
-            x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
-            vRot: (Math.random() - 0.5) * 5, rotacion: Math.random() * Math.PI * 2,
-            vida: vida, vidaMax: vida, color: coloresCarne[Math.floor(Math.random() * coloresCarne.length)],
-            path: WHALE_DEBRIS_PATHS[Math.floor(Math.random() * WHALE_DEBRIS_PATHS.length)]
+            x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, vRot: (Math.random() - 0.5) * 5, rotacion: Math.random() * Math.PI * 2, vida: vida, vidaMax: vida,
+            color: coloresCarne[Math.floor(Math.random() * coloresCarne.length)], path: WHALE_DEBRIS_PATHS[Math.floor(Math.random() * WHALE_DEBRIS_PATHS.length)],
+            trailCooldown: Math.random() * 0.1 // Stagger initial blood trail
         });
     }
 }
@@ -888,6 +891,10 @@ function generarEscombrosSubmarino(x, y) {
 
 
 export function generarGotasSangre(x, y, cantidad = 0) {
+    // --- OPTIMIZACIÓN: Limitar la frecuencia de generación de sangre ---
+    if (estadoJuego && estadoJuego.bloodGenerationCooldown > 0) return;
+    if (estadoJuego) estadoJuego.bloodGenerationCooldown = 0.05; // Máximo ~20 veces por segundo
+
     const numGotas = cantidad > 0 ? cantidad : 10 + Math.random() * 10;
     for (let i = 0; i < numGotas; i++) {
         const ang = Math.random() * Math.PI * 2;
@@ -1055,6 +1062,8 @@ function reiniciar(nivelDeInicio = 1) {
         valorObjetivoNivel: 0,
         armaCambiandoTimer: 0,
         jefe: null,
+        chunkGenerationCooldown: 0, // Para optimizar trozos de carne
+        bloodGenerationCooldown: 0, // Para optimizar gotas de sangre
         proyectilesTinta: [],
         armaActual: estadoJuego ? estadoJuego.armaActual : 'garra', // Preservar arma
         enfriamientoArma: 0,
@@ -1610,6 +1619,8 @@ function actualizar(dt) {
     if (estadoJuego.enfriamientoTorpedo > 0) estadoJuego.enfriamientoTorpedo -= dt;
     if (estadoJuego.armaCambiandoTimer > 0) estadoJuego.armaCambiandoTimer -= dt;
     if (estadoJuego.enfriamientoArma > 0) estadoJuego.enfriamientoArma -= dt;
+    if (estadoJuego.chunkGenerationCooldown > 0) estadoJuego.chunkGenerationCooldown -= dt;
+    if (estadoJuego.bloodGenerationCooldown > 0) estadoJuego.bloodGenerationCooldown -= dt;
     estadoJuego.teclasActivas = teclas;
     
     // --- LÓGICA DE PROFUNDIDAD CORREGIDA ---
@@ -2470,15 +2481,21 @@ function actualizar(dt) {
         d.y += d.vy * dt;
         d.rotacion += d.vRot * dt;
         d.vida -= dt;
+        if (d.trailCooldown > 0) d.trailCooldown -= dt;
 
-        // Dejar un rastro de sangre
-        if (Math.random() < 0.4) { // 40% de probabilidad por frame de soltar una partícula
+        // --- MEJORA VISUAL: Rastro de sangre dinámico ---
+        if (d.trailCooldown <= 0) {
+            d.trailCooldown = 0.05 + Math.random() * 0.05; // Siguiente gota en 50-100ms
+            const trailAngle = Math.atan2(d.vy, d.vx) + Math.PI; // Dirección opuesta al movimiento
+            const spread = 1.2; // Dispersión del rastro
+            const trailSpeed = 30 + Math.random() * 40; // Velocidad de las gotas de sangre
+            
             generarParticula(particulasExplosion, {
                 x: d.x, y: d.y,
-                vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20,
-                r: 1 + Math.random() * 2,
-                vida: 0.5 + Math.random() * 0.5,
-                color: '#8b0000' // Rojo oscuro
+                vx: d.vx * 0.1 + Math.cos(trailAngle + (Math.random() - 0.5) * spread) * trailSpeed, vy: d.vy * 0.1 + Math.sin(trailAngle + (Math.random() - 0.5) * spread) * trailSpeed,
+                r: 1 + Math.random() * 2.5,
+                vida: 0.6 + Math.random() * 0.6,
+                color: ['#b22222', '#8b0000'][Math.floor(Math.random()*2)] // Dos tonos de sangre
             });
         }
 
