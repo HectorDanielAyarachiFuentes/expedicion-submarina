@@ -7,23 +7,26 @@ export let proyectiles = [];
 export let torpedos = [];
 export let minas = [];
 
-export const WEAPON_ORDER = ['garra', 'escopeta', 'metralleta', 'laser', 'mina'];
+export const WEAPON_ORDER = ['garra', 'escopeta', 'gatling', 'laser', 'mina'];
 
 export const WEAPON_CONFIG = {
     garra: { velocidad: 1400, alcance: 0.7 }, // Alcance como % del ancho de pantalla
     escopeta: {
         enfriamiento: 2.5,
         balas: 25,
-        dispersion: 1.5,
+        dispersion: 1.2,
         velocidadProyectil: { min: 700, max: 1100 },
         vidaProyectil: { min: 0.5, max: 0.8 }
     },
-    metralleta: {
-        enfriamiento: 3.0,
-        balas: 30,
-        dispersion: 0.2,
-        velocidadProyectil: 1600,
-        vidaProyectil: 0.8
+    gatling: {
+        enfriamiento: 4.0,      // Cooldown después de una ráfaga completa
+        spinUpTime: 0.35,       // Tiempo en segundos para que el cañón empiece a girar
+        fireDuration: 3.5,      // Cuánto tiempo dispara en una ráfaga
+        bulletsPerSecond: 45,   // Balas por segundo
+        dispersion: 0.3,        // Dispersión de las balas
+        velocidadProyectil: 1800,
+        vidaProyectil: 0.9,
+        deployTime: 0.4         // Tiempo para la animación de despliegue/repliegue
     },
     laser: {
         consumoEnergia: 30, // por segundo
@@ -98,6 +101,30 @@ function getCannonTransform(baseX, baseY, jugador, estadoJuego) {
 }
 
 /**
+ * Calcula la posición y el ángulo del soporte ventral de la Gatling.
+ * @param {number} baseX - La coordenada X base del submarino (mundo).
+ * @param {number} baseY - La coordenada Y base del submarino (mundo).
+ * @param {object} jugador - El objeto del jugador (para la inclinación).
+ * @param {object} estadoJuego - El estado actual del juego.
+ * @returns {{x: number, y: number, angle: number}} - Posición y ángulo del soporte.
+ */
+function getGatlingMountTransform(baseX, baseY, jugador, estadoJuego) {
+    const isLevel5 = estadoJuego.nivel === 5;
+    const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
+    const finalAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
+
+    // El soporte está debajo y un poco hacia adelante del centro del submarino.
+    // Coordenadas locales: (20, 35) -> 20px adelante, 35px abajo.
+    const mountOffsetX = 20;
+    const mountOffsetY = 35;
+
+    // Rotamos este offset para encontrar la posición mundial.
+    const mountX = baseX + mountOffsetX * Math.cos(finalAngle) - mountOffsetY * Math.sin(finalAngle);
+    const mountY = baseY + mountOffsetX * Math.sin(finalAngle) + mountOffsetY * Math.cos(finalAngle);
+
+    return { x: mountX, y: mountY, angle: finalAngle };
+}
+/**
  * Calcula la posición y el ángulo del puerto de eyección de casquillos.
  * @param {number} baseX - La coordenada X base del submarino (mundo).
  * @param {number} baseY - La coordenada Y base del submarino (mundo).
@@ -165,43 +192,6 @@ function dispararShotgun(ctx) {
     setTimeout(() => S.reproducir('reload'), 500);
 }
 
-function dispararMetralleta(ctx) {
-    const { estadoJuego, jugador, S, generarRafagaBurbujasDisparo, generarCasquillo, triggerVibration } = ctx;
-    if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
-    const config = WEAPON_CONFIG.metralleta;
-    const cannon = getCannonTransform(jugador.x, jugador.y, jugador, estadoJuego);
-    generarRafagaBurbujasDisparo(cannon.x, cannon.y, estadoJuego.nivel === 5);
-
-    // Expulsar una ráfaga de casquillos
-    if (generarCasquillo) {
-        const numCasquillos = 8;
-        for (let i = 0; i < numCasquillos; i++) {
-            setTimeout(() => {
-                // Recalcular la posición del puerto en cada frame del timeout por si el jugador se mueve
-                const currentPort = getEjectionPortTransform(jugador.x, jugador.y, jugador, estadoJuego);
-                generarCasquillo(currentPort.x, currentPort.y, estadoJuego.nivel === 5);
-            }, i * 40); // Un casquillo cada 40ms
-        }
-    }
-
-    const numBalas = 30;
-    for (let i = 0; i < numBalas; i++) {
-        const angulo = cannon.angle + (Math.random() - 0.5) * config.dispersion;
-        const velocidad = config.velocidadProyectil;
-        const offset = (i / numBalas) * velocidad * 0.05; // Efecto de ráfaga
-        const offsetX = Math.cos(angulo + Math.PI / 2) * offset;
-        const offsetY = Math.sin(angulo + Math.PI / 2) * offset;
-        proyectiles.push({ x: cannon.x + offsetX, y: cannon.y + offsetY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 12, h: 2, color: '#ff6363', vida: config.vidaProyectil });
-    }
-    estadoJuego.enfriamientoArma = config.enfriamiento;
-    for (let i = 0; i < 5; i++) {
-        setTimeout(() => triggerVibration(40, 0.4, 0.2), i * 60);
-    }
-    let soundCount = 0;
-    const soundInterval = setInterval(() => { S.reproducir('machinegun'); soundCount++; if (soundCount >= 5) clearInterval(soundInterval); }, 60);
-    setTimeout(() => S.reproducir('reload'), 800);
-}
-
 function lanzarMina(ctx) {
     const { estadoJuego, jugador, S } = ctx;
     if (!estadoJuego || estadoJuego.enfriamientoArma > 0) return;
@@ -219,13 +209,24 @@ function lanzarMina(ctx) {
 }
 
 export function disparar(ctx) {
-    const { estadoJuego, jugador, Levels } = ctx;
+    const { estadoJuego, jugador, Levels, S } = ctx;
     if (!estadoJuego) return;
     switch (estadoJuego.armaActual) {
         case 'garra': if (!jugador.garra) dispararGarfio(ctx); else if (jugador.garra.fase === 'ida') { jugador.garra.fase = 'retorno'; Levels.onFallo(); } break;
         case 'escopeta': dispararShotgun(ctx); break;
-        case 'metralleta': dispararMetralleta(ctx); break;
-        case 'laser': break; 
+        case 'gatling': {
+            // La lógica de la gatling se maneja en updateWeapons por ser un arma sostenida.
+            // Al presionar el botón, se inicia el 'spin-up'.
+            const gatlingState = estadoJuego.gatlingState;
+            // Solo se puede empezar a disparar si está desplegada y lista.
+            if (gatlingState.isDeployed && !gatlingState.isSpinning && !gatlingState.isFiring && estadoJuego.enfriamientoArma <= 0) {
+                gatlingState.isSpinning = true;
+                gatlingState.spinTimer = WEAPON_CONFIG.gatling.spinUpTime;
+                S.reproducir('gatling_spinup');
+            }
+            break;
+        }
+        case 'laser': break;
         case 'mina': lanzarMina(ctx); break;
     }
 }
@@ -268,7 +269,7 @@ export function lanzarTorpedo(ctx) {
 // --- Lógica de Actualización ---
 
 export function updateWeapons(ctx) {
-    const { dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels, generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas, puntosPorRescate, triggerVibration } = ctx;
+    const { dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels, generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas, puntosPorRescate, triggerVibration, teclas, generarCasquillo } = ctx;
 
     // --- Lógica del Garfio ---
     if (jugador.garra) { 
@@ -398,6 +399,105 @@ export function updateWeapons(ctx) {
                 }
             }
         }
+    }
+
+    // --- Lógica de Despliegue/Repliegue de la Gatling ---
+    // Se ejecuta siempre, incluso si no es el arma activa, para poder replegarla.
+    const gatlingState = estadoJuego.gatlingState;
+    const gatlingConfig = WEAPON_CONFIG.gatling;
+    if (gatlingState.isDeploying) {
+        gatlingState.deployProgress += dtAjustado / gatlingConfig.deployTime;
+        if (gatlingState.deployProgress >= 1) {
+            gatlingState.deployProgress = 1;
+            gatlingState.isDeploying = false;
+            gatlingState.isDeployed = true;
+        }
+    } else if (gatlingState.isRetracting) {
+        gatlingState.deployProgress -= dtAjustado / gatlingConfig.deployTime;
+        if (gatlingState.deployProgress <= 0) {
+            gatlingState.deployProgress = 0;
+            gatlingState.isRetracting = false;
+            gatlingState.isDeployed = false;
+        }
+    }
+
+    // --- Lógica de la Ametralladora Gatling ---
+    if (estadoJuego.armaActual === 'gatling' && gatlingState.isDeployed) {
+        const firePressed = teclas && teclas[' '];
+
+        // Si se suelta el gatillo, se detiene todo
+        if (!firePressed && (gatlingState.isSpinning || gatlingState.isFiring)) {
+            S.detener('gatling_spinup');
+            S.detener('gatling_fire');
+            gatlingState.isSpinning = false;
+            gatlingState.isFiring = false;
+            // Si estaba disparando, poner en enfriamiento parcial
+            if (gatlingState.fireTimer > 0) {
+                estadoJuego.enfriamientoArma = gatlingConfig.enfriamiento / 2;
+            }
+        }
+
+        // Actualizar estado de giro
+        if (gatlingState.isSpinning) {
+            gatlingState.spinTimer -= dtAjustado;
+            if (gatlingState.spinTimer <= 0) {
+                gatlingState.isSpinning = false;
+                gatlingState.isFiring = true;
+                gatlingState.fireTimer = gatlingConfig.fireDuration;
+                gatlingState.bulletTimer = 0;
+                S.detener('gatling_spinup');
+                S.bucle('gatling_fire');
+            }
+        }
+
+        // Actualizar estado de disparo
+        if (gatlingState.isFiring) {
+            gatlingState.fireTimer -= dtAjustado;
+            gatlingState.bulletTimer -= dtAjustado;
+
+            // Disparar balas
+            if (gatlingState.bulletTimer <= 0) {
+                gatlingState.bulletTimer += 1 / gatlingConfig.bulletsPerSecond;
+                
+                const mount = getGatlingMountTransform(jugador.x, jugador.y, jugador, estadoJuego);
+
+                // --- CÁLCULO CORREGIDO DE LA BOCA DEL CAÑÓN ---
+                // Replicamos la transformación del canvas para encontrar la posición correcta.
+                const gunDeployOffset = 30; // Cuando dispara, siempre está desplegado (deployProgress = 1)
+                const barrelLength = 35;    // Longitud de los cañones
+                
+                // 1. Centro del ensamblaje de cañones (el punto que rota)
+                const assemblyCenterX = mount.x - gunDeployOffset * Math.sin(mount.angle);
+                const assemblyCenterY = mount.y + gunDeployOffset * Math.cos(mount.angle);
+                // 2. Posición de la boca del cañón (al final de los cañones)
+                const muzzleX = assemblyCenterX + barrelLength * Math.cos(mount.angle);
+                const muzzleY = assemblyCenterY + barrelLength * Math.sin(mount.angle);
+                const angulo = mount.angle + (Math.random() - 0.5) * gatlingConfig.dispersion;
+                const velocidad = gatlingConfig.velocidadProyectil;
+                
+                proyectiles.push({ x: muzzleX, y: muzzleY, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad, w: 14, h: 4, color: '#ffdd77', vida: gatlingConfig.vidaProyectil });
+
+                if (generarCasquillo) {
+                    const port = getEjectionPortTransform(jugador.x, jugador.y, jugador, estadoJuego);
+                    generarCasquillo(port.x, port.y, estadoJuego.nivel === 5);
+                }
+
+                triggerVibration(30, 0.5, 0.1);
+            }
+
+            if (gatlingState.fireTimer <= 0) {
+                gatlingState.isFiring = false;
+                estadoJuego.enfriamientoArma = gatlingConfig.enfriamiento;
+                S.detener('gatling_fire');
+                S.reproducir('reload');
+            }
+        }
+
+    } else if (estadoJuego.gatlingState.isSpinning || estadoJuego.gatlingState.isFiring) {
+        estadoJuego.gatlingState.isSpinning = false;
+        estadoJuego.gatlingState.isFiring = false;
+        S.detener('gatling_spinup');
+        S.detener('gatling_fire');
     }
 
     // --- Lógica de Colisión de Proyectiles ---
@@ -543,6 +643,68 @@ export function updateWeapons(ctx) {
 
 export function drawWeapons(dCtx) {
     const { ctx, estadoJuego, jugador, px, py, W, H } = dCtx;
+
+    // --- Dibuja la Ametralladora Gatling y su compartimento ---
+    // Se dibuja si es el arma actual O si se está replegando.
+    if (estadoJuego.armaActual === 'gatling' || estadoJuego.gatlingState.isRetracting) {
+        const gatlingState = estadoJuego.gatlingState;
+        const deployProgress = gatlingState.deployProgress;
+
+        // 1. Obtener la posición del soporte ventral
+        const mount = getGatlingMountTransform(px, py, jugador, estadoJuego);
+
+        ctx.save();
+        ctx.translate(mount.x, mount.y);
+        ctx.rotate(mount.angle);
+
+        // 2. Dibujar la compuerta abriéndose
+        const hatchWidth = 50;
+        const hatchHeight = 18;
+        const openAngle = Math.PI / 2.2;
+
+        // --- MEJORA VISUAL: Gradiente para dar profundidad a las compuertas ---
+        const hatchGrad = ctx.createLinearGradient(0, -hatchHeight, 0, hatchHeight);
+        hatchGrad.addColorStop(0, '#555');
+        hatchGrad.addColorStop(0.5, '#3d3d3d');
+        hatchGrad.addColorStop(1, '#2a2a2a');
+
+        ctx.fillStyle = hatchGrad;
+        ctx.strokeStyle = '#2a2a2a';
+        ctx.lineWidth = 2;
+
+        // Parte superior de la compuerta
+        ctx.save(); ctx.rotate(-openAngle * deployProgress); ctx.beginPath(); ctx.rect(-hatchWidth / 2, -hatchHeight, hatchWidth, hatchHeight); ctx.fill(); ctx.stroke(); ctx.restore();
+        // Parte inferior de la compuerta
+        ctx.save(); ctx.rotate(openAngle * deployProgress); ctx.beginPath(); ctx.rect(-hatchWidth / 2, 0, hatchWidth, hatchHeight); ctx.fill(); ctx.stroke(); ctx.restore();
+
+        // 3. Dibujar la Gatling saliendo del compartimento
+        if (deployProgress > 0) {
+            const gunDeployOffset = 30 * deployProgress; // Se mueve "hacia abajo" (eje Y local)
+            ctx.translate(0, gunDeployOffset);
+
+            // Lógica de rotación de los cañones
+            let rotation = 0;
+            if (gatlingState.isSpinning) {
+                const spinProgress = 1 - (gatlingState.spinTimer / WEAPON_CONFIG.gatling.spinUpTime);
+                rotation = spinProgress * spinProgress * 40 * estadoJuego.tiempoTranscurrido; // Acelera
+            } else if (gatlingState.isFiring) {
+                rotation = 40 * estadoJuego.tiempoTranscurrido; // Velocidad constante
+            }
+
+            // Dibujar los cañones
+            const numBarrels = 6;
+            const barrelLength = 35;
+            const barrelDist = 7; // Distancia del centro
+            for (let i = 0; i < numBarrels; i++) {
+                const angle = (i / numBarrels) * Math.PI * 2 + rotation;
+                const barrelX = Math.cos(angle) * barrelDist;
+                const barrelY = Math.sin(angle) * barrelDist;
+                ctx.fillStyle = '#4a4a4a';
+                ctx.fillRect(barrelX, barrelY - 2.5, barrelLength, 5);
+            }
+        }
+        ctx.restore();
+    }
 
     // --- Dibuja el Láser ---
     if (estadoJuego.laserActivo) {

@@ -202,6 +202,8 @@ export const S = (function () {
         ink: 'sonidos/ink.wav',
         shotgun: 'sonidos/submarino/shotgun.wav',
         machinegun: 'sonidos/submarino/machinegun.wav',
+        gatling_spinup: 'sonidos/submarino/boost.wav', // REUTILIZADO
+        gatling_fire: 'sonidos/submarino/machinegun.wav', // REUTILIZADO
         reload: 'sonidos/submarino/reload.wav',
         laser_beam: 'sonidos/submarino/laser.wav',
         // Sonidos que faltaban (usados en los niveles pero no definidos aquí)
@@ -247,8 +249,8 @@ export const S = (function () {
                 el.preload = 'auto';
                 if (k.startsWith('music_')) { el.loop = false; el.volume = 0.35; el.addEventListener('ended', playRandomMusic); }
                 else if (k === 'theme_main') { el.loop = true; el.volume = 0.35; }
-                // --- NUEVO: Sonidos de efectos que hacen loop ---
-                else if (k === 'laser_beam' || k === 'boost') {
+                // --- NUEVO: Sonidos de efectos que hacen loop --- // prettier-ignore
+                else if (k === 'laser_beam' || k === 'boost' || k === 'gatling_spinup' || k === 'gatling_fire') {
                     el.loop = true; el.volume = 0.45; // Un volumen adecuado para efectos continuos
                 }
                 else { el.volume = 0.5; }
@@ -1058,7 +1060,18 @@ function reiniciar(nivelDeInicio = 1) {
         enfriamientoArma: 0,
         asesinatos: 0,
         teclasActivas: {},
-        boostActivo: false,
+        gatlingState: {
+            isSpinning: false,
+            isFiring: false,
+            spinTimer: 0,
+            fireTimer: 0,
+            bulletTimer: 0,
+            isDeployed: false,
+            isDeploying: false,
+            isRetracting: false,
+            deployProgress: 0,
+        },
+        boostActivo: false, // prettier-ignore
         boostEnergia: 100,
         boostMaxEnergia: 100,
         boostEnfriamiento: 0,
@@ -1738,12 +1751,19 @@ function actualizar(dt) {
         teclas['m'] = teclas['M'] = false;
     }
 
-    if (teclas[' '] && estadoJuego.bloqueoEntrada === 0 && estadoJuego.armaActual !== 'laser') { disparar(); teclas[' '] = false; }
+    const prevWeapon = estadoJuego.armaActual;
+
+    if (teclas[' '] && estadoJuego.bloqueoEntrada === 0) {
+        // Las armas sostenidas (láser, gatling) manejan su propia lógica en `updateWeapons`
+        if (estadoJuego.armaActual !== 'laser' && estadoJuego.armaActual !== 'gatling') {
+            disparar(); teclas[' '] = false; // Armas de un solo disparo
+        } else if (estadoJuego.armaActual === 'gatling') { disparar(); } // La gatling necesita un pulso inicial para empezar a girar
+    }
     if ((teclas['x'] || teclas['X']) && estadoJuego.bloqueoEntrada === 0) { lanzarTorpedo(); teclas['x'] = teclas['X'] = false; }
-    if (teclas['1']) { estadoJuego.armaActual = 'garra'; }
-    if (teclas['2']) { estadoJuego.armaActual = 'escopeta'; }
-    if (teclas['3']) { estadoJuego.armaActual = 'metralleta'; }
-    if (teclas['4']) { estadoJuego.armaActual = 'laser'; }
+    if (teclas['1']) { estadoJuego.armaActual = 'garra'; teclas['1'] = false; }
+    if (teclas['2']) { estadoJuego.armaActual = 'escopeta'; teclas['2'] = false; }
+    if (teclas['3']) { estadoJuego.armaActual = 'gatling'; teclas['3'] = false; }
+    if (teclas['4']) { estadoJuego.armaActual = 'laser'; teclas['4'] = false; }
     if ((teclas['c'] || teclas['C']) && estadoJuego.bloqueoEntrada === 0) {
         const currentIndex = Weapons.WEAPON_ORDER.indexOf(estadoJuego.armaActual);
         const nextIndex = (currentIndex + 1) % Weapons.WEAPON_ORDER.length;
@@ -1752,11 +1772,24 @@ function actualizar(dt) {
         S.reproducir('reload');
         estadoJuego.armaCambiandoTimer = 0.3; // Este timer es para la animación del HUD
     }
+
+    // --- Lógica de Despliegue/Repliegue de la Gatling al cambiar de arma ---
+    if (estadoJuego.armaActual !== prevWeapon) {
+        const gatlingState = estadoJuego.gatlingState;
+        // Si cambiamos DESDE la Gatling y estaba desplegada/desplegándose
+        if (prevWeapon === 'gatling' && (gatlingState.isDeployed || gatlingState.isDeploying)) {
+            gatlingState.isRetracting = true; gatlingState.isDeploying = false; gatlingState.isSpinning = false; gatlingState.isFiring = false; S.detener('gatling_spinup'); S.detener('gatling_fire'); S.reproducir('reload');
+        }
+        // Si cambiamos HACIA la Gatling y no está ya desplegada/desplegándose
+        if (estadoJuego.armaActual === 'gatling' && !gatlingState.isDeployed && !gatlingState.isDeploying) {
+            gatlingState.isDeploying = true; gatlingState.isRetracting = false; S.reproducir('reload');
+        }
+    }
     
     // --- Lógica de Habilidades: Escudo de Energía ---
     const eraShieldActivo = estadoJuego.shieldActivo;
     // El escudo se activa con la tecla 'v' y si tiene energía y no está en enfriamiento.
-    estadoJuego.shieldActivo = (teclas['v'] || teclas['V']) && estadoJuego.shieldEnergia > 0 && estadoJuego.shieldEnfriamiento <= 0;
+    estadoJuego.shieldActivo = (teclas['v'] || teclas['V']) && estadoJuego.shieldEnergia > 0 && estadoJuego.shieldEnfriamiento <= 0; // prettier-ignore
 
     // Lógica de sonidos de activación/desactivación
     if (estadoJuego.shieldActivo && !eraShieldActivo) {
@@ -3910,6 +3943,7 @@ function iniciarAnimacionMuerte() {
     S.detener('music');
     S.detener('laser_beam');
     S.detener('boost');
+    S.detener('gatling_fire');
     S.reproducir('explosion_grande');
 
     // Limpiar entidades existentes para la escena de muerte
@@ -4005,6 +4039,7 @@ function ganarJuego() {
     S.detener('music');
     S.detener('laser_beam');
     S.detener('boost');
+    S.detener('gatling_fire');
     S.reproducir('victory'); setTimeout(() => S.reproducir('theme_main'), 2000);
     if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
     if (mainMenu) mainMenu.style.display = 'block';
@@ -4165,7 +4200,8 @@ export function gameLoop(t) {
         const weaponUpdateContext = {
             dtAjustado, estadoJuego, jugador, animales, W, H, S, Levels,
             generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas,
-        puntosPorRescate,
+            puntosPorRescate,
+            teclas, generarCasquillo,
         triggerVibration: S.triggerVibration
         };
         Weapons.updateWeapons(weaponUpdateContext);
@@ -4566,6 +4602,7 @@ export function init() {
             S.pausar('music'); // Pausar la música del juego
             S.detener('boost'); // Detener sonidos en bucle
             S.detener('laser_beam');
+            S.detener('gatling_fire');
             if (controllerDisconnectOverlay) {
                 controllerDisconnectOverlay.style.display = 'grid';
             }
@@ -4600,7 +4637,7 @@ export function init() {
         }
         const tapX = e.clientX;
         if (tapX < W * 0.4) { arrastreId = e.pointerId; arrastreActivo = true; arrastreY = e.clientY; e.preventDefault(); } // prettier-ignore
-        else if (tapX > W * 0.6) { if (!estadoJuego || !estadoJuego.enEjecucion) return; if (estadoJuego.bloqueoEntrada === 0) { teclas[' '] = true; } }
+        else if (tapX > W * 0.6) { if (!estadoJuego || !estadoJuego.enEjecucion) return; if (estadoJuego.bloqueoEntrada === 0) { teclas[' '] = true; if (estadoJuego.armaActual === 'gatling') disparar({ estadoJuego, jugador, S, Levels }); } }
         else { lanzarTorpedo(); }
     }, { passive: false });
     window.addEventListener('pointermove', (e) => {
@@ -4610,7 +4647,7 @@ export function init() {
     }, { passive: false });
     window.addEventListener('pointerup', (e) => {
         if (estadoJuego && estadoJuego.nivel === 5) { return; }
-        if (e.pointerId === arrastreId) { arrastreActivo = false; arrastreId = -1; } teclas[' '] = false;
+        if (e.pointerId === arrastreId) { arrastreActivo = false; arrastreId = -1; } teclas[' '] = false; // Para armas sostenidas, esto detiene el fuego
     }, { passive: false });
     window.addEventListener('resize', autoSize);
 
