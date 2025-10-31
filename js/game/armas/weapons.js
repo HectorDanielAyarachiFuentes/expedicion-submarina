@@ -874,8 +874,8 @@ export function drawWeapons(dCtx) {
         const hx0 = cannon.x;
         const hy0 = cannon.y;
         ctx.save();
-        ctx.strokeStyle = '#8ff';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#666'; // Cable más oscuro y metálico
+        ctx.lineWidth = 3;       // Cable más grueso
         ctx.beginPath();
         ctx.moveTo(hx0, hy0);
         ctx.lineTo(jugador.garra.x, jugador.garra.y);
@@ -884,9 +884,13 @@ export function drawWeapons(dCtx) {
         ctx.save();
         ctx.translate(jugador.garra.x, jugador.garra.y);
         ctx.rotate(Math.atan2(jugador.garra.dy, jugador.garra.dx));
-        ctx.fillStyle = '#8ff';
+        ctx.fillStyle = '#999'; // Color de la punta del arpón
         ctx.beginPath();
-        ctx.moveTo(0, -6); ctx.lineTo(6, 0); ctx.lineTo(0, 6); ctx.closePath();
+        ctx.moveTo(0, 0);       // Centro de la punta
+        ctx.lineTo(20, 0);      // Longitud del arpón
+        ctx.lineTo(10, -8);     // Púa superior
+        ctx.lineTo(10, 8);      // Púa inferior
+        ctx.closePath();
         ctx.fill();
         ctx.restore();
     }
