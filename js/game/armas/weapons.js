@@ -308,10 +308,20 @@ export function updateWeapons(ctx) {
             if (estadoJuego.nivel !== 5) {
                 for (let j = 0; j < animales.length; j++) {
                     const a = animales[j];
+                    // --- LÓGICA DE CAPTURA MEJORADA ---
+                    // Lista de tipos de enemigos que son capturables y no tienen HP.
+                    const tiposCapturables = ['normal', 'rojo', 'dorado', 'mierdei'];
+
                     if (!g.golpeado && !a.capturado && Math.hypot(a.x - g.x, a.y - g.y) < a.r) {
-                        if (a.hp !== undefined) {
+                        // Si el animal es de un tipo que NO es capturable (tiene HP), le hace daño.
+                        if (!tiposCapturables.includes(a.tipo)) {
                             a.hp -= 15;
-                            generarTrozoBallena(g.x, g.y, 5, 200);
+                            // Generar efecto de daño apropiado
+                            if (a.tipo === 'whale' || a.tipo === 'shark' || a.tipo === 'baby_whale' || a.tipo === 'orca') {
+                                generarTrozoBallena(g.x, g.y, 5, 200);
+                            } else {
+                                generarExplosion(g.x, g.y, '#ff8833', 30);
+                            }
                             S.reproducir('boss_hit');
                             if (a.hp <= 0) {
                                 generarExplosion(a.x, a.y, '#aaffff', a.w);
@@ -324,6 +334,7 @@ export function updateWeapons(ctx) {
                             g.fase = 'retorno';
                             break;
                         } else {
+                            // Si es un tipo capturable, lo atrapa.
                             g.golpeado = a;
                             a.capturado = true;
                             g.fase = 'retorno';
