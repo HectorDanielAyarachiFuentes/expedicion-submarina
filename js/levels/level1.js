@@ -112,21 +112,26 @@ export function update(dt) {
     if (levelState.tiempoParaProximoEvento <= 0) {
         // Lógica de spawn aleatoria pero controlada
         const r = Math.random();
-        if (r < 0.1) { // 10% de probabilidad de una mini-oleada
+        const tiempoNormalizado = Math.min(1, levelState.tiempoDeJuego / 120); // Normalizar a 120 segundos
+
+        if (r < 0.05 * tiempoNormalizado) { // Baja probabilidad de Orca que aumenta con el tiempo
+            generarAnimal(false, 'orca');
+        } else if (r < (0.15 * tiempoNormalizado) + 0.05) { // Probabilidad de Tiburón que aumenta
+            generarAnimal(false, 'shark');
+        } else if (r < (0.1 * (1 - tiempoNormalizado)) + 0.1) { // Probabilidad de mini-oleada, disminuye un poco pero se mantiene
             for (let i = 0; i < 3; i++) {
                 setTimeout(() => generarAnimal(false, Math.random() < 0.4 ? 'rojo' : 'normal'), i * 200);
             }
-        } else if (r < 0.15) { // 5% de probabilidad de un 'mierdei'
+        } else if (r < (0.05 * (1 - tiempoNormalizado)) + 0.15) { // Probabilidad de 'mierdei'
              generarAnimal(false, 'mierdei');
-        }
-        else { // 85% de un animal normal o rojo
+        } else { // Animal normal o rojo, la probabilidad disminuye con el tiempo
             generarAnimal(false, Math.random() < 0.25 ? 'rojo' : 'normal');
         }
         
         // El tiempo para el siguiente spawn se acorta a medida que avanza el juego
         const spawnBase = 2.2;
         const spawnMin = 0.4;
-        const factorDificultad = Math.min(1, levelState.tiempoDeJuego / 90); // Tarda 90s en alcanzar dificultad máx
+        const factorDificultad = Math.min(1, levelState.tiempoDeJuego / 120); // Tarda 120s en alcanzar dificultad máx
         levelState.tiempoParaProximoEvento = spawnBase - (spawnBase - spawnMin) * factorDificultad;
     }
 }

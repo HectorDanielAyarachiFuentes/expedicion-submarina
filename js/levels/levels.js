@@ -18,7 +18,7 @@ import { estadoJuego, dificultadBase, animales, S, generarGotasSangre } from '..
 // 2. CONFIGURACIÓN CENTRALIZADA DE NIVELES
 // He movido el multiplicador de velocidad aquí para que toda la configuración esté en un solo lugar.
 export const CONFIG_NIVELES = [
-  { nombre: 'NIVEL 1: CAÑÓN DE MAR DEL PLATA', objetivo: 'Captura 10 especímenes', meta: 10, tipo: 'capture', speedMultiplier: 1.0 },
+  { nombre: 'NIVEL 1: CAÑÓN DE MAR DEL PLATA', objetivo: 'Captura 10 especímenes', meta: 25, tipo: 'capture', speedMultiplier: 1.0 },
   { nombre: 'NIVEL 2: FOSA ABISAL', objetivo: 'Sobrevive 60 segundos', meta: 60, tipo: 'survive', speedMultiplier: 1.4 },
   { nombre: 'NIVEL 3: LA GUARIDA DEL KRAKEN', objetivo: 'Derrota al jefe', meta: 1, tipo: 'boss', speedMultiplier: 1.0 },
   { nombre: 'NIVEL 4: CAMPO DE ESCOMBROS', objetivo: 'Sobrevive 90 segundos', meta: 90, tipo: 'survive', speedMultiplier: 1.0 },
