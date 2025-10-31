@@ -58,6 +58,7 @@ let activeLevelModule = null;
  */
 export function initLevel(nivel) {
     activeLevelModule = levelModules[nivel] || null;
+    console.log(`[Levels.js] Intentando iniciar Nivel ${nivel}. activeLevelModule:`, activeLevelModule, `Tiene init?:`, activeLevelModule && typeof activeLevelModule.init === 'function');
 
     if (activeLevelModule && typeof activeLevelModule.init === 'function') {
         try {
