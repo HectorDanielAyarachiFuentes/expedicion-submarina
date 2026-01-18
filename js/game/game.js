@@ -72,7 +72,7 @@ function dibujarSpriteConTinte(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHe
 // --- Funciones Matemáticas y de Utilidad ---
 export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 export function lerp(a, b, t) { return a + (b - a) * t; }
-export function dificultadBase() { 
+export function dificultadBase() {
     if (!estadoJuego || !estadoJuego.enEjecucion) return 0;
     return estadoJuego.tiempoTranscurrido / 150;
 }
@@ -189,17 +189,17 @@ const infoAnimCtx = infoAnimCanvas ? infoAnimCanvas.getContext('2d') : null;
 let animarSubmarino = false;
 
 function actualizarIconos() {
-  // Esta función cambia la apariencia del botón de silencio
-  // para reflejar si el sonido está activado o no.
-  if (!muteBtn) return;
-  const slash = document.getElementById('muteSlash');
-  if (S.estaSilenciado()) {
-    muteBtn.classList.add('muted');
-    if (slash) slash.style.display = 'block';
-  } else {
-    muteBtn.classList.remove('muted');
-    if (slash) slash.style.display = 'none';
-  }
+    // Esta función cambia la apariencia del botón de silencio
+    // para reflejar si el sonido está activado o no.
+    if (!muteBtn) return;
+    const slash = document.getElementById('muteSlash');
+    if (S.estaSilenciado()) {
+        muteBtn.classList.add('muted');
+        if (slash) slash.style.display = 'block';
+    } else {
+        muteBtn.classList.remove('muted');
+        if (slash) slash.style.display = 'none';
+    }
 }
 
 // =================================================================================
@@ -288,7 +288,10 @@ export const S = (function () {
                     el.loop = true; el.volume = 0.45; // Un volumen adecuado para efectos continuos
                 }
                 else { el.volume = 0.5; }
-                el.addEventListener('error', function(e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = { element: el, source: null }; } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); } } }
+                el.addEventListener('error', function (e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = { element: el, source: null };
+            } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); }
+        }
+    }
     function reproducir(k) {
         const audioObj = a[k];
         if (!audioObj) {
@@ -338,7 +341,7 @@ export const S = (function () {
             audioObj.element.pause();
             audioObj.element.currentTime = 0;
             if (k.startsWith('music_')) { audioObj.element.addEventListener('ended', playRandomMusic); }
-        } catch (e) {}
+        } catch (e) { }
     }
     function startPlaylist() {
         if (musicaActual) detener(musicaActual);
@@ -363,7 +366,7 @@ export const S = (function () {
         try {
             const promise = el.play();
             if (promise !== undefined) {
-                promise.catch(error => {});
+                promise.catch(error => { });
             }
         } catch (e) { }
     }
@@ -380,27 +383,27 @@ export const S = (function () {
     }
     function setSilenciado(m) { for (const k in a) { try { a[k].element.muted = !!m; } catch (e) { } } _silenciado = !!m; }
 
-/**
- * Activa la vibración en el mando de juego conectado, si existe.
- * @param {number} duration Duración de la vibración en milisegundos.
- * @param {number} [weak=1.0] Intensidad del motor de vibración débil (0.0 a 1.0).
- * @param {number} [strong=1.0] Intensidad del motor de vibración fuerte (0.0 a 1.0).
- */
-function triggerVibration(duration, weak = 1.0, strong = 1.0) {
-    if (!gamepadConectado || !estadoJuego || !estadoJuego.enEjecucion) return;
+    /**
+     * Activa la vibración en el mando de juego conectado, si existe.
+     * @param {number} duration Duración de la vibración en milisegundos.
+     * @param {number} [weak=1.0] Intensidad del motor de vibración débil (0.0 a 1.0).
+     * @param {number} [strong=1.0] Intensidad del motor de vibración fuerte (0.0 a 1.0).
+     */
+    function triggerVibration(duration, weak = 1.0, strong = 1.0) {
+        if (!gamepadConectado || !estadoJuego || !estadoJuego.enEjecucion) return;
 
-    const gamepads = navigator.getGamepads();
-    if (!gamepads[0] || !gamepads[0].vibrationActuator) return;
+        const gamepads = navigator.getGamepads();
+        if (!gamepads[0] || !gamepads[0].vibrationActuator) return;
 
-    gamepads[0].vibrationActuator.playEffect('dual-rumble', {
-        startDelay: 0,
-        duration: duration,
-        weakMagnitude: weak,
-        strongMagnitude: strong
-    }).catch(e => { /* No hacer nada si falla, es una característica no esencial. */ });
-}
+        gamepads[0].vibrationActuator.playEffect('dual-rumble', {
+            startDelay: 0,
+            duration: duration,
+            weakMagnitude: weak,
+            strongMagnitude: strong
+        }).catch(e => { /* No hacer nada si falla, es una característica no esencial. */ });
+    }
     function estaSilenciado() { return _silenciado; }
-    function alternarSilenciado() { setSilenciado(!estaSilenciado()); } 
+    function alternarSilenciado() { setSilenciado(!estaSilenciado()); }
     return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, startPlaylist, playRandomWhaleSong, getAudioData, triggerVibration };
 })();
 
@@ -427,13 +430,13 @@ let criaturasImg = null, criaturasListas = false, cFrameAncho = 0, cFrameAlto = 
 cargarImagen('img/sprites/criaturas.png', function (img) { if (img) { criaturasImg = img; cFrameAncho = Math.floor(img.width / 2); cFilas = Math.max(1, Math.floor(img.height / cFrameAncho)); cFrameAlto = Math.floor(img.height / cFilas); criaturasListas = true; } });
 let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0;
 cargarImagen('img/Fondos/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
- 
+
 // --- Fondos con Parallax ---
 let bgImg = null, bgListo = false, bgAncho = 0, bgAlto = 0;
 let bgOffset = 0; // Offset para el scroll del fondo
 const BG_DRIFT_SPEED = 8; // Velocidad de deriva constante para el fondo (píxeles/seg)
 const FG_DRIFT_SPEED = 25; // Velocidad de deriva constante para el primer plano (píxeles/seg)
- 
+
 cargarImagen('img/Fondos/bg_back.png', function (img) {
     if (img) {
         bgImg = img;
@@ -465,7 +468,7 @@ function comprobarMierdeiListo() {
         mierdeiListo = true;
     }
 }
-cargarImagen('img/sprites/mierdei.png', function(img) {
+cargarImagen('img/sprites/mierdei.png', function (img) {
     if (img) {
         mierdeiImg = img;
         mierdeiImgCargada = true;
@@ -474,7 +477,7 @@ cargarImagen('img/sprites/mierdei.png', function(img) {
         console.error("No se pudo cargar la imagen 'img/mierdei.png'. Asegúrate de que la ruta es correcta.");
     }
 });
-cargarJson('js/json_sprites/mierdei.json', function(data) {
+cargarJson('js/json_sprites/mierdei.json', function (data) {
     if (data) {
         MIERDEI_SPRITE_DATA = data;
         mierdeiJsonCargado = true;
@@ -491,14 +494,14 @@ function comprobarSharkListo() {
         sharkListo = true;
     }
 }
-cargarImagen('img/sprites/tiburon.png', function (img) { 
-    if (img) { 
-        sharkImg = img; 
+cargarImagen('img/sprites/tiburon.png', function (img) {
+    if (img) {
+        sharkImg = img;
         sharkImgCargada = true;
         comprobarSharkListo();
-    } 
+    }
 });
-cargarJson('js/json_sprites/shark.json', function(data) {
+cargarJson('js/json_sprites/shark.json', function (data) {
     if (data) {
         SHARK_SPRITE_DATA = data;
         sharkJsonCargado = true;
@@ -515,14 +518,14 @@ function comprobarWhaleListo() {
         whaleListo = true;
     }
 }
-cargarImagen('img/sprites/ballena.png', function (img) { 
-    if (img) { 
-        whaleImg = img; 
+cargarImagen('img/sprites/ballena.png', function (img) {
+    if (img) {
+        whaleImg = img;
         whaleImgCargada = true;
         comprobarWhaleListo();
-    } 
+    }
 });
-cargarJson('js/json_sprites/whale.json', function(data) {
+cargarJson('js/json_sprites/whale.json', function (data) {
     if (data) {
         WHALE_SPRITE_DATA = data;
         whaleJsonCargado = true;
@@ -539,14 +542,14 @@ function comprobarBabyWhaleListo() {
         babyWhaleListo = true;
     }
 }
-cargarImagen('img/sprites/ballenabebe.png', function (img) { 
-    if (img) { 
-        babyWhaleImg = img; 
+cargarImagen('img/sprites/ballenabebe.png', function (img) {
+    if (img) {
+        babyWhaleImg = img;
         babyWhaleImgCargada = true;
         comprobarBabyWhaleListo();
-    } 
+    }
 });
-cargarJson('js/json_sprites/ballenabebe.json', function(data) {
+cargarJson('js/json_sprites/ballenabebe.json', function (data) {
     if (data) {
         BABYWHALE_SPRITE_DATA = data;
         babyWhaleJsonCargado = true;
@@ -563,14 +566,14 @@ function comprobarOrcaLista() {
         orcaListo = true;
     }
 }
-cargarImagen('img/sprites/orca.png', function (img) { 
-    if (img) { 
-        orcaImg = img; 
+cargarImagen('img/sprites/orca.png', function (img) {
+    if (img) {
+        orcaImg = img;
         orcaImgCargada = true;
         comprobarOrcaLista();
-    } 
+    }
 });
-cargarJson('js/json_sprites/orca.json', function(data) {
+cargarJson('js/json_sprites/orca.json', function (data) {
     if (data) {
         ORCA_SPRITE_DATA = data;
         orcaJsonCargado = true;
@@ -934,12 +937,12 @@ export function generarGotasSangre(x, y, cantidad = 0) {
         const ang = Math.random() * Math.PI * 2;
         const spd = 20 + Math.random() * 100;
         const r = 1.5 + Math.random() * 2.5;
-        generarParticula(particulasExplosion, { 
-            x, y, 
-            vx: Math.cos(ang) * spd, 
-            vy: Math.sin(ang) * spd, 
-            r: r, 
-            vida: 0.8 + Math.random() * 0.6, 
+        generarParticula(particulasExplosion, {
+            x, y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            r: r,
+            vida: 0.8 + Math.random() * 0.6,
             color: '#b22222' // Color sangre
         });
     }
@@ -1060,7 +1063,7 @@ export function infligirDanoJugador(cantidad = 1, tipoSonido = 'choque') {
     // Si no hay escudo, el jugador recibe el daño.
     const antes = estadoJuego.vidas;
     if (estadoJuego.vidas > 0) estadoJuego.vidas = Math.max(0, estadoJuego.vidas - cantidad);
-if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir(tipoSonido); S.triggerVibration(300, 1.0, 1.0); }
+    if (estadoJuego.vidas < antes) { estadoJuego.animVida = 0.6; S.reproducir(tipoSonido); S.triggerVibration(300, 1.0, 1.0); }
     if (estadoJuego.vidas <= 0) {
         perderJuego();
     } else {
@@ -1086,6 +1089,187 @@ const MIERDEi_ANIMATION_SPEED = 0.06;
 const BABYWHALE_ANIMATION_SPEED = 0.07;
 const ORCA_ANIMATION_SPEED = 0.06;
 const SONAR_SWEEP_SPEED = 2.0; // Radianes por segundo para el barrido del sonar
+
+// =================================================================================
+//  SISTEMA DE IA AVANZADA PARA HABITANTES MARINOS
+// =================================================================================
+
+// --- Constantes de Cardumen ---
+const CARDUMEN_RADIO_COHESION = 200;   // Radio para calcular centro del grupo
+const CARDUMEN_RADIO_SEPARACION = 50;  // Radio mínimo entre peces
+const CARDUMEN_RADIO_ALINEACION = 150; // Radio para alinear velocidades
+const CARDUMEN_RADIO_HUIDA = 300;      // Radio de detección de amenazas
+const CARDUMEN_FUERZA_COHESION = 0.8;  // Fuerza de atracción al centro
+const CARDUMEN_FUERZA_SEPARACION = 1.5; // Fuerza de repulsión (mayor para evitar solapamiento)
+const CARDUMEN_FUERZA_ALINEACION = 0.6; // Fuerza de alineación
+const CARDUMEN_FUERZA_HUIDA = 3.0;     // Fuerza de huida de amenazas
+const CARDUMEN_VELOCIDAD_MAX = 180;    // Velocidad máxima de un pez en cardumen
+
+// --- Constantes de Tiburón ---
+const SHARK_ANGULO_FLANQUEO = Math.PI / 4; // 45 grados de flanqueo
+const SHARK_RADIO_ACECHO = 400; // Radio para entrar en estado de acecho
+
+// --- Constantes de Orca ---
+const ORCA_RADIO_CERCO = 300; // Radio del cerco
+
+/**
+ * Calcula las fuerzas de cardumen para un pez (cohesión, separación, alineación).
+ * @param {object} pez - El pez actual.
+ * @returns {{fx: number, fy: number}} - Las fuerzas a aplicar.
+ */
+function calcularFuerzasCardumen(pez) {
+    let cohesionX = 0, cohesionY = 0, cohesionCount = 0;
+    let separacionX = 0, separacionY = 0;
+    let alineacionVx = 0, alineacionVy = 0, alineacionCount = 0;
+
+    for (const otro of animales) {
+        if (otro === pez) continue;
+        // Solo considerar peces normales del cardumen
+        if (!['normal', 'rojo', 'aggressive'].includes(otro.tipo)) continue;
+
+        const dx = otro.x - pez.x;
+        const dy = otro.y - pez.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 1) continue; // Evitar división por cero
+
+        // Cohesión: atraer hacia el centro del grupo
+        if (dist < CARDUMEN_RADIO_COHESION) {
+            cohesionX += otro.x;
+            cohesionY += otro.y;
+            cohesionCount++;
+        }
+
+        // Separación: repeler si está muy cerca
+        if (dist < CARDUMEN_RADIO_SEPARACION) {
+            const fuerza = (CARDUMEN_RADIO_SEPARACION - dist) / CARDUMEN_RADIO_SEPARACION;
+            separacionX -= (dx / dist) * fuerza;
+            separacionY -= (dy / dist) * fuerza;
+        }
+
+        // Alineación: igualar velocidad con vecinos
+        if (dist < CARDUMEN_RADIO_ALINEACION) {
+            alineacionVx += otro.vx || 0;
+            alineacionVy += otro.vy || 0;
+            alineacionCount++;
+        }
+    }
+
+    let fx = 0, fy = 0;
+
+    // Aplicar cohesión
+    if (cohesionCount > 0) {
+        const centroX = cohesionX / cohesionCount;
+        const centroY = cohesionY / cohesionCount;
+        fx += (centroX - pez.x) * CARDUMEN_FUERZA_COHESION * 0.01;
+        fy += (centroY - pez.y) * CARDUMEN_FUERZA_COHESION * 0.01;
+    }
+
+    // Aplicar separación
+    fx += separacionX * CARDUMEN_FUERZA_SEPARACION * 50;
+    fy += separacionY * CARDUMEN_FUERZA_SEPARACION * 50;
+
+    // Aplicar alineación
+    if (alineacionCount > 0) {
+        const avgVx = alineacionVx / alineacionCount;
+        const avgVy = alineacionVy / alineacionCount;
+        fx += (avgVx - (pez.vx || 0)) * CARDUMEN_FUERZA_ALINEACION * 0.1;
+        fy += (avgVy - (pez.vy || 0)) * CARDUMEN_FUERZA_ALINEACION * 0.1;
+    }
+
+    return { fx, fy };
+}
+
+/**
+ * Calcula la fuerza de huida de amenazas (jugador, tiburones, orcas).
+ * @param {object} pez - El pez actual.
+ * @returns {{fx: number, fy: number}} - La fuerza de huida.
+ */
+function calcularFuerzaHuida(pez) {
+    let fx = 0, fy = 0;
+
+    // Huir del jugador
+    if (jugador && estadoJuego && estadoJuego.enEjecucion) {
+        const dx = pez.x - jugador.x;
+        const dy = pez.y - jugador.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < CARDUMEN_RADIO_HUIDA && dist > 1) {
+            const fuerza = (CARDUMEN_RADIO_HUIDA - dist) / CARDUMEN_RADIO_HUIDA;
+            fx += (dx / dist) * fuerza * CARDUMEN_FUERZA_HUIDA * 100;
+            fy += (dy / dist) * fuerza * CARDUMEN_FUERZA_HUIDA * 100;
+        }
+    }
+
+    // Huir de depredadores (tiburones, orcas)
+    for (const depredador of animales) {
+        if (!['shark', 'orca'].includes(depredador.tipo)) continue;
+
+        const dx = pez.x - depredador.x;
+        const dy = pez.y - depredador.y;
+        const dist = Math.hypot(dx, dy);
+
+        // Los depredadores tienen un radio de amenaza mayor
+        const radioAmenaza = depredador.tipo === 'orca' ? CARDUMEN_RADIO_HUIDA * 1.5 : CARDUMEN_RADIO_HUIDA;
+
+        if (dist < radioAmenaza && dist > 1) {
+            const fuerza = (radioAmenaza - dist) / radioAmenaza;
+            fx += (dx / dist) * fuerza * CARDUMEN_FUERZA_HUIDA * 120;
+            fy += (dy / dist) * fuerza * CARDUMEN_FUERZA_HUIDA * 120;
+        }
+    }
+
+    return { fx, fy };
+}
+
+/**
+ * Alerta a peces cercanos cuando uno detecta peligro.
+ * @param {object} pezAsustado - El pez que detectó el peligro.
+ */
+function alertarPecesCercanos(pezAsustado) {
+    const RADIO_ALERTA = 250;
+
+    for (const otro of animales) {
+        if (otro === pezAsustado) continue;
+        if (!['normal', 'rojo', 'aggressive'].includes(otro.tipo)) continue;
+
+        const dist = Math.hypot(otro.x - pezAsustado.x, otro.y - pezAsustado.y);
+        if (dist < RADIO_ALERTA) {
+            // Marcar como alertado temporalmente
+            otro.alertado = true;
+            otro.alertaTimer = 2.0; // Alerta activa por 2 segundos
+        }
+    }
+}
+
+/**
+ * Calcula el ángulo de flanqueo para tiburones seguidores.
+ * @param {number} index - Índice del tiburón en la manada.
+ * @param {number} baseAngle - Ángulo base hacia el objetivo.
+ * @returns {number} - Ángulo ajustado para flanqueo.
+ */
+function calcularAnguloFlanqueoTiburon(index, baseAngle) {
+    // Los tiburones pares flanquean por arriba, los impares por abajo
+    const offset = (index % 2 === 0 ? 1 : -1) * SHARK_ANGULO_FLANQUEO * (Math.floor(index / 2) + 1) * 0.5;
+    return baseAngle + offset;
+}
+
+/**
+ * Calcula la posición de cerco para una orca en la manada.
+ * @param {object} orca - La orca.
+ * @param {object} objetivo - El objetivo del cerco.
+ * @param {number} indexEnManada - Posición de la orca en la manada.
+ * @param {number} tamanoManada - Tamaño total de la manada.
+ * @returns {{x: number, y: number}} - Posición objetivo del cerco.
+ */
+function calcularPosicionCercoOrca(orca, objetivo, indexEnManada, tamanoManada) {
+    // Distribuir las orcas en un círculo alrededor del objetivo
+    const angulo = (Math.PI * 2 / tamanoManada) * indexEnManada;
+    return {
+        x: objetivo.x + Math.cos(angulo) * ORCA_RADIO_CERCO,
+        y: objetivo.y + Math.sin(angulo) * ORCA_RADIO_CERCO
+    };
+}
 
 // --- Funciones de Control del Juego ---
 function reiniciar(nivelDeInicio = 1) {
@@ -1127,7 +1311,7 @@ function reiniciar(nivelDeInicio = 1) {
         laserMaxEnergia: 100,
         laserActivo: false,
         velocidadJuego: 1.0,
-        slowMoTimer: 0, 
+        slowMoTimer: 0,
         levelFlags: {}, // >>> CAMBIO CLAVE <<< Objeto para que los niveles comuniquen flags al motor (ej: no mover el fondo)
         shieldActivo: false,
         shieldEnergia: 100,
@@ -1167,7 +1351,7 @@ function reiniciar(nivelDeInicio = 1) {
     estadoJuego.cameraX = 0;
     estadoJuego.cameraY = 0;
     estadoJuego.prevCameraX = 0;
-    
+
     pilotos = [];
     trozosHumanos = [];
     delete estadoJuego.darknessOverride; // Limpiamos la oscuridad del nivel 2, si existiera.
@@ -1175,7 +1359,7 @@ function reiniciar(nivelDeInicio = 1) {
     jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0, inclinacion: 0 };
     jugador.direccion = 1; // 1 para derecha, -1 para izquierda
     Levels.initLevel(nivelDeInicio);
-    
+
     escombros = [];
     animales = [];
     proyectilesEnemigos = [];
@@ -1208,7 +1392,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
     let velocidad = overrides.velocidad || (velocidadActual() + 60);
 
     let tipo = tipoForzado || 'normal';
-    
+
     // --- LÓGICA DE APARICIÓN MEJORADA ---
     // Si no se fuerza un tipo muy específico (como 'dorado' o 'mierdei'),
     // hay una probabilidad de que aparezca un enemigo especial en su lugar.
@@ -1257,7 +1441,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
             x: spawnX, y, vx: velocidad * 0.7 * direccion, r: anchoDeseado / 2,
             w: anchoDeseado, h: altoDeseado, capturado: false, tipo: 'mierdei',
             semillaFase: Math.random() * Math.PI * 2, // Kept for floating, might remove later if not needed
-            frame: 0, 
+            frame: 0,
             timerFrame: 0,
         });
     } else if (tipo === 'shark') {
@@ -1266,7 +1450,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         animales.push({
             x: spawnX, y, vx: velocidad * direccion, vy: 0, r: 50, w: tamano, h: tamano,
             capturado: false, frame: 0, timerFrame: 0, hp: 60, maxHp: 60,
-            semillaFase: Math.random() * Math.PI * 2, 
+            semillaFase: Math.random() * Math.PI * 2,
             tipo: 'shark',
             huntCooldown: 2.0 + Math.random(), // Cooldown inicial antes de la primera caza
             isHunting: false,
@@ -1274,7 +1458,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         });
     } else if (tipo === 'orca') {
         if (!orcaListo) return;
-        
+
         const packSize = 2 + Math.floor(Math.random() * 2); // Manada de 2 a 3 orcas
         const packId = `orca_pack_${Date.now()}_${Math.random()}`;
 
@@ -1310,7 +1494,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         const adultWhale = {
             x: spawnX, y, vx: velocidad * direccion, vy: 0, r: 100, w: tamano, h: tamano,
             capturado: false, frame: 0, timerFrame: 0,
-            semillaFase: Math.random() * Math.PI * 2, 
+            semillaFase: Math.random() * Math.PI * 2,
             tipo: 'whale',
             hp: 130, maxHp: 130, // Vida aumentada a 130
             isEnraged: false,
@@ -1343,7 +1527,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
                 animales.push({
                     x: babyX, y: babyY, vx: babyVelocidad * direccion, vy: 0, r: 55, w: babyTamano, h: babyTamano,
                     capturado: false, frame: 0, timerFrame: 0,
-                    semillaFase: Math.random() * Math.PI * 2, 
+                    semillaFase: Math.random() * Math.PI * 2,
                     tipo: 'baby_whale',
                     hp: 40, // Ahora tiene vida y puede ser eliminada
                     maxHp: 40,
@@ -1362,7 +1546,7 @@ export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrid
         if (tipo === 'aggressive') {
             velocidad *= 1.3;
         }
-        
+
         const tamano = overrides.ancho || 96;
         const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
 
@@ -1427,7 +1611,7 @@ function actualizarCriaturasMenu(dt) {
     // Mover criaturas del menú (que están en el array 'animales')
     for (let i = animales.length - 1; i >= 0; i--) {
         const a = animales[i];
-        
+
         if (a.isChaser) continue; // Los tiburones perseguidores se actualizan en `actualizarAnimacionMenu`
         // Usar un movimiento sinusoidal simple para que se sientan más naturales
         a.x += a.vx * dt;
@@ -1508,9 +1692,11 @@ function actualizarCriaturasMenu(dt) {
         }
 
         // Reciclar si sale de la pantalla para mantener el ambiente vivo
+        // Pero solo si no hay demasiados animales (límite para un ambiente marino realista)
         if (a.x < -a.w) {
             animales.splice(i, 1);
-            if (modoSuperposicion === 'menu' && !__iniciando) {
+            const MAX_CRIATURAS_MENU = 8; // Límite para un ambiente marino más natural
+            if (modoSuperposicion === 'menu' && !__iniciando && animales.length < MAX_CRIATURAS_MENU) {
                 const tiposMenu = ['normal'];
                 if (sharkListo) tiposMenu.push('shark');
                 if (whaleListo) tiposMenu.push('whale');
@@ -1624,7 +1810,7 @@ function actualizarAnimacionMenu(dt) {
                 for (let i = 0; i < numSharks; i++) {
                     const sharkX = menuFlyBy.x - (Math.sign(menuFlyBy.vx) * (150 + i * 80 + Math.random() * 50));
                     const sharkY = menuFlyBy.y + (Math.random() - 0.5) * 200;
-                    
+
                     const shark = {
                         x: sharkX, y: sharkY,
                         vx: menuFlyBy.vx * (0.85 + Math.random() * 0.1), // Un poco más lentos
@@ -1659,7 +1845,7 @@ function actualizar(dt) {
     if (estadoJuego.chunkGenerationCooldown > 0) estadoJuego.chunkGenerationCooldown -= dt;
     if (estadoJuego.bloodGenerationCooldown > 0) estadoJuego.bloodGenerationCooldown -= dt;
     estadoJuego.teclasActivas = teclas;
-    
+
     // --- LÓGICA DE PROFUNDIDAD CORREGIDA ---
     // La profundidad ahora se basa en la posición Y del jugador, no en el tiempo.
     // Esto hace que solo cambie cuando el jugador se mueve verticalmente.
@@ -1673,7 +1859,7 @@ function actualizar(dt) {
     if (teclas['ArrowLeft']) vx -= 1;
     if (teclas['ArrowRight']) vx += 1;
     const len = Math.hypot(vx, vy);
-    
+
     if (len > 0) {
         vx = (vx / len) * JUGADOR_VELOCIDAD;
         vy = (vy / len) * JUGADOR_VELOCIDAD;
@@ -1697,7 +1883,7 @@ function actualizar(dt) {
         }
     }
     estadoJuego.velocidad_actual = currentSpeed;
-    
+
     // --- Animación de la Hélice ---
     const isMoving = len > 0;
     let targetSpeed = 5; // Velocidad de ralentí
@@ -1721,14 +1907,14 @@ function actualizar(dt) {
 
         const humoX = jugador.x + offsetX * Math.cos(anguloFinal) - offsetY * Math.sin(anguloFinal);
         const humoY = jugador.y + offsetX * Math.sin(anguloFinal) + offsetY * Math.cos(anguloFinal);
-        
+
         generarHumoDaño(humoX, humoY, isLevel5);
     }
 
 
     // Llama a la lógica de actualización del nivel actual
     Levels.updateLevel(dt, vx, vy);
-    
+
     // Aplicar el movimiento calculado a partir de las teclas
     jugador.x += vx * dt;
     jugador.y += vy * dt;
@@ -1771,7 +1957,7 @@ function actualizar(dt) {
     if (vy < 0) inclinacionRobotObjetivo = -INCLINACION_MAX;
     else if (vy > 0) inclinacionRobotObjetivo = INCLINACION_MAX;
 
-    if(isLevel5){
+    if (isLevel5) {
         if (teclas['ArrowLeft']) inclinacionRobotObjetivo -= INCLINACION_MAX * 1.5;
         else if (teclas['ArrowRight']) inclinacionRobotObjetivo += INCLINACION_MAX * 1.5;
     }
@@ -1833,7 +2019,7 @@ function actualizar(dt) {
             gatlingState.isDeploying = true; gatlingState.isRetracting = false; S.reproducir('reload');
         }
     }
-    
+
     // --- Lógica de Habilidades: Escudo de Energía ---
     const eraShieldActivo = estadoJuego.shieldActivo;
     // El escudo se activa con la tecla 'v' y si tiene energía y no está en enfriamiento.
@@ -1873,7 +2059,7 @@ function actualizar(dt) {
     const configNivel = Levels.CONFIG_NIVELES[estadoJuego.nivel - 1];
     if (configNivel.tipo === 'capture') { estadoJuego.valorObjetivoNivel = estadoJuego.rescatados; }
     else if (configNivel.tipo === 'survive') { estadoJuego.valorObjetivoNivel = Math.min(estadoJuego.valorObjetivoNivel + dt, configNivel.meta); }
-    
+
     // --- Lógica de Habilidades: Impulso (Boost) ---
     const eraBoostActivo = estadoJuego.boostActivo;
     estadoJuego.boostActivo = (teclas['b'] || teclas['B']) && estadoJuego.boostEnergia > 0 && estadoJuego.boostEnfriamiento <= 0;
@@ -1893,7 +2079,7 @@ function actualizar(dt) {
         }
         estadoJuego.screenShake = 5; // Activa el temblor de pantalla
         estadoJuego.cameraZoom = 0.95; // Activa el zoom out
-        
+
         let boostVx = 1, boostVy = 0;
         if (len > 0) {
             boostVx = vx / JUGADOR_VELOCIDAD; // Normalizar el vector de velocidad
@@ -1913,7 +2099,7 @@ function actualizar(dt) {
     if (estadoJuego.boostEnergia <= 0) {
         estadoJuego.boostEnergia = 0;
         if (estadoJuego.boostEnfriamiento <= 0) { // Iniciar enfriamiento solo una vez
-             estadoJuego.boostEnfriamiento = 2.0; // 2 segundos de enfriamiento
+            estadoJuego.boostEnfriamiento = 2.0; // 2 segundos de enfriamiento
         }
     }
 
@@ -1944,15 +2130,15 @@ function actualizar(dt) {
     }
 
     // --- Actualización de Enemigos (Animales) ---
-    for (let i = animales.length - 1; i >= 0; i--) { 
-        const a = animales[i]; 
+    for (let i = animales.length - 1; i >= 0; i--) {
+        const a = animales[i];
         // --- CORRECCIÓN: Añadir una guarda para prevenir el crash ---
         // Si 'a' es undefined por alguna razón (un bug sutil de splice en otro lugar),
         // esta comprobación evitará que el juego se bloquee.
         if (!a) continue;
 
         if (a.laserHitTimer > 0) a.laserHitTimer -= dt;
-        
+
         // --- IA y Movimiento Específico por Tipo de Enemigo ---        
         if (a.tipo === 'disparador') {
             // Movimiento: Flota en su sitio con un ligero vaivén vertical
@@ -1977,145 +2163,201 @@ function actualizar(dt) {
             // Animación
             a.timerFrame += dt; if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
         } else
-        if (a.tipo === 'baby_whale') {
-            // --- NUEVO: Lógica de huida ---
-            const FLEE_RADIUS = 250;
-            const playerDist = Math.hypot(jugador.x - a.x, jugador.y - a.y);
+            if (a.tipo === 'baby_whale') {
+                // ==============================================================
+                // SISTEMA DE IA MEJORADO PARA CRÍAS DE BALLENA
+                // Estados: juguetona -> curiosa -> huyendo -> normal
+                // ==============================================================
 
-            // Si el jugador se acerca y la cría no está huyendo, inicia la huida.
-            if (playerDist < FLEE_RADIUS && !a.isFleeing && a.mother && animales.includes(a.mother)) {
-                a.isFleeing = true;
-                a.fleeTimer = 2.5; // Huirá durante 2.5 segundos.
-            }
+                const FLEE_RADIUS = 250;
+                const CURIOSITY_RADIUS = 400;
+                const playerDist = Math.hypot(jugador.x - a.x, jugador.y - a.y);
+                const motherNearby = a.mother && animales.includes(a.mother);
+                const distToMother = motherNearby ? Math.hypot(a.x - a.mother.x, a.y - a.mother.y) : Infinity;
 
-            // Actualizar el temporizador de huida.
-            if (a.isFleeing) {
-                a.fleeTimer -= dt;
-                if (a.fleeTimer <= 0) {
-                    a.isFleeing = false;
+                // Inicializar estado si no existe
+                if (!a.estadoCria) a.estadoCria = 'normal';
+                if (!a.curiosidadTimer) a.curiosidadTimer = 0;
+                if (!a.juegoTimer) a.juegoTimer = 5 + Math.random() * 10; // Timer para comportamiento juguetón
+
+                // Actualizar timers
+                a.juegoTimer -= dt;
+                if (a.curiosidadTimer > 0) a.curiosidadTimer -= dt;
+                if (a.fleeTimer > 0) a.fleeTimer -= dt;
+                else a.isFleeing = false;
+
+                // --- MÁQUINA DE ESTADOS ---
+                if (playerDist < FLEE_RADIUS && !a.isFleeing) {
+                    // Jugador muy cerca: HUIR
+                    a.isFleeing = true;
+                    a.fleeTimer = 2.5;
+                    a.estadoCria = 'huyendo';
+                    // Alertar a la madre si está cerca
+                    if (motherNearby && !a.mother.isProtecting) {
+                        a.mother.isProtecting = true;
+                        a.mother.protectedBaby = a;
+                        S.reproducir('whale_song1'); // Llamada de auxilio
+                    }
+                } else if (a.estadoCria === 'huyendo' && !a.isFleeing) {
+                    // Terminó de huir: volver a normal
+                    a.estadoCria = 'normal';
+                } else if (a.estadoCria === 'normal' && motherNearby && distToMother < 300) {
+                    // Si está cerca de mamá y el jugador está a media distancia: CURIOSIDAD
+                    if (playerDist < CURIOSITY_RADIUS && playerDist > FLEE_RADIUS && Math.random() < 0.002) {
+                        a.estadoCria = 'curiosa';
+                        a.curiosidadTimer = 1.5 + Math.random(); // Curiosa por 1.5 a 2.5 segundos
+                    }
+                    // Comportamiento juguetón aleatorio
+                    if (a.juegoTimer <= 0 && Math.random() < 0.3) {
+                        a.estadoCria = 'juguetona';
+                        a.juegoTimer = 3 + Math.random() * 2;
+                    }
+                } else if (a.estadoCria === 'curiosa' && a.curiosidadTimer <= 0) {
+                    a.estadoCria = 'normal';
+                } else if (a.estadoCria === 'juguetona' && a.juegoTimer <= 2) {
+                    a.estadoCria = 'normal';
                 }
-            }
 
-            // --- Movimiento ---
-            if (a.mother && animales.includes(a.mother)) {
+                // --- MOVIMIENTO SEGÚN ESTADO ---
                 let targetX, targetY, speed;
-                if (a.isFleeing) {
-                    // Objetivo: un punto seguro detrás de la madre.
-                    targetX = a.mother.x + 200;
-                    targetY = a.mother.y;
-                    speed = 2.2; // Se mueve más rápido para escapar.
-                } else {
-                    // Comportamiento normal: seguir a la madre.
-                    targetX = a.mother.x + 150;
-                    targetY = a.mother.y;
-                    speed = 0.8;
+
+                switch (a.estadoCria) {
+                    case 'huyendo':
+                        // Huir hacia atrás de la madre
+                        if (motherNearby) {
+                            targetX = a.mother.x + 250;
+                            targetY = a.mother.y;
+                        } else {
+                            targetX = a.x + 100;
+                            targetY = a.y;
+                        }
+                        speed = 2.5;
+                        break;
+
+                    case 'curiosa':
+                        // Acercarse ligeramente al jugador
+                        targetX = a.x + (jugador.x - a.x) * 0.1;
+                        targetY = a.y + (jugador.y - a.y) * 0.1;
+                        speed = 1.0;
+                        break;
+
+                    case 'juguetona':
+                        // Nadar en círculos alrededor de la madre
+                        if (motherNearby) {
+                            const angle = estadoJuego.tiempoTranscurrido * 2 + a.semillaFase;
+                            targetX = a.mother.x + Math.cos(angle) * 100;
+                            targetY = a.mother.y + Math.sin(angle) * 80;
+                        } else {
+                            targetX = a.x;
+                            targetY = a.y;
+                        }
+                        speed = 1.5;
+                        break;
+
+                    default: // 'normal'
+                        // Seguir a la madre
+                        if (motherNearby) {
+                            targetX = a.mother.x + 150;
+                            targetY = a.mother.y;
+                        } else {
+                            a.x += a.vx * dt;
+                            targetX = a.x;
+                            targetY = a.y;
+                        }
+                        speed = 0.8;
+                        break;
                 }
+
                 a.x = lerp(a.x, targetX, dt * speed);
                 a.y = lerp(a.y, targetY, dt * speed);
-            } else {
-                // Si no hay madre, se mueve por su cuenta
-                a.x += a.vx * dt;
-            }
 
-            // Movimiento sinusoidal para que sea más natural
-            a.y += Math.sin(estadoJuego.tiempoTranscurrido * 2.5 + a.semillaFase) * 60 * dt;
+                // Movimiento sinusoidal para que sea más natural
+                a.y += Math.sin(estadoJuego.tiempoTranscurrido * 2.5 + a.semillaFase) * 50 * dt;
 
-            a.timerFrame += dt;
-            if (a.timerFrame >= BABYWHALE_ANIMATION_SPEED) {
-                a.timerFrame -= BABYWHALE_ANIMATION_SPEED;
-                if (BABYWHALE_SPRITE_DATA) {
-                    a.frame = (a.frame + 1) % BABYWHALE_SPRITE_DATA.frames.length;
+                // Animación
+                a.timerFrame += dt;
+                if (a.timerFrame >= BABYWHALE_ANIMATION_SPEED) {
+                    a.timerFrame -= BABYWHALE_ANIMATION_SPEED;
+                    if (BABYWHALE_SPRITE_DATA) {
+                        a.frame = (a.frame + 1) % BABYWHALE_SPRITE_DATA.frames.length;
+                    }
                 }
-            }
-        } else if (a.tipo === 'orca') {
-            a.huntCooldown -= dt;
-            a.attackTimer -= dt;
+            } else if (a.tipo === 'orca') {
+                a.huntCooldown -= dt;
+                a.attackTimer -= dt;
 
-            // --- Lógica de estado de la Orca ---
-            // 1. Si está cazando un animal, continuar
-            if (a.isHuntingAnimal && a.targetAnimal && animales.includes(a.targetAnimal) && a.targetAnimal.hp > 0) {
-                const target = a.targetAnimal;
-                const angle = Math.atan2(target.y - a.y, target.x - a.x);
-                const speed = 800;
-                a.vx = lerp(a.vx, Math.cos(angle) * speed, dt * 4.0);
-                a.vy = lerp(a.vy, Math.sin(angle) * speed, dt * 4.0);
-                
-                // Ataque al impactar
-                if (Math.hypot(a.x - target.x, a.y - target.y) < a.r + target.r * 0.8) {
-                    if (a.attackTimer <= 0) {
-                        const damage = a.isPackLeader ? 35 : 25;
-                        target.hp -= damage;
-                        a.attackTimer = 0.8;
-                        generarGotasSangre(target.x, target.y);
-                        S.reproducir('boss_hit');
+                // --- Lógica de estado de la Orca ---
+                // 1. Si está cazando un animal, continuar
+                if (a.isHuntingAnimal && a.targetAnimal && animales.includes(a.targetAnimal) && a.targetAnimal.hp > 0) {
+                    const target = a.targetAnimal;
+                    const angle = Math.atan2(target.y - a.y, target.x - a.x);
+                    const speed = 800;
+                    a.vx = lerp(a.vx, Math.cos(angle) * speed, dt * 4.0);
+                    a.vy = lerp(a.vy, Math.sin(angle) * speed, dt * 4.0);
 
-                        // Si la presa es una cría o un pez normal, las ballenas adultas cercanas se enfurecen.
-                        const esPresaProtegida = target.tipo === 'baby_whale' || ['normal', 'rojo', 'aggressive'].includes(target.tipo);
-                        if (esPresaProtegida) {
-                            const AGGRO_RADIUS = W * 0.7; // Radio de "grito de auxilio" de la presa
-                            for (const otherAnimal of animales) {
-                                // Buscar a todas las ballenas adultas en el radio de agresión.
-                                if (otherAnimal.tipo === 'whale') {
-                                    const dist = Math.hypot(a.x - otherAnimal.x, a.y - otherAnimal.y);
-                                    if (dist < AGGRO_RADIUS) {
-                                        // Si la ballena no está ya enfurecida, la enfurecemos.
-                                        if (!otherAnimal.isEnraged) {
-                                            otherAnimal.isEnraged = true;
-                                            otherAnimal.vx *= 2.0; // Aumentar su velocidad
+                    // Ataque al impactar
+                    if (Math.hypot(a.x - target.x, a.y - target.y) < a.r + target.r * 0.8) {
+                        if (a.attackTimer <= 0) {
+                            const damage = a.isPackLeader ? 35 : 25;
+                            target.hp -= damage;
+                            a.attackTimer = 0.8;
+                            generarGotasSangre(target.x, target.y);
+                            S.reproducir('boss_hit');
+
+                            // Si la presa es una cría o un pez normal, las ballenas adultas cercanas se enfurecen.
+                            const esPresaProtegida = target.tipo === 'baby_whale' || ['normal', 'rojo', 'aggressive'].includes(target.tipo);
+                            if (esPresaProtegida) {
+                                const AGGRO_RADIUS = W * 0.7; // Radio de "grito de auxilio" de la presa
+                                for (const otherAnimal of animales) {
+                                    // Buscar a todas las ballenas adultas en el radio de agresión.
+                                    if (otherAnimal.tipo === 'whale') {
+                                        const dist = Math.hypot(a.x - otherAnimal.x, a.y - otherAnimal.y);
+                                        if (dist < AGGRO_RADIUS) {
+                                            // Si la ballena no está ya enfurecida, la enfurecemos.
+                                            if (!otherAnimal.isEnraged) {
+                                                otherAnimal.isEnraged = true;
+                                                otherAnimal.vx *= 2.0; // Aumentar su velocidad
+                                            }
+                                            // Asignar (o reasignar) el objetivo de venganza a la orca atacante.
+                                            otherAnimal.revengeTarget = a;
                                         }
-                                        // Asignar (o reasignar) el objetivo de venganza a la orca atacante.
-                                        otherAnimal.revengeTarget = a; 
                                     }
                                 }
                             }
                         }
                     }
                 }
-            } 
-            // 2. Si está cazando al jugador, continuar
-            else if (a.isHunting) {
-                const angle = Math.atan2(jugador.y - a.y, jugador.x - a.x);
-                const targetVx = Math.cos(angle) * 700;
-                const targetVy = Math.sin(angle) * 700;
-                a.vx = lerp(a.vx, targetVx, dt * 3.0);
-                a.vy = lerp(a.vy, targetVy, dt * 3.0);
-                if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
-                    a.isHunting = false;
-                }
-            }
-            // 3. Si está inactiva, buscar una presa
-            else {
-                // Resetear estados de caza
-                a.isHuntingAnimal = false;
-                a.targetAnimal = null;
-                a.isHunting = false;
-
-                // Movimiento de patrulla
-                a.vx = -(velocidadActual() + 80) * (a.isPackLeader ? 1.1 : 1.0);
-                a.vy = Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + a.semillaFase) * 50;
-
-                // Lógica de búsqueda de presas si no está en cooldown
-                if (a.huntCooldown <= 0) {
-                    let bestTarget = null;
-                    let minDistance = Infinity;
-                    const SIGHT_RADIUS = W * 0.8;
-
-                    // Prioridad 1: Ballenas bebé
-                    for (const other of animales) {
-                        if (other.tipo === 'baby_whale' && other.hp > 0) {
-                            const dist = Math.hypot(a.x - other.x, a.y - other.y);
-                            if (dist < SIGHT_RADIUS && dist < minDistance) {
-                                minDistance = dist;
-                                bestTarget = other;
-                            }
-                        }
+                // 2. Si está cazando al jugador, continuar
+                else if (a.isHunting) {
+                    const angle = Math.atan2(jugador.y - a.y, jugador.x - a.x);
+                    const targetVx = Math.cos(angle) * 700;
+                    const targetVy = Math.sin(angle) * 700;
+                    a.vx = lerp(a.vx, targetVx, dt * 3.0);
+                    a.vy = lerp(a.vy, targetVy, dt * 3.0);
+                    if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
+                        a.isHunting = false;
                     }
+                }
+                // 3. Si está inactiva, buscar una presa
+                else {
+                    // Resetear estados de caza
+                    a.isHuntingAnimal = false;
+                    a.targetAnimal = null;
+                    a.isHunting = false;
 
-                    // Prioridad 2: Peces pequeños (si no hay ballenas bebé)
-                    if (!bestTarget) {
-                        minDistance = Infinity;
+                    // Movimiento de patrulla
+                    a.vx = -(velocidadActual() + 80) * (a.isPackLeader ? 1.1 : 1.0);
+                    a.vy = Math.sin(estadoJuego.tiempoTranscurrido * 1.5 + a.semillaFase) * 50;
+
+                    // Lógica de búsqueda de presas si no está en cooldown
+                    if (a.huntCooldown <= 0) {
+                        let bestTarget = null;
+                        let minDistance = Infinity;
+                        const SIGHT_RADIUS = W * 0.8;
+
+                        // Prioridad 1: Ballenas bebé
                         for (const other of animales) {
-                            if (['normal', 'rojo', 'aggressive'].includes(other.tipo)) {
+                            if (other.tipo === 'baby_whale' && other.hp > 0) {
                                 const dist = Math.hypot(a.x - other.x, a.y - other.y);
                                 if (dist < SIGHT_RADIUS && dist < minDistance) {
                                     minDistance = dist;
@@ -2123,330 +2365,419 @@ function actualizar(dt) {
                                 }
                             }
                         }
-                    }
-                    
-                    if (bestTarget) {
-                        a.isHuntingAnimal = true;
-                        a.targetAnimal = bestTarget;
-                        a.huntCooldown = 8.0 + Math.random() * 4; // Cooldown largo
 
-                        // Coordinación de manada
-                        if (a.isPackLeader) {
-                            for (const packMate of animales) {
-                                if (packMate.tipo === 'orca' && packMate.packId === a.packId && packMate !== a) {
-                                    packMate.isHuntingAnimal = true;
-                                    packMate.targetAnimal = bestTarget;
+                        // Prioridad 2: Peces pequeños (si no hay ballenas bebé)
+                        if (!bestTarget) {
+                            minDistance = Infinity;
+                            for (const other of animales) {
+                                if (['normal', 'rojo', 'aggressive'].includes(other.tipo)) {
+                                    const dist = Math.hypot(a.x - other.x, a.y - other.y);
+                                    if (dist < SIGHT_RADIUS && dist < minDistance) {
+                                        minDistance = dist;
+                                        bestTarget = other;
+                                    }
                                 }
                             }
                         }
-                    } else if (jugador.x < a.x && a.x < W) {
-                        // Prioridad 3: Cazar al jugador si no hay otra presa
-                        a.isHunting = true;
-                        a.huntCooldown = 4.0 + Math.random() * 2;
+
+                        if (bestTarget) {
+                            a.isHuntingAnimal = true;
+                            a.targetAnimal = bestTarget;
+                            a.huntCooldown = 8.0 + Math.random() * 4;
+
+                            // ESTRATEGIA DE CERCO: Coordinación de manada mejorada
+                            if (a.isPackLeader) {
+                                // Contar miembros de la manada
+                                const manada = animales.filter(o =>
+                                    o.tipo === 'orca' && o.packId === a.packId
+                                );
+
+                                manada.forEach((packMate, index) => {
+                                    if (packMate !== a) {
+                                        packMate.isHuntingAnimal = true;
+                                        packMate.targetAnimal = bestTarget;
+                                        // Cada orca toma una posición en el cerco
+                                        packMate.posicionCerco = calcularPosicionCercoOrca(
+                                            packMate, bestTarget, index, manada.length
+                                        );
+                                        packMate.faseCerco = 'aproximando'; // aproximando -> atacando
+                                    }
+                                });
+                                a.faseCerco = 'liderando';
+                            }
+                        } else if (jugador.x < a.x && a.x < W) {
+                            // Prioridad 3: Cazar al jugador si no hay otra presa
+                            a.isHunting = true;
+                            a.huntCooldown = 4.0 + Math.random() * 2;
+                        }
                     }
                 }
-            }
 
-            // Movimiento y animación final
-            a.x += a.vx * dt;
-            a.y += a.vy * dt;
-
-            a.timerFrame += dt;
-            if (a.timerFrame >= ORCA_ANIMATION_SPEED) {
-                a.timerFrame -= ORCA_ANIMATION_SPEED;
-                if (ORCA_SPRITE_DATA) {
-                    a.frame = (a.frame + 1) % ORCA_SPRITE_DATA.frames.length;
-                }
-            }
-        } else if (a.tipo === 'shark') {
-            if (a.isHunting) {
-                // El tiburón está cazando, se mueve en su vector de ataque
+                // Movimiento y animación final
                 a.x += a.vx * dt;
                 a.y += a.vy * dt;
-                generarBurbujasEmbestidaTiburom(a.x, a.y);
-                // Si sale de la pantalla, deja de cazar
-                if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
-                    a.isHunting = false;
-                    a.isPackLeader = false;
-                    a.vx = -(velocidadActual() + 60) * 0.9; // Resetea a velocidad de patrulla
-                    a.vy = 0;
-                }
-            } else {
-                // Modo patrulla: se mueve de derecha a izquierda
-                a.x += a.vx * dt;
-                // Estela de burbujas en modo patrulla
-                if (Math.random() < 0.1) {
-                    const tailX = a.x + a.w / 2;
-                    const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.1);
-                    generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 30 + Math.random() * 30, vy: (Math.random() - 0.5) * 25 - 10, r: Math.random() * 2.0 + 1.0, vida: 0.9 + Math.random() * 0.7, color: '' });
-                }
-                a.huntCooldown -= dt;
-                // Si ve al jugador y no está en cooldown, inicia la caza en manada
-                if (a.huntCooldown <= 0 && jugador.x < a.x && a.x < W) {
-                    // --- INICIO DE LA NUEVA LÓGICA DE CAZA EN MANADA ---
-                    a.isHunting = true;
-                    a.isPackLeader = true; // Este es el líder de la manada
-                    const angle = Math.atan2(jugador.y - a.y, jugador.x - a.x);
-                    a.vx = Math.cos(angle) * 600; // Velocidad de embestida
-                    a.vy = Math.sin(angle) * 600;
-                    a.huntCooldown = 5.0 + Math.random() * 3; // Cooldown más largo para el líder
 
-                    // El líder "llama" a otros tiburones cercanos para que se unan al ataque
-                    const PACK_CALL_RADIUS = W * 0.5; // Radio de llamada de la manada
-                    for (const otherShark of animales) {
-                        if (otherShark !== a && otherShark.tipo === 'shark' && !otherShark.isHunting) {
-                            const distance = Math.hypot(a.x - otherShark.x, a.y - otherShark.y);
-                            if (distance < PACK_CALL_RADIUS) {
-                                // Este tiburón se une a la caza como seguidor
-                                otherShark.isHunting = true;
-                                otherShark.isPackLeader = false;
-                                const targetX = jugador.x + (Math.random() - 0.5) * 200; // Apunta a una zona cercana al jugador
-                                const targetY = jugador.y + (Math.random() - 0.5) * 200;
-                                const followerAngle = Math.atan2(targetY - otherShark.y, targetX - otherShark.x);
-                                const followerSpeed = 550 + Math.random() * 100; // Velocidad ligeramente variable
-                                otherShark.vx = Math.cos(followerAngle) * followerSpeed;
-                                otherShark.vy = Math.sin(followerAngle) * followerSpeed;
-                                otherShark.huntCooldown = 3.0 + Math.random() * 2; // Cooldown para el seguidor
+                a.timerFrame += dt;
+                if (a.timerFrame >= ORCA_ANIMATION_SPEED) {
+                    a.timerFrame -= ORCA_ANIMATION_SPEED;
+                    if (ORCA_SPRITE_DATA) {
+                        a.frame = (a.frame + 1) % ORCA_SPRITE_DATA.frames.length;
+                    }
+                }
+            } else if (a.tipo === 'shark') {
+                if (a.isHunting) {
+                    // El tiburón está cazando, se mueve en su vector de ataque
+                    a.x += a.vx * dt;
+                    a.y += a.vy * dt;
+                    generarBurbujasEmbestidaTiburom(a.x, a.y);
+                    // Si sale de la pantalla, deja de cazar
+                    if (a.x < -a.w || a.x > W + a.w || a.y < -a.h || a.y > H + a.h) {
+                        a.isHunting = false;
+                        a.isPackLeader = false;
+                        a.vx = -(velocidadActual() + 60) * 0.9; // Resetea a velocidad de patrulla
+                        a.vy = 0;
+                    }
+                } else {
+                    // Modo patrulla: se mueve de derecha a izquierda
+                    a.x += a.vx * dt;
+                    // Estela de burbujas en modo patrulla
+                    if (Math.random() < 0.1) {
+                        const tailX = a.x + a.w / 2;
+                        const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.1);
+                        generarParticula(particulasBurbujas, { x: tailX, y: tailY, vx: 30 + Math.random() * 30, vy: (Math.random() - 0.5) * 25 - 10, r: Math.random() * 2.0 + 1.0, vida: 0.9 + Math.random() * 0.7, color: '' });
+                    }
+                    a.huntCooldown -= dt;
+                    // Si ve al jugador y no está en cooldown, inicia la caza en manada
+                    if (a.huntCooldown <= 0 && jugador.x < a.x && a.x < W) {
+                        // --- SISTEMA DE CAZA EN MANADA CON FLANQUEO ---
+                        a.isHunting = true;
+                        a.isPackLeader = true;
+                        const baseAngle = Math.atan2(jugador.y - a.y, jugador.x - a.x);
+                        a.vx = Math.cos(baseAngle) * 600;
+                        a.vy = Math.sin(baseAngle) * 600;
+                        a.huntCooldown = 5.0 + Math.random() * 3;
+                        S.reproducir('choque_ligero'); // Sonido de llamada de caza
+
+                        // El líder llama a otros tiburones con flanqueo estratégico
+                        const PACK_CALL_RADIUS = W * 0.6;
+                        let followerIndex = 0;
+
+                        for (const otherShark of animales) {
+                            if (otherShark !== a && otherShark.tipo === 'shark' && !otherShark.isHunting) {
+                                const distance = Math.hypot(a.x - otherShark.x, a.y - otherShark.y);
+                                if (distance < PACK_CALL_RADIUS) {
+                                    otherShark.isHunting = true;
+                                    otherShark.isPackLeader = false;
+
+                                    // Usar flanqueo: cada seguidor ataca desde un ángulo diferente
+                                    const flanqueoAngle = calcularAnguloFlanqueoTiburon(followerIndex, baseAngle);
+                                    const followerSpeed = 550 + Math.random() * 100;
+
+                                    otherShark.vx = Math.cos(flanqueoAngle) * followerSpeed;
+                                    otherShark.vy = Math.sin(flanqueoAngle) * followerSpeed;
+                                    otherShark.huntCooldown = 3.0 + Math.random() * 2;
+
+                                    followerIndex++;
+                                }
                             }
                         }
-                    }
-                    // --- FIN DE LA NUEVA LÓGICA ---
-                }
-            }
-            // Animación específica para el tiburón
-            a.timerFrame += dt;
-            if (a.timerFrame >= SHARK_ANIMATION_SPEED) {
-                a.timerFrame -= SHARK_ANIMATION_SPEED; // Más preciso que resetear a 0
-                a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length;
-            }
-        } else if (a.tipo === 'whale') {
-            // Lógica de enfurecimiento
-            if (!a.isEnraged && a.hp > 0 && a.hp <= a.maxHp * 0.35) {
-                a.isEnraged = true;
-                a.vx *= 2.5; // Se vuelve mucho más rápida
-                S.reproducir('boss_hit'); // Sonido de furia
-                generarGotasSangre(a.x, a.y); // Salpica sangre
-            }
-
-            // --- NUEVO: Lógica de protección de crías ---
-            const PROTECTION_RADIUS = 400;
-            let closestThreatenedBaby = null;
-            let minPlayerDist = PROTECTION_RADIUS;
-
-            // Buscar la cría más amenazada que le pertenezca
-            for (const other of animales) {
-                if (other.tipo === 'baby_whale' && other.mother === a) {
-                    const dist = Math.hypot(jugador.x - other.x, jugador.y - other.y);
-                    if (dist < minPlayerDist) {
-                        minPlayerDist = dist;
-                        closestThreatenedBaby = other;
+                        // --- FIN CAZA CON FLANQUEO ---
                     }
                 }
-            }
+                // Animación específica para el tiburón
+                a.timerFrame += dt;
+                if (a.timerFrame >= SHARK_ANIMATION_SPEED) {
+                    a.timerFrame -= SHARK_ANIMATION_SPEED; // Más preciso que resetear a 0
+                    a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length;
+                }
+            } else if (a.tipo === 'whale') {
+                // Lógica de enfurecimiento
+                if (!a.isEnraged && a.hp > 0 && a.hp <= a.maxHp * 0.35) {
+                    a.isEnraged = true;
+                    a.vx *= 2.5; // Se vuelve mucho más rápida
+                    S.reproducir('boss_hit'); // Sonido de furia
+                    generarGotasSangre(a.x, a.y); // Salpica sangre
+                }
 
-            // Actualizar estado de protección
-            a.isProtecting = !!closestThreatenedBaby;
-            a.protectedBaby = closestThreatenedBaby;
-            // --- FIN Lógica de protección ---
+                // --- NUEVO: Lógica de protección de crías ---
+                const PROTECTION_RADIUS = 400;
+                let closestThreatenedBaby = null;
+                let minPlayerDist = PROTECTION_RADIUS;
 
-            // --- SUGERENCIA DE IA: LÓGICA DE NUEVOS ATAQUES ---
-            // 1. Ataque de chorro de agua (Spout)
-            a.spoutCooldown -= dt;
-            if (a.spoutCooldown <= 0 && !a.isTailSwiping) {
-                // Dispara un chorro de agua hacia arriba o abajo
-                const dirY = a.y > H / 2 ? -1 : 1; // Dispara lejos del centro de la pantalla
-                generarChorroDeAgua(a.x - a.w * 0.2, a.y, dirY);
-                a.spoutCooldown = 3.5 + Math.random() * 2.5; // Reinicia el temporizador
-            }
+                // Buscar la cría más amenazada que le pertenezca
+                for (const other of animales) {
+                    if (other.tipo === 'baby_whale' && other.mother === a) {
+                        const dist = Math.hypot(jugador.x - other.x, jugador.y - other.y);
+                        if (dist < minPlayerDist) {
+                            minPlayerDist = dist;
+                            closestThreatenedBaby = other;
+                        }
+                    }
+                }
 
-            // --- LÓGICA DE CANTO AMBIENTAL ---
-            if (a.songCooldown > 0) {
-                a.songCooldown -= dt;
-            } else {
-                S.playRandomWhaleSong();
-                // Reinicia el temporizador para el próximo canto (REDUCIDO PARA PRUEBAS)
-                a.songCooldown = 5.0 + Math.random() * 5.0;
-            }
+                // Actualizar estado de protección
+                a.isProtecting = !!closestThreatenedBaby;
+                a.protectedBaby = closestThreatenedBaby;
+                // --- FIN Lógica de protección ---
 
-            // 2. Ataque de coletazo (Tail Swipe)
-            a.tailSwipeCooldown -= dt;
-            // El coletazo solo ocurre si el jugador está detrás de la ballena
-            if (a.tailSwipeCooldown <= 0 && !a.isTailSwiping && jugador.x > a.x) {
-                a.isTailSwiping = true;
-                a.tailSwipeProgress = 0;
-                a.tailSwipeCooldown = 6.0 + Math.random() * 4.0;
-            }
+                // --- SUGERENCIA DE IA: LÓGICA DE NUEVOS ATAQUES ---
+                // 1. Ataque de chorro de agua (Spout)
+                a.spoutCooldown -= dt;
+                if (a.spoutCooldown <= 0 && !a.isTailSwiping) {
+                    // Dispara un chorro de agua hacia arriba o abajo
+                    const dirY = a.y > H / 2 ? -1 : 1; // Dispara lejos del centro de la pantalla
+                    generarChorroDeAgua(a.x - a.w * 0.2, a.y, dirY);
+                    a.spoutCooldown = 3.5 + Math.random() * 2.5; // Reinicia el temporizador
+                }
 
-            if (a.isTailSwiping) {
-                a.tailSwipeProgress += dt * 4; // El coletazo dura 0.25s
-                // Hitbox del coletazo
-                const tailX = a.x + a.w / 2;
-                const tailY = a.y;
-                const tailRadius = 60; // Radio del área de efecto
-                if (Math.hypot(jugador.x - tailX, jugador.y - tailY) < jugador.r + tailRadius) {
-                    if (estadoJuego.vidas > 0) {
-                        estadoJuego.vidas--;
-                        estadoJuego.animVida = 0.6;
+                // --- LÓGICA DE CANTO AMBIENTAL ---
+                if (a.songCooldown > 0) {
+                    a.songCooldown -= dt;
+                } else {
+                    S.playRandomWhaleSong();
+                    // Reinicia el temporizador para el próximo canto (REDUCIDO PARA PRUEBAS)
+                    a.songCooldown = 5.0 + Math.random() * 5.0;
+                }
+
+                // 2. Ataque de coletazo (Tail Swipe)
+                a.tailSwipeCooldown -= dt;
+                // El coletazo solo ocurre si el jugador está detrás de la ballena
+                if (a.tailSwipeCooldown <= 0 && !a.isTailSwiping && jugador.x > a.x) {
+                    a.isTailSwiping = true;
+                    a.tailSwipeProgress = 0;
+                    a.tailSwipeCooldown = 6.0 + Math.random() * 4.0;
+                }
+
+                if (a.isTailSwiping) {
+                    a.tailSwipeProgress += dt * 4; // El coletazo dura 0.25s
+                    // Hitbox del coletazo
+                    const tailX = a.x + a.w / 2;
+                    const tailY = a.y;
+                    const tailRadius = 60; // Radio del área de efecto
+                    if (Math.hypot(jugador.x - tailX, jugador.y - tailY) < jugador.r + tailRadius) {
+                        if (estadoJuego.vidas > 0) {
+                            estadoJuego.vidas--;
+                            estadoJuego.animVida = 0.6;
+                            S.reproducir('choque');
+                        }
+                        if (estadoJuego.vidas <= 0) perderJuego();
+                        a.isTailSwiping = false; // El coletazo golpea solo una vez
+                    }
+
+                    if (a.tailSwipeProgress >= 1) {
+                        a.isTailSwiping = false;
+                    }
+                } else if (a.revengeTarget) {
+                    // --- LÓGICA DE VENGANZA ---
+                    const target = a.revengeTarget;
+                    const angle = Math.atan2(target.y - a.y, target.x - a.x);
+                    const revengeSpeed = 500; // Velocidad de venganza
+                    a.vx = lerp(a.vx, Math.cos(angle) * revengeSpeed, dt * 3.5);
+                    a.vy = lerp(a.vy, Math.sin(angle) * revengeSpeed, dt * 3.5);
+
+                    // Colisión y daño al objetivo de venganza (la orca)
+                    if (a.collisionCooldown <= 0 && Math.hypot(a.x - target.x, a.y - target.y) < a.r + target.r * 0.8) {
+                        const damage = 40; // Fuerte daño por embestida
+                        target.hp -= damage;
+                        a.collisionCooldown = 1.0; // Enfriamiento para no infligir daño en cada frame
                         S.reproducir('choque');
+                        generarGotasSangre(target.x, target.y, 20);
+
+                        // Si el objetivo muere, dejar de perseguirlo
+                        if (target.hp <= 0) {
+                            a.revengeTarget = null;
+                            a.isEnraged = false; // Se calma
+                        }
                     }
-                    if (estadoJuego.vidas <= 0) perderJuego();
-                    a.isTailSwiping = false; // El coletazo golpea solo una vez
-                }
+                } else if (a.isProtecting && a.protectedBaby) {
+                    // --- MOVIMIENTO DE PROTECCIÓN ---
+                    // La ballena se interpone entre el jugador y la cría.
+                    const baby = a.protectedBaby;
+                    const dxToPlayer = jugador.x - baby.x;
+                    const dyToPlayer = jugador.y - baby.y;
+                    const distToPlayer = Math.hypot(dxToPlayer, dyToPlayer);
 
-                if (a.tailSwipeProgress >= 1) {
-                    a.isTailSwiping = false;
-                }
-            } else if (a.revengeTarget) {
-                // --- LÓGICA DE VENGANZA ---
-                const target = a.revengeTarget;
-                const angle = Math.atan2(target.y - a.y, target.x - a.x);
-                const revengeSpeed = 500; // Velocidad de venganza
-                a.vx = lerp(a.vx, Math.cos(angle) * revengeSpeed, dt * 3.5);
-                a.vy = lerp(a.vy, Math.sin(angle) * revengeSpeed, dt * 3.5);
+                    // El objetivo es un punto delante de la cría, en la línea hacia el jugador
+                    const offset = 120; // A qué distancia se interpone
+                    const targetX = baby.x + (dxToPlayer / distToPlayer) * offset;
+                    const targetY = baby.y + (dyToPlayer / distToPlayer) * offset;
 
-                // Colisión y daño al objetivo de venganza (la orca)
-                if (a.collisionCooldown <= 0 && Math.hypot(a.x - target.x, a.y - target.y) < a.r + target.r * 0.8) {
-                    const damage = 40; // Fuerte daño por embestida
-                    target.hp -= damage;
-                    a.collisionCooldown = 1.0; // Enfriamiento para no infligir daño en cada frame
-                    S.reproducir('choque');
-                    generarGotasSangre(target.x, target.y, 20);
+                    // --- CORRECCIÓN: Actualizar vx/vy para que la ballena se voltee ---
+                    const angleToTarget = Math.atan2(targetY - a.y, targetX - a.x);
+                    const protectionSpeed = 450; // Velocidad de protección
+                    a.vx = lerp(a.vx, Math.cos(angleToTarget) * protectionSpeed, dt * 3.0);
+                    a.vy = lerp(a.vy, Math.sin(angleToTarget) * protectionSpeed, dt * 3.0);
 
-                    // Si el objetivo muere, dejar de perseguirlo
-                    if (target.hp <= 0) {
-                        a.revengeTarget = null;
-                        a.isEnraged = false; // Se calma
+                    // Si está protegiendo, puede intentar un coletazo si el jugador se acerca demasiado a la ballena
+                    if (a.tailSwipeCooldown <= 0 && Math.hypot(jugador.x - a.x, jugador.y - a.y) < 200) {
+                        a.isTailSwiping = true; a.tailSwipeProgress = 0; a.tailSwipeCooldown = 4.0 + Math.random() * 3.0;
                     }
+                } else {
+                    // Movimiento normal de patrulla con rebote en su zona
+                    if (a.isPatrolling) {
+                        if ((a.x < a.patrolMinX && a.vx < 0) || (a.x > a.patrolMaxX && a.vx > 0)) {
+                            a.vx *= -1; // Invertir dirección
+                        }
+                    }
+                    // Movimiento vertical sinusoidal para que no sea tan rígido
+                    a.vy = Math.sin(estadoJuego.tiempoTranscurrido * 0.5 + a.semillaFase) * 20;
                 }
-            } else if (a.isProtecting && a.protectedBaby) {
-                // --- MOVIMIENTO DE PROTECCIÓN ---
-                // La ballena se interpone entre el jugador y la cría.
-                const baby = a.protectedBaby;
-                const dxToPlayer = jugador.x - baby.x;
-                const dyToPlayer = jugador.y - baby.y;
-                const distToPlayer = Math.hypot(dxToPlayer, dyToPlayer);
-                
-                // El objetivo es un punto delante de la cría, en la línea hacia el jugador
-                const offset = 120; // A qué distancia se interpone
-                const targetX = baby.x + (dxToPlayer / distToPlayer) * offset;
-                const targetY = baby.y + (dyToPlayer / distToPlayer) * offset;
+                // --- FIN SUGERENCIA ---
 
-                // --- CORRECCIÓN: Actualizar vx/vy para que la ballena se voltee ---
-                const angleToTarget = Math.atan2(targetY - a.y, targetX - a.x);
-                const protectionSpeed = 450; // Velocidad de protección
-                a.vx = lerp(a.vx, Math.cos(angleToTarget) * protectionSpeed, dt * 3.0);
-                a.vy = lerp(a.vy, Math.sin(angleToTarget) * protectionSpeed, dt * 3.0);
+                if (a.collisionCooldown > 0) a.collisionCooldown -= dt;
 
-                // Si está protegiendo, puede intentar un coletazo si el jugador se acerca demasiado a la ballena
-                if (a.tailSwipeCooldown <= 0 && Math.hypot(jugador.x - a.x, jugador.y - a.y) < 200) {
-                    a.isTailSwiping = true; a.tailSwipeProgress = 0; a.tailSwipeCooldown = 4.0 + Math.random() * 3.0;
+                // Si el objetivo de venganza muere o desaparece, volver a la normalidad
+                if (a.revengeTarget && (!animales.includes(a.revengeTarget) || a.revengeTarget.hp <= 0)) {
+                    a.revengeTarget = null;
+                    a.isEnraged = false; // Se calma
+                }
+
+                // --- APLICAR MOVIMIENTO ---
+                // Solo no se mueve si está en medio de un coletazo
+                if (!a.isTailSwiping) {
+                    a.x += a.vx * dt;
+                    a.y += a.vy * dt;
+                }
+
+                // Efecto de burbujas de la cola
+                if (Math.random() < 0.25) { // Controlar la frecuencia para no sobrecargar
+                    const tailX = a.x + a.w / 2.5; // Origen de las burbujas en la cola
+                    const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.3); // Variación vertical
+                    generarParticula(particulasBurbujas, {
+                        x: tailX, y: tailY,
+                        vx: 20 + Math.random() * 30, // Las burbujas se quedan un poco atrás
+                        vy: (Math.random() - 0.5) * 20 - 15, // Tienden a subir
+                        r: Math.random() * 2.5 + 1, vida: 1.2 + Math.random() * 1.0, color: ''
+                    });
+                }
+
+                // Animación
+                a.timerFrame += dt;
+                if (a.timerFrame >= WHALE_ANIMATION_SPEED) {
+                    a.timerFrame -= WHALE_ANIMATION_SPEED;
+                    a.frame = (a.frame + 1) % WHALE_SPRITE_DATA.frames.length;
+                }
+            } else if (a.tipo === 'mierdei') {
+                a.x += a.vx * dt;
+                a.timerFrame += dt;
+                if (a.timerFrame >= MIERDEi_ANIMATION_SPEED) {
+                    a.timerFrame -= MIERDEi_ANIMATION_SPEED;
+                    a.frame = (a.frame + 1) % MIERDEI_SPRITE_DATA.frames.length;
                 }
             } else {
-                // Movimiento normal de patrulla con rebote en su zona
-                if (a.isPatrolling) {
-                    if ((a.x < a.patrolMinX && a.vx < 0) || (a.x > a.patrolMaxX && a.vx > 0)) {
-                        a.vx *= -1; // Invertir dirección
+                // =================================================================
+                // SISTEMA DE CARDUMEN - Comportamiento de grupo para peces normales
+                // =================================================================
+
+                // Inicializar vy si no existe (para compatibilidad)
+                if (a.vy === undefined) a.vy = 0;
+
+                // Actualizar timer de alerta si existe
+                if (a.alertaTimer !== undefined && a.alertaTimer > 0) {
+                    a.alertaTimer -= dt;
+                    if (a.alertaTimer <= 0) {
+                        a.alertado = false;
                     }
                 }
-                // Movimiento vertical sinusoidal para que no sea tan rígido
-                a.vy = Math.sin(estadoJuego.tiempoTranscurrido * 0.5 + a.semillaFase) * 20;
-            }
-            // --- FIN SUGERENCIA ---
 
-            if (a.collisionCooldown > 0) a.collisionCooldown -= dt;
+                // Calcular fuerzas de cardumen
+                const fuerzasCardumen = calcularFuerzasCardumen(a);
+                const fuerzasHuida = calcularFuerzaHuida(a);
 
-            // Si el objetivo de venganza muere o desaparece, volver a la normalidad
-            if (a.revengeTarget && (!animales.includes(a.revengeTarget) || a.revengeTarget.hp <= 0)) {
-                a.revengeTarget = null;
-                a.isEnraged = false; // Se calma
-            }
+                // Detectar si hay amenaza cercana para alertar a otros
+                const distJugador = jugador ? Math.hypot(a.x - jugador.x, a.y - jugador.y) : Infinity;
+                if (distJugador < CARDUMEN_RADIO_HUIDA * 0.5 && !a.yaAlerto) {
+                    alertarPecesCercanos(a);
+                    a.yaAlerto = true; // Prevenir alertas repetidas
+                }
+                if (distJugador > CARDUMEN_RADIO_HUIDA) {
+                    a.yaAlerto = false; // Resetear cuando está lejos
+                }
 
-            // --- APLICAR MOVIMIENTO ---
-            // Solo no se mueve si está en medio de un coletazo
-            if (!a.isTailSwiping) {
+                // Aplicar fuerzas según estado
+                let vxFinal = a.vx;
+                let vyFinal = a.vy;
+
+                // Si está alertado o hay amenaza cercana, priorizar huida
+                const hayAmenaza = Math.hypot(fuerzasHuida.fx, fuerzasHuida.fy) > 50;
+
+                if (hayAmenaza || a.alertado) {
+                    // Modo huida: fuerzas de huida dominan
+                    vxFinal += fuerzasHuida.fx * dt;
+                    vyFinal += fuerzasHuida.fy * dt;
+                    // Agregar fuerzas de cardumen más sutiles para mantener grupo
+                    vxFinal += fuerzasCardumen.fx * dt * 0.3;
+                    vyFinal += fuerzasCardumen.fy * dt * 0.3;
+                } else {
+                    // Modo normal: usar patrón de movimiento + cardumen
+                    switch (a.patronMovimiento) {
+                        case 'sinusoidal':
+                            vyFinal = Math.sin(estadoJuego.tiempoTranscurrido * 3 + a.semillaFase) * 80;
+                            break;
+                        case 'pausa_acelera':
+                            if (a.estadoMovimiento === 'moviendo') {
+                                if (a.x < W * 0.85) {
+                                    a.estadoMovimiento = 'pausado';
+                                    a.timerMovimiento = 0.5 + Math.random() * 0.8;
+                                }
+                            } else if (a.estadoMovimiento === 'pausado') {
+                                a.timerMovimiento -= dt;
+                                vxFinal = 0; // Detenerse durante pausa
+                                if (a.timerMovimiento <= 0) {
+                                    a.estadoMovimiento = 'acelerando';
+                                    const angulo = Math.atan2(jugador.y - a.y, jugador.x - a.x);
+                                    vxFinal = Math.cos(angulo) * velocidadActual() * 1.5;
+                                    vyFinal = Math.sin(angulo) * velocidadActual() * 1.5;
+                                }
+                            }
+                            break;
+                        default: // 'lineal' - agregar ondulación sutil
+                            vyFinal += Math.sin(estadoJuego.tiempoTranscurrido * 2 + a.semillaFase) * 30;
+                            break;
+                    }
+
+                    // Agregar fuerzas de cardumen
+                    vxFinal += fuerzasCardumen.fx * dt;
+                    vyFinal += fuerzasCardumen.fy * dt;
+                }
+
+                // Limitar velocidad máxima
+                const velocidadActualPez = Math.hypot(vxFinal, vyFinal);
+                if (velocidadActualPez > CARDUMEN_VELOCIDAD_MAX * 2) {
+                    const factor = (CARDUMEN_VELOCIDAD_MAX * 2) / velocidadActualPez;
+                    vxFinal *= factor;
+                    vyFinal *= factor;
+                }
+
+                // Aplicar movimiento con suavizado
+                a.vx = lerp(a.vx, vxFinal, dt * 3);
+                a.vy = lerp(a.vy, vyFinal, dt * 3);
                 a.x += a.vx * dt;
                 a.y += a.vy * dt;
+
+                // Mantener dentro de límites verticales
+                a.y = clamp(a.y, 50, H - 50);
+
+                // >>> Estela de burbujas para los peces <<<
+                if (Math.random() < 0.15) {
+                    const tailX = a.x + a.w / 2;
+                    const tailY = a.y;
+                    generarParticula(particulasBurbujas, {
+                        x: tailX,
+                        y: tailY,
+                        vx: 20 + Math.random() * 20,
+                        vy: (Math.random() - 0.5) * 20 - 15,
+                        r: Math.random() * 1.5 + 0.5,
+                        vida: 0.8 + Math.random() * 0.7,
+                        color: ''
+                    });
+                }
+
+                // Animación
+                a.timerFrame += dt;
+                if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
             }
 
-            // Efecto de burbujas de la cola
-            if (Math.random() < 0.25) { // Controlar la frecuencia para no sobrecargar
-                const tailX = a.x + a.w / 2.5; // Origen de las burbujas en la cola
-                const tailY = a.y + (Math.random() - 0.5) * (a.h * 0.3); // Variación vertical
-                generarParticula(particulasBurbujas, {
-                    x: tailX, y: tailY,
-                    vx: 20 + Math.random() * 30, // Las burbujas se quedan un poco atrás
-                    vy: (Math.random() - 0.5) * 20 - 15, // Tienden a subir
-                    r: Math.random() * 2.5 + 1, vida: 1.2 + Math.random() * 1.0, color: ''
-                });
-            }
-
-            // Animación
-            a.timerFrame += dt;
-            if (a.timerFrame >= WHALE_ANIMATION_SPEED) {
-                a.timerFrame -= WHALE_ANIMATION_SPEED;
-                a.frame = (a.frame + 1) % WHALE_SPRITE_DATA.frames.length;
-            }
-        } else if (a.tipo === 'mierdei') {
-            a.x += a.vx * dt;
-            a.timerFrame += dt;
-            if (a.timerFrame >= MIERDEi_ANIMATION_SPEED) {
-                a.timerFrame -= MIERDEi_ANIMATION_SPEED;
-                a.frame = (a.frame + 1) % MIERDEI_SPRITE_DATA.frames.length;
-            }
-        } else {
-            // --- SUGERENCIA DE IA: LÓGICA DE MOVIMIENTO VARIADO ---
-            switch (a.patronMovimiento) {
-                case 'sinusoidal':
-                    a.x += a.vx * dt;
-                    // Usamos el tiempo de juego y una semilla para que cada pez tenga una onda única
-                    a.y += Math.sin(estadoJuego.tiempoTranscurrido * 3 + a.semillaFase) * 80 * dt;
-                    break;
-                case 'pausa_acelera':
-                    if (a.estadoMovimiento === 'moviendo') {
-                        a.x += a.vx * dt;
-                        // Si cruza cierto punto de la pantalla, entra en estado de pausa
-                        if (a.x < W * 0.85) {
-                            a.estadoMovimiento = 'pausado';
-                            a.timerMovimiento = 0.5 + Math.random() * 0.8; // Pausa entre 0.5 y 1.3s
-                        }
-                    } else if (a.estadoMovimiento === 'pausado') {
-                        a.timerMovimiento -= dt;
-                        if (a.timerMovimiento <= 0) {
-                            a.estadoMovimiento = 'acelerando';
-                            // Acelera hacia la Y del jugador
-                            const angulo = Math.atan2(jugador.y - a.y, jugador.x - a.x);
-                            a.vx = Math.cos(angulo) * velocidadActual() * 1.5;
-                            a.vy = Math.sin(angulo) * velocidadActual() * 1.5;
-                        }
-                    } else { // 'acelerando'
-                        a.x += a.vx * dt;
-                        a.y += a.vy * dt;
-                    }
-                    break;
-                default: // 'lineal'
-                    a.x += a.vx * dt;
-                    break;
-            }
-            // --- FIN SUGERENCIA ---
-            // >>> NUEVO: Estela de burbujas para los peces <<<
-            if (Math.random() < 0.15) { // No generar en cada frame para un efecto más sutil
-                const tailX = a.x + a.w / 2; // La cola del pez
-                const tailY = a.y;
-                generarParticula(particulasBurbujas, {
-                    x: tailX,
-                    y: tailY,
-                    vx: 20 + Math.random() * 20, // Burbujas van un poco hacia la derecha (quedan atrás)
-                    vy: (Math.random() - 0.5) * 20 - 15, // Tienden a flotar hacia arriba
-                    r: Math.random() * 1.5 + 0.5, // Burbujas pequeñas
-                    vida: 0.8 + Math.random() * 0.7,
-                    color: '' // El color no se usa para las burbujas, solo el stroke
-                });
-            }
-            // Animación para otras criaturas
-            a.timerFrame += dt; 
-            if (a.timerFrame >= 0.2) { a.timerFrame -= 0.2; a.frame ^= 1; }
-        }
-        
         // --- Colisión Jugador-Enemigo ---
         if (!a.capturado && Math.hypot(jugador.x - a.x, jugador.y - a.y) < jugador.r + a.r * 0.5) {
             // --- REINTEGRACIÓN DE EFECTOS DE COLISIÓN ---
@@ -2474,15 +2805,15 @@ function actualizar(dt) {
             Levels.onKill(a.tipo); // Notificar al sistema de niveles que el animal fue "eliminado" por colisión
             animales.splice(i, 1); // El animal se destruye al chocar
             continue;
-        } 
-        
+        }
+
         // --- Limpieza de Enemigos Fuera de Pantalla ---
         const despawnLimit = usaCamera ? estadoJuego.cameraX - a.w : -a.w;
-        if (a.x < despawnLimit) { 
-            animales.splice(i, 1); 
+        if (a.x < despawnLimit) {
+            animales.splice(i, 1);
         }
     }
-    
+
     // --- Actualización de Proyectiles Enemigos ---
     for (let i = proyectilesEnemigos.length - 1; i >= 0; i--) {
         const p = proyectilesEnemigos[i];
@@ -2507,7 +2838,7 @@ function actualizar(dt) {
     for (let i = estadoJuego.proyectilesTinta.length - 1; i >= 0; i--) { const ink = estadoJuego.proyectilesTinta[i]; ink.x += ink.vx * dt; if (ink.x < 0) { generarNubeDeTinta(ink.x + Math.random() * 100, ink.y, 80); estadoJuego.proyectilesTinta.splice(i, 1); } }
 
     estadoJuego.animVida = Math.max(0, estadoJuego.animVida - dt);
-    
+
     // Actualizar trozos de ballena
     for (let i = whaleDebris.length - 1; i >= 0; i--) {
         const d = whaleDebris[i];
@@ -2526,13 +2857,13 @@ function actualizar(dt) {
             const trailAngle = Math.atan2(d.vy, d.vx) + Math.PI; // Dirección opuesta al movimiento
             const spread = 1.2; // Dispersión del rastro
             const trailSpeed = 30 + Math.random() * 40; // Velocidad de las gotas de sangre
-            
+
             generarParticula(particulasExplosion, {
                 x: d.x, y: d.y,
                 vx: d.vx * 0.1 + Math.cos(trailAngle + (Math.random() - 0.5) * spread) * trailSpeed, vy: d.vy * 0.1 + Math.sin(trailAngle + (Math.random() - 0.5) * spread) * trailSpeed,
                 r: 1 + Math.random() * 2.5,
                 vida: 0.6 + Math.random() * 0.6,
-                color: ['#b22222', '#8b0000'][Math.floor(Math.random()*2)] // Dos tonos de sangre
+                color: ['#b22222', '#8b0000'][Math.floor(Math.random() * 2)] // Dos tonos de sangre
             });
         }
 
@@ -2629,7 +2960,7 @@ function actualizarSonarPings() {
             estadoJuego.sonarPings.push({ tipo: 'animal', dx, dy, isHostile, isBoss });
         }
     }
-    
+
     // Jefe (si existe y no está en la lista de animales)
     if (estadoJuego.jefe && !animales.includes(estadoJuego.jefe)) {
         const dx = estadoJuego.jefe.x - jugador.x; const dy = estadoJuego.jefe.y - jugador.y;
@@ -2664,7 +2995,7 @@ function actualizarSonarPings() {
             estadoJuego.sonarPings.push({ tipo: 'escombro', dx, dy, tamano: (e.tamano || e.size) });
         }
     }
-    
+
     // Ataques especiales (Láser, Kraken)
     if (estadoJuego.laserActivo) {
         const isLevel5 = estadoJuego.nivel === 5;
@@ -2751,7 +3082,7 @@ function renderizar(dt) {
             const a = animales[i];
             const offsetFlotante = Math.sin(Math.PI * estadoJuego.tiempoTranscurrido * 0.8 + a.semillaFase) * 8;
             ctx.save();
-            
+
             if (a.tipo === 'baby_whale') {
                 // --- Dibuja la Ballena Bebé ---
                 ctx.translate(a.x, a.y + offsetFlotante);
@@ -2782,7 +3113,7 @@ function renderizar(dt) {
                         const dHeight = a.w / aspectRatio;
                         ctx.imageSmoothingEnabled = false;
                         if (a.vx > 0) { ctx.scale(-1, 1); }
-                        ctx.drawImage(babyWhaleImg, sx, sy, sWidth, sHeight, 
+                        ctx.drawImage(babyWhaleImg, sx, sy, sWidth, sHeight,
                             Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
                     }
                 }
@@ -2815,7 +3146,7 @@ function renderizar(dt) {
                         ctx.imageSmoothingEnabled = false;
                         // La orca puede moverse en cualquier dirección, así que la volteamos según su vx
                         if (a.vx > 0) { ctx.scale(-1, 1); }
-                        ctx.drawImage(orcaImg, sx, sy, sWidth, sHeight, 
+                        ctx.drawImage(orcaImg, sx, sy, sWidth, sHeight,
                             Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
                     }
                 }
@@ -2851,7 +3182,7 @@ function renderizar(dt) {
                     const frameData = SHARK_SPRITE_DATA.frames[a.frame];
                     if (frameData) {
                         const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
-                        
+
                         const aspectRatio = sWidth / sHeight;
                         const dHeight = a.w / aspectRatio;
 
@@ -2877,11 +3208,11 @@ function renderizar(dt) {
                 if (a.isTailSwiping) {
                     const progress = a.tailSwipeProgress; // 0 a 1
                     const alpha = Math.sin(progress * Math.PI); // Fade in and out
-                    
+
                     // Dibuja un arco para representar el área de barrido
                     ctx.beginPath();
                     const tailX = a.w / 2.5; // Origen del coletazo
-                    ctx.arc(tailX, 0, 60, -Math.PI/2, Math.PI/2);
+                    ctx.arc(tailX, 0, 60, -Math.PI / 2, Math.PI / 2);
                     ctx.strokeStyle = `rgba(200, 230, 255, ${alpha * 0.8})`;
                     ctx.lineWidth = 8;
                     ctx.stroke();
@@ -2966,7 +3297,7 @@ function renderizar(dt) {
             }
             ctx.restore();
         }
-        
+
         // Dibuja el submarino de la animación del menú si no se está jugando
         if (estadoJuego && !estadoJuego.enEjecucion) {
             dibujarAnimacionMenu();
@@ -2999,7 +3330,7 @@ function renderizar(dt) {
             if (propellerReady && propellerImg) {
                 ctx.save();
                 // El offset se aplica en el eje X local del submarino, que ya está escalado.
-                const propOffsetX = -spriteAncho * robotEscala / 2 - 10; 
+                const propOffsetX = -spriteAncho * robotEscala / 2 - 10;
                 ctx.translate(propOffsetX, 0);
                 const propSize = 40;
 
@@ -3101,7 +3432,7 @@ function renderizar(dt) {
                         const sparkStart = Math.random() * length * 0.8;
                         const sparkLength = 15 + Math.random() * 25;
                         const sparkY = (Math.random() - 0.5) * (width * (1 - sparkStart / length));
-                        
+
                         ctx.strokeStyle = `rgba(220, 255, 255, ${0.4 + Math.random() * 0.5})`;
                         ctx.lineWidth = 1 + Math.random() * 1.5;
                         ctx.beginPath();
@@ -3121,7 +3452,7 @@ function renderizar(dt) {
                             const originY = py - 35 * Math.sin(anguloFinal);
                             generarParticula(particulasExplosion, { x: originX, y: originY, vx: Math.cos(particleAngle) * particleSpeed, vy: Math.sin(particleAngle) * particleSpeed, r: 1.5 + Math.random() * 2.5, vida: 0.5 + Math.random() * 0.5, color: ['#ffffff', '#afeeee', '#87ceeb'][Math.floor(Math.random() * 3)] });
                         }
-                        for(let i = 0; i < 8; i++) { generarBurbujaPropulsion(px - 40 * Math.cos(anguloFinal), py - 40 * Math.sin(anguloFinal) + (Math.random() - 0.5) * 30, isLevel5); }
+                        for (let i = 0; i < 8; i++) { generarBurbujaPropulsion(px - 40 * Math.cos(anguloFinal), py - 40 * Math.sin(anguloFinal) + (Math.random() - 0.5) * 30, isLevel5); }
                     }
                 } else {
                     // --- EFECTO NORMAL (SIN BOOST) ---
@@ -3288,7 +3619,7 @@ function renderizar(dt) {
         ctx.stroke(d.path);
         ctx.restore();
     }
-    
+
     // Se restaura el contexto principal (que incluye la cámara, zoom y shake)
     ctx.restore();
 
@@ -3303,7 +3634,16 @@ function renderizar(dt) {
 function dibujarFondoParallax() {
     if (!estadoJuego || !bgCtx) return;
 
-    bgCtx.fillStyle = '#06131f';
+    // Colores para el ciclo día/noche
+    // Día: Azul océano profundo (#1a4b6e -> r:26, g:75, b:110)
+    // Noche: Azul casi negro (#06131f -> r:6, g:19, b:31)
+    const factor = estadoJuego.dayNightFactor || 0; // 0 = día, 1 = noche
+
+    const r = Math.round(26 + (6 - 26) * factor);
+    const g = Math.round(75 + (19 - 75) * factor);
+    const b = Math.round(110 + (31 - 110) * factor);
+
+    bgCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
     bgCtx.fillRect(0, 0, W, H);
 
     if (bgListo && bgAncho > 0) {
@@ -3367,7 +3707,7 @@ function dibujarSonar() {
     bgGrad.addColorStop(1, 'rgba(6, 19, 31, 0.5)');
     sonarCtx.fillStyle = bgGrad;
     sonarCtx.fill(octagonPath);
-    
+
     // Retícula (círculos y líneas)
     sonarCtx.strokeStyle = 'rgba(126, 203, 255, 0.2)';
     sonarCtx.lineWidth = 1;
@@ -3437,7 +3777,7 @@ function dibujarSonar() {
 
             const isHostile = a.hp !== undefined || a.tipo === 'shark' || a.tipo === 'mega_whale' || a.tipo === 'mierdei' || a.tipo === 'orca';
             const isBoss = a.tipo === 'mega_whale' || (estadoJuego.jefe && a === estadoJuego.jefe);
-            
+
             const pulse = 1.0 + Math.sin(time * 5 + pingX) * 0.2;
             const pingSize = (isBoss ? 6 : (isHostile ? 4 : 3)) * pulse;
 
@@ -3447,7 +3787,7 @@ function dibujarSonar() {
 
             sonarCtx.save();
             sonarCtx.translate(pingX, pingY);
-            
+
             if (isHostile) { // Dibujar como diamante
                 sonarCtx.rotate(Math.PI / 4);
                 sonarCtx.fillRect(-pingSize / 2, -pingSize / 2, pingSize, pingSize);
@@ -3460,7 +3800,7 @@ function dibujarSonar() {
         }
     }
     sonarCtx.shadowBlur = 0;
-    
+
     // Si hay un jefe, marcarlo de forma especial
     if (estadoJuego.jefe) {
         const dx = estadoJuego.jefe.x - jugador.x;
@@ -3469,7 +3809,7 @@ function dibujarSonar() {
         if (dist < SONAR_WORLD_RADIUS) {
             const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
             const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            
+
             sonarCtx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
             sonarCtx.lineWidth = 2;
             const pulse = 1.0 + Math.sin(time * 3) * 0.1;
@@ -3477,7 +3817,7 @@ function dibujarSonar() {
             sonarCtx.strokeRect(pingX - size / 2, pingY - size / 2, size, size);
         }
     }
-    
+
     // --- NUEVO: Dibujar pings de proyectiles ---
     sonarCtx.shadowBlur = 5;
 
@@ -3540,7 +3880,7 @@ function dibujarSonar() {
         if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
             const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
             const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            
+
             // Efecto de pulso/parpadeo
             const pulse = Math.floor(time * 3) % 2; // Parpadea
             if (pulse === 0) continue;
@@ -3555,13 +3895,13 @@ function dibujarSonar() {
         const isLevel5 = estadoJuego.nivel === 5;
         const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
         const laserAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
-        
+
         const pulse = 0.8 + Math.sin(time * 40) * 0.2; // Pulso de intensidad
 
         sonarCtx.strokeStyle = `rgba(255, 100, 100, ${pulse})`;
         sonarCtx.shadowColor = 'rgba(255, 100, 100, 1)';
         sonarCtx.lineWidth = 3;
-        
+
         sonarCtx.beginPath();
         sonarCtx.moveTo(centerX, centerY);
         sonarCtx.lineTo(centerX + Math.cos(laserAngle) * SONAR_RADIUS, centerY + Math.sin(laserAngle) * SONAR_RADIUS);
@@ -3594,7 +3934,7 @@ function dibujarSonar() {
         for (const laser of estadoJuego.jefe.lasers) {
             const dx1 = laser.x - jugador.x;
             const dy1 = laser.y - jugador.y;
-            
+
             if (Math.hypot(dx1, dy1) < SONAR_WORLD_RADIUS) {
                 const startPingX = centerX + (dx1 / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
                 const startPingY = centerY + (dy1 / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
@@ -3650,7 +3990,7 @@ function dibujarSonar() {
                 sonarCtx.lineWidth = 3;
                 sonarCtx.shadowColor = 'red';
                 sonarCtx.shadowBlur = 10;
-                
+
                 sonarCtx.beginPath();
                 sonarCtx.moveTo(centerX - SONAR_RADIUS, pingY);
                 sonarCtx.lineTo(centerX + SONAR_RADIUS, pingY);
@@ -3660,7 +4000,7 @@ function dibujarSonar() {
                 const tentacleWorldX = W - ataque.progreso * (W + 200);
                 const dx = tentacleWorldX - jugador.x;
                 const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                
+
                 const pulse = 1.0 + Math.sin(time * 10) * 0.2;
                 const pingSize = 12 * pulse;
 
@@ -3704,7 +4044,7 @@ function dibujarSonar() {
 }
 
 // --- NUEVO: Función para dibujar el polvo marino ---
-function dibujarPolvoMarino() {    
+function dibujarPolvoMarino() {
     // Esta función ahora está vacía porque su lógica se ha movido a `dibujarMascaraLuz`
     // para que las partículas de polvo solo aparezcan dentro del cono de luz del submarino,
     // creando un efecto volumétrico mucho más realista.
@@ -3758,14 +4098,29 @@ function dibujarMascaraLuz() {
     fx.clearRect(0, 0, W, H);
     const isLevel5 = estadoJuego.nivel === 5;
 
-    const oscuridadBase = estadoJuego.tiempoTranscurrido / 180; // prettier-ignore
-    const oscuridadObjetivo = estadoJuego.darknessOverride !== undefined 
-        ? estadoJuego.darknessOverride 
-        : oscuridadBase;
+    // --- NUEVO: Ciclo Día/Noche Dinámico ---
+    // Ciclo completo cada 180 segundos (3 minutos)
+    const CYCLE_DURATION = 180;
+    // Usamos seno para una transición suave: -1 a 1, lo mapeamos a 0 a 1
+    // offset de -Math.PI/2 para empezar en día (0) y subir a noche (1)
+    const cyclePhase = (estadoJuego.tiempoTranscurrido % CYCLE_DURATION) / CYCLE_DURATION * Math.PI * 2;
+    const cycleFactor = (Math.sin(cyclePhase - Math.PI / 2) + 1) / 2; // 0.0 (Día) a 1.0 (Noche)
 
-    const alpha = lerp(0, 0.9, clamp(oscuridadObjetivo, 0, 1));
+    // La oscuridad máxima será 0.65 (65%) en lugar de 0.9, para que no sea tan oscuro.
+    const MAX_DARKNESS = 0.65;
+
+    // Si hay un override (ej. eventos), lo usamos, sino usamos el ciclo natural
+    const oscuridadObjetivo = estadoJuego.darknessOverride !== undefined
+        ? estadoJuego.darknessOverride
+        : cycleFactor;
+
+    const alpha = lerp(0, MAX_DARKNESS, clamp(oscuridadObjetivo, 0, 1));
+
+    // Guardamos el factor de ciclo en el estado para que el fondo lo pueda usar
+    estadoJuego.dayNightFactor = cycleFactor;
+
     if (alpha <= 0.001) return;
-    
+
     fx.globalCompositeOperation = 'source-over';
     fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
     fx.fillRect(0, 0, W, H);
@@ -3884,8 +4239,8 @@ function actualizarHTMLHUD() {
     } else {
         hudLevelText.textContent = `NIVEL ${s.nivel}`;
         const configNivel = Levels.CONFIG_NIVELES[s.nivel - 1];
-        if (configNivel.tipo === 'capture') { objetivoHTML = `CAPTURAS: ${s.rescatados} / ${configNivel.meta}`; } 
-        else if (configNivel.tipo === 'survive') { objetivoHTML = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - s.valorObjetivoNivel)}s`; } 
+        if (configNivel.tipo === 'capture') { objetivoHTML = `CAPTURAS: ${s.rescatados} / ${configNivel.meta}`; }
+        else if (configNivel.tipo === 'survive') { objetivoHTML = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - s.valorObjetivoNivel)}s`; }
         else if (configNivel.tipo === 'boss') { objetivoHTML = configNivel.objetivo.toUpperCase(); }
         else { objetivoHTML = ''; }
     }
@@ -3924,7 +4279,7 @@ function actualizarHTMLHUD() {
         statSpeedValue.textContent = `${velActual} km/h`;
         s._prevVelocidad = velActual;
     }
-    if (s.boostActivo) { statSpeedValue.classList.add('boosting'); triggerHudShake(2); } 
+    if (s.boostActivo) { statSpeedValue.classList.add('boosting'); triggerHudShake(2); }
     else { statSpeedValue.classList.remove('boosting'); }
 
     // --- Récord (solo se actualiza una vez al inicio) ---
@@ -4199,7 +4554,7 @@ function mostrarPantallaGameOver() {
     }
     animales.length = 0; // Limpiar animales del juego
     const tiposMenu = ['normal', 'normal', 'normal', sharkListo ? 'shark' : 'normal', whaleListo ? 'whale' : 'normal'];
-    for (let i = 0; i < 7; i++) { const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)]; setTimeout(() => generarAnimal(false, tipoAleatorio), i * 1800); }
+    for (let i = 0; i < 4; i++) { const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)]; setTimeout(() => generarAnimal(false, tipoAleatorio), i * 2500); }
 }
 function ganarJuego() {
     if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
@@ -4250,7 +4605,7 @@ function comprobarCompletadoNivel() {
 }
 function activarTransicionNivel(proximoNivel) { estadoJuego.faseJuego = 'transition'; estadoJuego.enEjecucion = false; const config = Levels.CONFIG_NIVELES[proximoNivel - 1]; if (mainMenu) mainMenu.style.display = 'none'; if (levelTitle) levelTitle.textContent = config.nombre; if (levelDesc) levelDesc.textContent = config.objetivo; if (levelTransition) levelTransition.style.display = 'block'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } setTimeout(() => { iniciarSiguienteNivel(proximoNivel); }, 4000); }
 function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; Weapons.initWeapons(); estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) gameplayHints.classList.remove('visible'); }
-function mostrarVistaMenuPrincipal(desdePausa) {    
+function mostrarVistaMenuPrincipal(desdePausa) {
     if (!mainMenu) return;
 
     if (desdePausa) {
@@ -4280,17 +4635,17 @@ function mostrarVistaMenuPrincipal(desdePausa) {
     }
 
     // Generar criaturas de fondo si es el menú inicial (no en pausa)
+    // Menos criaturas para un ambiente marino más realista y natural
     if (!desdePausa) {
         animales.length = 0; // Limpiar cualquier animal de una partida anterior
         const tiposMenu = [
-            'normal', 'normal', 'normal', 
-            sharkListo ? 'shark' : 'normal', 
+            'normal', 'normal', 'normal',
+            sharkListo ? 'shark' : 'normal',
             whaleListo ? 'whale' : 'normal',
-            babyWhaleListo ? 'baby_whale' : 'normal'
         ];
-        for (let i = 0; i < 7; i++) { // Más criaturas para un fondo más vivo
+        for (let i = 0; i < 4; i++) { // Solo 4 criaturas para un ambiente más realista
             const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)];
-            setTimeout(() => generarAnimal(false, tipoAleatorio), i * 1800);
+            setTimeout(() => generarAnimal(false, tipoAleatorio), i * 2500); // Más espaciadas en el tiempo
         }
     }
     if (levelTransition) levelTransition.style.display = 'none';
@@ -4342,7 +4697,8 @@ function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { docume
  */
 function autoSize() {
     const v = { w: innerWidth, h: innerHeight }; // Los lienzos ahora ocupan toda la pantalla.
-    [bgCanvas, cvs, fxCanvas, sonarCanvas, hudCanvas].forEach(c => { if (c) { c.width = v.w; c.height = v.h; } }); W = v.w; H = v.h; calcularCarriles(); if (!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); } }
+    [bgCanvas, cvs, fxCanvas, sonarCanvas, hudCanvas].forEach(c => { if (c) { c.width = v.w; c.height = v.h; } }); W = v.w; H = v.h; calcularCarriles(); if (!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); }
+}
 // ========= Función de Bucle de Juego (se exporta a main.js) =========
 // Este es el corazón del juego, el bucle que se ejecuta continuamente.
 let ultimo = 0;
@@ -4373,7 +4729,7 @@ export function gameLoop(t) {
             generarExplosion, generarTrozoBallena, generarGotasSangre, generarParticula, particulasBurbujas, particulasExplosion,
             puntosPorRescate,
             teclas, generarCasquillo,
-        triggerVibration: S.triggerVibration
+            triggerVibration: S.triggerVibration
         };
         Weapons.updateWeapons(weaponUpdateContext);
 
@@ -4413,7 +4769,7 @@ function actualizarGamepad() {
     // --- Lógica de Menú (si el overlay está visible) ---
     if (overlay && overlay.style.display !== 'none') {
         actualizarGamepadMenu(gp);
-    } 
+    }
     // --- Lógica Durante el Juego ---
     else if (estadoJuego && estadoJuego.enEjecucion) {
         actualizarGamepadJuego(gp);
@@ -4445,7 +4801,7 @@ function actualizarGamepadMenu(gp) {
             if (levelSelectBtn && levelSelectBtn.style.display !== 'none') levelSelectBtn.click();
         }
     }
-    
+
     // --- Selector de Niveles ---
     else if (levelSelectContent && levelSelectContent.style.display !== 'none') {
         const botonesNivel = levelSelectorContainer.querySelectorAll('.levelbtn:not(:disabled)');
@@ -4462,7 +4818,7 @@ function actualizarGamepadMenu(gp) {
             }
         }
         if (movedRight) {
-             if (botonesNivel.length > 0) {
+            if (botonesNivel.length > 0) {
                 estadoJuego.nivelSeleccionadoIndex = (estadoJuego.nivelSeleccionadoIndex + 1) % botonesNivel.length;
                 actualizarSeleccionNivelVisual();
             }
@@ -4666,10 +5022,10 @@ function renderizarSubmarinoBailarin(t) {
     for (let i = 0; i < 7; i++) {
         // Cada burbuja tiene su propio ciclo de vida basado en el tiempo
         const cicloBurbuja = (tiempo * (20 + i * 5) + i * 40) % (h + 50);
-        
+
         const x = popaX + Math.sin(tiempo * 2 + i) * 15; // Oscilan un poco horizontalmente
         const y = h - cicloBurbuja; // Suben desde abajo
-        
+
         const r = Math.max(1, (1 - y / h) * (4 + Math.sin(tiempo + i))); // Más pequeñas arriba
         const opacidad = Math.max(0.1, (1 - y / h) * 0.7);
 
@@ -4698,14 +5054,14 @@ function dibujarParticulas() {
     // Partículas de polvo y ambiente (detrás de todo)
     ctx.globalCompositeOperation = 'lighter';
     for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
-    
+
     // Partículas de explosión (brillantes)
     for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
-    
+
     // Partículas de tinta/humo (oscuras)
     ctx.globalCompositeOperation = 'source-over';
     for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
-    
+
     // Burbujas (solo contorno)
     ctx.strokeStyle = '#aae2ff';
     ctx.lineWidth = 1.5;
@@ -4872,7 +5228,7 @@ export function init() {
         };
     }
     if (pauseBtn) {
-        pauseBtn.onclick = function() {
+        pauseBtn.onclick = function () {
             abrirMenuPrincipal(); // Esta función ya maneja la lógica de pausar el juego
         };
     }
@@ -4902,7 +5258,7 @@ export function init() {
                         randomIndex = Math.floor(Math.random() * a_creditos_imagenes.length);
                     } while (randomIndex === a_creditos_imagen_actual && a_creditos_imagenes.length > 1);
                     a_creditos_imagen_actual = randomIndex;
-                    
+
                     creatorPic.style.opacity = 0;
                     setTimeout(() => {
                         creatorPic.src = a_creditos_imagenes[a_creditos_imagen_actual];
@@ -4926,7 +5282,7 @@ export function init() {
             }
         };
     }
-    
+
     // --- 4. OTROS EVENTOS DE UI ---
     if (logoHUD) { logoHUD.addEventListener('click', abrirMenuPrincipal); }
 
@@ -4953,7 +5309,7 @@ export function init() {
                 if (gamepads[0]) {
                     prevGamepadButtons = gamepads[0].buttons.map(() => false);
                 }
-                
+
                 estadoJuego.enEjecucion = true;
                 estadoJuego.juegoPausadoPorConexionMando = false;
                 S.bucle('music');
@@ -4967,7 +5323,7 @@ export function init() {
         stayOnKeyboardButton.onclick = () => {
             if (estadoJuego && estadoJuego.juegoPausadoPorConexionMando) {
                 gamepadConectado = false; // MANTENER MANDO DESACTIVADO (para esta sesión)
-                
+
                 estadoJuego.enEjecucion = true;
                 estadoJuego.juegoPausadoPorConexionMando = false;
                 S.bucle('music');
@@ -5005,7 +5361,7 @@ export function init() {
                     if (estadoJuego) {
                         estadoJuego.enEjecucion = true;
                         estadoJuego.bloqueoEntrada = 0.15;
-                    if (gameplayHints) gameplayHints.classList.remove('visible');
+                        if (gameplayHints) gameplayHints.classList.remove('visible');
                     }
                     S.bucle('music');
                 } else {
@@ -5045,9 +5401,9 @@ export function init() {
     actualizarIconos();
     reiniciar();
     mostrarVistaMenuPrincipal(false);
-    
+
     // --- Carga de Recursos SVG (desde archivos) ---
-    cargarImagen('js/svg/propeller.svg', function(img) {
+    cargarImagen('js/svg/propeller.svg', function (img) {
         if (!img) return;
         propellerImg = img;
         propellerReady = true;
