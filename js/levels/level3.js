@@ -330,6 +330,56 @@ function recibirDano(jefe, proyectil, cantidad) {
     }
 }
 
+// --- FUNCIONES AUXILIARES DE DIBUJO ---
+
+function dibujarTentaculoDetallado(ctx, jefe, t, tiempo) {
+    const speedMult = jefe.enraged ? 4 : 2;
+    const ampMult = jefe.enraged ? 1.5 : 1.0;
+
+    // Calcular puntos de control curvos
+    const a = t.angulo + Math.sin(tiempo * speedMult + t.fase) * 0.3 * ampMult;
+    const midX = jefe.x + Math.cos(a) * t.largo * 0.5;
+    const midY = jefe.y + Math.sin(a) * t.largo * 0.5;
+    const endX = jefe.x + Math.cos(a + Math.sin(tiempo * (speedMult * 0.8) + t.fase) * 0.5) * t.largo;
+    const endY = jefe.y + Math.sin(a + Math.sin(tiempo * (speedMult * 0.8) + t.fase) * 0.5) * t.largo;
+
+    // Dibujar el tentáculo usando curvas cuadráticas pero con grosor variable
+    // Para simular grosor variable, dibujamos varios segmentos o un path relleno
+    // Aproximación simple: dibujar línea gruesa base y línea fina encima + ventosas
+
+    // Color base
+    ctx.strokeStyle = jefe.enraged ? '#7f1d1d' : '#4a0e78'; // Más oscuro
+    ctx.lineWidth = 22;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(jefe.x, jefe.y);
+    ctx.quadraticCurveTo(midX, midY, endX, endY);
+    ctx.stroke();
+
+    // Color luz (volumen)
+    ctx.strokeStyle = jefe.enraged ? '#b91c1c' : '#7c3aed';
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.moveTo(jefe.x, jefe.y);
+    ctx.quadraticCurveTo(midX, midY, endX, endY);
+    ctx.stroke();
+
+    // Ventosas (Círculos a lo largo de la curva)
+    // Aproximamos la curva tomando puntos intermedios
+    ctx.fillStyle = jefe.enraged ? '#fca5a5' : '#e9d5ff'; // Ventosas claras
+    for (let i = 0.2; i < 0.9; i += 0.15) {
+        // Interpolar cuadrática simple (Bezier de 2do grado: (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2)
+        const mt = 1 - i;
+        const tx = mt * mt * jefe.x + 2 * mt * i * midX + i * i * endX;
+        const ty = mt * mt * jefe.y + 2 * mt * i * midY + i * i * endY;
+
+        ctx.beginPath();
+        const rVentosa = (1 - i) * 6 + 2; // Más grandes cerca de la base
+        ctx.arc(tx, ty, rVentosa, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
 /**
  * Bucle de dibujado del nivel. Dibuja al jefe y sus ataques.
  */
@@ -337,6 +387,7 @@ export function draw() {
     if (!estadoJuego.jefe) return;
 
     const jefe = estadoJuego.jefe;
+    const time = estadoJuego.tiempoTranscurrido;
     ctx.save();
 
     // Vibración si está enfurecido
@@ -344,86 +395,152 @@ export function draw() {
         ctx.translate((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
     }
 
-    // Efecto de parpadeo blanco al ser golpeado
+    // Efecto de brillo blanco al ser golpeado
     if (jefe.timerGolpe > 0) ctx.filter = 'brightness(2.5)';
 
-    // Dibuja los tentáculos
-    // Color cambia si está enfurecido
-    ctx.strokeStyle = jefe.enraged ? '#b91c1c' : '#6a0dad';
-    ctx.lineWidth = 18; ctx.lineCap = 'round';
+    // --- 1. DIBUJAR TENTÁCULOS (Detrás del cuerpo) ---
+    jefe.tentaculos.forEach(t => dibujarTentaculoDetallado(ctx, jefe, t, time));
 
-    jefe.tentaculos.forEach(t => {
-        ctx.beginPath();
-        ctx.moveTo(jefe.x, jefe.y);
-        // Movimiento más frenético si está enfurecido
-        const speedMult = jefe.enraged ? 4 : 2;
-        const ampMult = jefe.enraged ? 1.5 : 1.0;
+    // --- 2. DIBUJAR CUERPO (Con volumen 3D) ---
+    ctx.save();
 
-        const a = t.angulo + Math.sin(estadoJuego.tiempoTranscurrido * speedMult + t.fase) * 0.3 * ampMult;
-        const midX = jefe.x + Math.cos(a) * t.largo * 0.5;
-        const midY = jefe.y + Math.sin(a) * t.largo * 0.5;
-        const endX = jefe.x + Math.cos(a + Math.sin(estadoJuego.tiempoTranscurrido * (speedMult * 0.8) + t.fase) * 0.5) * t.largo;
-        const endY = jefe.y + Math.sin(a + Math.sin(estadoJuego.tiempoTranscurrido * (speedMult * 0.8) + t.fase) * 0.5) * t.largo;
-        ctx.quadraticCurveTo(midX, midY, endX, endY);
-        ctx.stroke();
-    });
+    // Respiración (escalado suave)
+    const breath = 1 + Math.sin(time * 2) * 0.03;
+    ctx.translate(jefe.x, jefe.y);
+    ctx.scale(breath, breath);
 
-    // Dibuja el cuerpo del jefe
-    // Rojo oscuro si está enfurecido, violeta normal si no
-    ctx.fillStyle = jefe.enraged ? '#7f1d1d' : '#8a2be2';
-    ctx.beginPath();
-    ctx.ellipse(jefe.x, jefe.y, jefe.w / 2, jefe.h / 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Brillo interior si va a lanzar espiral
-    if (jefe.estado === 'attacking_spiral') {
-        ctx.shadowColor = '#ff3333';
-        ctx.shadowBlur = 20 + Math.sin(estadoJuego.tiempoTranscurrido * 10) * 10;
-        ctx.fillStyle = '#ff5555';
-        ctx.beginPath();
-        ctx.arc(jefe.x, jefe.y, 40, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+    // Gradiente Radial para dar efecto 3D esférico/ovoide
+    const gradBody = ctx.createRadialGradient(-20, -20, 10, 0, 0, jefe.w / 2);
+    if (jefe.enraged) {
+        gradBody.addColorStop(0, '#ef4444'); // Centro rojo brillante
+        gradBody.addColorStop(0.5, '#b91c1c'); // medio rojo oscuro
+        gradBody.addColorStop(1, '#450a0a'); // Borde casi negro
+    } else {
+        gradBody.addColorStop(0, '#a78bfa'); // Centro violeta claro
+        gradBody.addColorStop(0.5, '#7c3aed'); // medio violeta
+        gradBody.addColorStop(1, '#4c1d95'); // Borde oscuro
     }
 
-    // Dibuja los ojos
-    ctx.fillStyle = jefe.enraged ? '#fbbf24' : '#fff'; // Ojos amarillos de furia
+    ctx.fillStyle = gradBody;
     ctx.beginPath();
-    ctx.arc(jefe.x - 40, jefe.y - 50, 25, 0, Math.PI * 2);
-    ctx.arc(jefe.x + 40, jefe.y - 50, 25, 0, Math.PI * 2);
+    // Usar el ancho original (sin offset) ya que hemos hecho translate
+    ctx.ellipse(0, 0, jefe.w / 2, jefe.h / 2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Dibuja las pupilas que siguen al jugador
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    let pupilaX = clamp(jugador.x, jefe.x - 50, jefe.x - 30);
-    ctx.arc(pupilaX, jefe.y - 50, jefe.enraged ? 5 : 10, 0, Math.PI * 2); // Pupilas contraídas en furia
-    pupilaX = clamp(jugador.x, jefe.x + 30, jefe.x + 50);
-    ctx.arc(pupilaX, jefe.y - 50, jefe.enraged ? 5 : 10, 0, Math.PI * 2);
-    ctx.fill();
+    // Textura: Manchas / Poros
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    for (let k = 0; k < 5; k++) {
+        // Manchas estáticas relativas al cuerpo
+        ctx.beginPath();
+        const mx = Math.cos(k * 2.5) * 40;
+        const my = Math.sin(k * 3.0) * 80;
+        ctx.arc(mx, my, 8 + k, 0, Math.PI * 2);
+        ctx.fill();
+    }
 
-    // Dibuja los efectos del ataque de barrido
+    // Brillo interior especial si va a cargar Espiral
+    if (jefe.estado === 'attacking_spiral') {
+        const pulse = Math.sin(time * 15) * 0.5 + 0.5;
+        ctx.fillStyle = `rgba(255, 100, 100, ${pulse * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, 60, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // --- 3. DIBUJAR OJOS (Complejos) ---
+    const eyeOffset = 40;
+    const eyeY = -50;
+
+    function dibujarOjo(x, y, tam) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Esclerótica (Blanco del ojo)
+        ctx.fillStyle = '#fff';
+        if (jefe.enraged) ctx.fillStyle = '#fef3c7'; // Amarillento infectado
+        ctx.beginPath(); ctx.arc(0, 0, tam, 0, Math.PI * 2); ctx.fill();
+
+        // Sombra interna ojo
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Iris
+        const irisColor = jefe.enraged ? '#dc2626' : '#2563eb'; // Rojo sangre vs Azul
+        ctx.fillStyle = irisColor;
+
+        // Pupila que sigue al jugador (calculada antes, pero ahora local)
+        // Necesitamos coordenadas mundo para clamp
+        const worldEyeX = jefe.x + (x * breath); // Aprox
+        const worldEyeY = jefe.y + (y * breath);
+
+        const mirarX = clamp((jugador.x - worldEyeX) * 0.2, -tam * 0.4, tam * 0.4);
+        const mirarY = clamp((jugador.y - worldEyeY) * 0.2, -tam * 0.4, tam * 0.4);
+
+        ctx.beginPath();
+        ctx.arc(mirarX, mirarY, tam * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupila
+        ctx.fillStyle = '#000';
+        // Enraged: pupila afilada (gato/reptil)
+        if (jefe.enraged) {
+            ctx.beginPath();
+            ctx.ellipse(mirarX, mirarY, 3, tam * 0.45, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.arc(mirarX, mirarY, tam * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Brillo especular (Reflejo de luz, siempre arriba izquierda)
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(mirarX - 5, mirarY - 5, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    dibujarOjo(-eyeOffset, eyeY, 28);
+    dibujarOjo(eyeOffset, eyeY, 28);
+
+    ctx.restore(); // Restaurar transformaciones del cuerpo
+
+    // --- 4. EFECTOS DE ATAQUE MUNDIALES (Fuera del transform del cuerpo) ---
+    // Barrido Smash
     if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
-        if (jefe.datosAtaque.carga > 0) { // Dibuja la zona de advertencia
-            ctx.fillStyle = jefe.enraged ? 'rgba(255, 0, 0, 0.6)' : 'rgba(255, 50, 50, 0.4)';
-            ctx.fillRect(0, jefe.datosAtaque.y - 20, W, 40);
-            ctx.strokeStyle = '#e04040';
-            ctx.lineWidth = 40;
-            ctx.beginPath();
-            ctx.moveTo(W, jefe.datosAtaque.y);
-            ctx.lineTo(W - 100, jefe.datosAtaque.y + (Math.random() - 0.5) * 20);
-            ctx.stroke();
-        } else { // Dibuja el tentáculo de ataque
+        if (jefe.datosAtaque.carga > 0) { // Warning
+            ctx.fillStyle = jefe.enraged ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 50, 50, 0.3)';
+            // Barra parpadeante
+            if (Math.floor(time * 10) % 2 === 0) {
+                ctx.fillRect(0, jefe.datosAtaque.y - 30, W, 60);
+            }
+
+            // Línea guía
+            ctx.strokeStyle = '#ef4444';
+            ctx.setLineDash([20, 20]);
+            ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(0, jefe.datosAtaque.y); ctx.lineTo(W, jefe.datosAtaque.y); ctx.stroke();
+            ctx.setLineDash([]);
+        } else { // Tentáculo gigante
             const tentaculoX = W - jefe.datosAtaque.progreso * (W + 200);
-            ctx.strokeStyle = jefe.enraged ? '#7f1d1d' : '#e04040';
-            ctx.lineWidth = 40;
+
+            // Dibujar tentáculo gigante de ataque
+            ctx.fillStyle = jefe.enraged ? '#991b1b' : '#be123c';
+            ctx.strokeStyle = jefe.enraged ? '#7f1d1d' : '#881337';
+            ctx.lineWidth = 10;
+
             ctx.beginPath();
-            ctx.moveTo(tentaculoX + 200, jefe.datosAtaque.y - 20);
-            ctx.lineTo(tentaculoX, jefe.datosAtaque.y);
-            ctx.lineTo(tentaculoX + 200, jefe.datosAtaque.y + 20);
+            ctx.moveTo(tentaculoX + 400, jefe.datosAtaque.y - 40); // Base fuera pantalla
+            ctx.lineTo(tentaculoX, jefe.datosAtaque.y); // Punta
+            ctx.lineTo(tentaculoX + 400, jefe.datosAtaque.y + 40);
+            ctx.fill();
             ctx.stroke();
         }
     }
+
     ctx.restore();
 }
 
