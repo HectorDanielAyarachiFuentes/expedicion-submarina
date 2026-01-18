@@ -1,6 +1,7 @@
 /* ========= Variables y Estilos Globales ========= */
 :root {
-    --bg-dark: #06131f; /* Azul muy oscuro, casi negro */
+    --bg-dark: #06131f;
+    /* Azul muy oscuro, casi negro */
     --bg-card: #001830;
     --text-light: #e9f3ff;
     --accent-blue: #7ecbff;
@@ -10,44 +11,72 @@
     --accent-red: #b22222;
     --accent-red-light: #ff4d4d;
 
-    --hud-bg-color: rgba(6, 19, 31, 0.5); /* Más transparente */
-    --hud-blur: 12px; /* Más desenfoque */
+    --hud-bg-color: rgba(6, 19, 31, 0.5);
+    /* Más transparente */
+    --hud-blur: 12px;
+    /* Más desenfoque */
     --hud-border-color: rgba(126, 203, 255, 0.4);
-    --status-bar-height: 60px; /* Reducido para un look más moderno */
+    --status-bar-height: 60px;
+    /* Reducido para un look más moderno */
     --total-hud-height: var(--status-bar-height);
 }
 
-html, body { 
-    margin: 0; 
-    height: 100%; 
-    background: var(--bg-dark); 
-    font-family: 'Press Start 2P', monospace; 
-    overflow: hidden; 
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg-dark);
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
 }
 
 /* ========= Capas de Canvas (AJUSTADAS AL NUEVO LAYOUT) ========= */
-canvas { 
-    position: fixed; 
+canvas {
+    position: fixed;
     left: 0;
-    top: 0; /* El canvas ocupa toda la pantalla */
-    width: 100vw; height: 100vh;
-    display: block; 
+    top: 0;
+    /* El canvas ocupa toda la pantalla */
+    width: 100vw;
+    height: 100vh;
+    display: block;
 }
+
 /* ... (El resto de estilos de canvas permanece igual) ... */
-#bgCanvas { z-index: 0; }
-#gameCanvas { z-index: 1; }
-#fxCanvas { z-index: 2; pointer-events: none; }
-#hudCanvas { z-index: 3; pointer-events: none; }
-#sonarCanvas { z-index: 4; pointer-events: none; }
+#bgCanvas {
+    z-index: 0;
+}
+
+#gameCanvas {
+    z-index: 1;
+}
+
+#fxCanvas {
+    z-index: 2;
+    pointer-events: none;
+}
+
+#hudCanvas {
+    z-index: 3;
+    pointer-events: none;
+}
+
+#sonarCanvas {
+    z-index: 4;
+    pointer-events: none;
+}
 
 /* Contenedor principal para todos los elementos del HUD en HTML */
 #live-hud-container {
     position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     z-index: 5;
-    pointer-events: none; /* No interfiere con el juego, los hijos pueden reactivarlos */
-    will-change: transform; /* Pista de optimización para la sacudida del HUD */
+    pointer-events: none;
+    /* No interfiere con el juego, los hijos pueden reactivarlos */
+    will-change: transform;
+    /* Pista de optimización para la sacudida del HUD */
 }
 
 /* ========= HUD SUPERIOR (DISEÑO EN LÍNEA ÚNICA) ========= */
@@ -55,17 +84,21 @@ canvas {
 #top-hud {
     /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
     position: absolute;
-    top: 0; /* La posición se controla con el padding de #status-bar */
+    top: 0;
+    /* La posición se controla con el padding de #status-bar */
     left: 0;
-    width: 100%; /* Ocupa todo el ancho para posicionar los pods */
+    width: 100%;
+    /* Ocupa todo el ancho para posicionar los pods */
     z-index: 6;
-    pointer-events: none; /* No interfiere con clics */
+    pointer-events: none;
+    /* No interfiere con clics */
 }
 
 #status-bar {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start; /* Alinea los pods en la parte superior */
+    align-items: flex-start;
+    /* Alinea los pods en la parte superior */
     /* CAMBIO: Padding ajustado para el nuevo visor ovalado */
     padding: 3vh 5vw;
     box-sizing: border-box;
@@ -81,34 +114,44 @@ canvas {
     padding: 8px 16px;
     display: flex;
     align-items: center;
-    gap: 12px; /* Espacio entre elementos dentro del pod */
-    pointer-events: all; /* Los pods sí son clickeables */
+    gap: 12px;
+    /* Espacio entre elementos dentro del pod */
+    pointer-events: all;
+    /* Los pods sí son clickeables */
     animation: slideInTop 0.6s 0.3s ease-out forwards;
     opacity: 0;
     transform: translateY(-100%);
 }
 
-@keyframes slideInTop { to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInTop {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 /* Estilo para el logo en el HUD superior */
 #logoHUD {
-    height: clamp(35px, 6vh, 45px); /* Tamaño del logo */
+    height: clamp(35px, 6vh, 45px);
+    /* Tamaño del logo */
     image-rendering: pixelated;
-    filter: drop-shadow(0 0 5px rgba(126, 203, 255, 0.5)); /* Sutil resplandor */
+    filter: drop-shadow(0 0 5px rgba(126, 203, 255, 0.5));
+    /* Sutil resplandor */
 }
 
 /* ===== NUEVO ESTILO MEJORADO PARA EL POD IZQUIERDO ===== */
 #status-left.hud-pod {
     background: linear-gradient(120deg, rgba(0, 59, 142, 0.7), rgba(6, 19, 31, 0.5) 70%);
     border-style: solid;
-    border-width: 2px; /* Un poco más grueso para el efecto */
+    border-width: 2px;
+    /* Un poco más grueso para el efecto */
     border-image-source: linear-gradient(to bottom, var(--accent-blue), transparent);
     border-image-slice: 1;
     border-left: 5px solid var(--accent-yellow);
     border-radius: 0 10px 10px 0;
     padding: 10px 20px 10px 15px;
     clip-path: polygon(0 0, 100% 0, 95% 100%, 0 100%);
-    box-shadow: 
+    box-shadow:
         inset 0 0 15px rgba(126, 203, 255, 0.1),
         -5px 0 15px -5px var(--accent-yellow);
 }
@@ -125,10 +168,11 @@ canvas {
     border-radius: 10px 0 0 10px;
     padding: 10px 15px 10px 20px;
     clip-path: polygon(5% 0, 100% 0, 100% 100%, 0 100%);
-    box-shadow: 
+    box-shadow:
         inset 0 0 15px rgba(126, 203, 255, 0.1),
         5px 0 15px -5px var(--accent-yellow);
-    gap: 16px; /* Más espacio para los botones hexagonales */
+    gap: 16px;
+    /* Más espacio para los botones hexagonales */
 }
 
 #status-text {
@@ -145,36 +189,58 @@ canvas {
     opacity: 0.8;
 }
 
-#hud-objective-text { 
-    color: var(--accent-yellow); 
+#hud-objective-text {
+    color: var(--accent-yellow);
     font-size: clamp(0.7rem, 1.5vw, 0.9rem);
     text-shadow: 0 0 6px rgba(255, 221, 119, 0.7);
 }
-.hint { 
+
+.hint {
     display: flex;
     align-items: center;
-    gap: 0.6rem; /* Espacio reducido */
+    gap: 0.6rem;
+    /* Espacio reducido */
     font-size: clamp(0.6rem, 1.3vw, 0.8rem);
     text-transform: uppercase;
     opacity: 0.8;
 }
-.hint-grid { 
+
+.hint-grid {
     display: grid;
     grid-template-areas: "title up" "left down" "right .";
     grid-template-columns: auto auto;
     gap: 4px 8px;
     align-items: center;
 }
-.hint-grid > span { grid-area: title; justify-self: start; align-self: center; margin-right: 0.8rem; }
-.hint-grid .key-arrow-up { grid-area: up; }
-.hint-grid .key-arrow-left { grid-area: left; }
-.hint-grid .key-arrow-down { grid-area: down; }
-.hint-grid .key-arrow-right { grid-area: right; }
+
+.hint-grid>span {
+    grid-area: title;
+    justify-self: start;
+    align-self: center;
+    margin-right: 0.8rem;
+}
+
+.hint-grid .key-arrow-up {
+    grid-area: up;
+}
+
+.hint-grid .key-arrow-left {
+    grid-area: left;
+}
+
+.hint-grid .key-arrow-down {
+    grid-area: down;
+}
+
+.hint-grid .key-arrow-right {
+    grid-area: right;
+}
 
 
 kbd.key-icon {
     display: inline-flex;
-    justify-content: center; /* Centrado para iconos */
+    justify-content: center;
+    /* Centrado para iconos */
     align-items: center;
     background: #334155;
     color: var(--text-light);
@@ -183,61 +249,121 @@ kbd.key-icon {
     font-family: 'Press Start 2P', monospace;
     height: 28px;
     transition: all 0.1s ease-out;
-    border-radius: 4px; /* Bordes ligeramente más suaves */
+    border-radius: 4px;
+    /* Bordes ligeramente más suaves */
 }
-kbd.key-icon:active { transform: translateY(2px); border-bottom-width: 1px; }
-kbd.text-key { width: 28px; font-size: 1.1rem; }
-.key-arrow-up, .key-arrow-down, .key-arrow-left, .key-arrow-right { width: 28px; }
-.key-arrow-up::before { content: ''; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 9px solid var(--accent-blue-light); }
-.key-arrow-down::before { content: ''; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 9px solid var(--accent-blue-light); }
-.key-arrow-left::before { content: ''; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 9px solid var(--accent-blue-light); }
-.key-arrow-right::before { content: ''; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 9px solid var(--accent-blue-light); } kbd.key-spacebar { width: 100px; height: 24px; background-color: var(--accent-blue-light); }
+
+kbd.key-icon:active {
+    transform: translateY(2px);
+    border-bottom-width: 1px;
+}
+
+kbd.text-key {
+    width: 28px;
+    font-size: 1.1rem;
+}
+
+.key-arrow-up,
+.key-arrow-down,
+.key-arrow-left,
+.key-arrow-right {
+    width: 28px;
+}
+
+.key-arrow-up::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 9px solid var(--accent-blue-light);
+}
+
+.key-arrow-down::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 9px solid var(--accent-blue-light);
+}
+
+.key-arrow-left::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-right: 9px solid var(--accent-blue-light);
+}
+
+.key-arrow-right::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 9px solid var(--accent-blue-light);
+}
+
+kbd.key-spacebar {
+    width: 100px;
+    height: 24px;
+    background-color: var(--accent-blue-light);
+}
 
 /* ===== NUEVO Y MEJORADO ESTILO PARA LOS BOTONES DEL HUD ===== */
 .spritebtn {
 
- width: clamp(38px, 6vh, 44px); /* Tamaño consistente */
- height: clamp(38px, 6vh, 44px);
- 
- /* Apariencia */
- background-color: #2c5a8e; /* Un azul intermedio */
- border: 2px solid var(--accent-blue-light);
- border-bottom-width: 4px;
- border-right-width: 4px;
- border-radius: 8px;
- box-shadow: inset 0 0 0 2px var(--accent-blue-dark);
- 
- display: flex;
- justify-content: center;
- align-items: center;
- 
- /* Interacción */
- cursor: pointer;
- transition: all 0.1s ease-out;
+    width: clamp(38px, 6vh, 44px);
+    /* Tamaño consistente */
+    height: clamp(38px, 6vh, 44px);
+
+    /* Apariencia */
+    background-color: #2c5a8e;
+    /* Un azul intermedio */
+    border: 2px solid var(--accent-blue-light);
+    border-bottom-width: 4px;
+    border-right-width: 4px;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 2px var(--accent-blue-dark);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* Interacción */
+    cursor: pointer;
+    transition: all 0.1s ease-out;
 }
 
 .spritebtn:hover {
- background-color: #4c7fb8; /* Un poco más claro al pasar el ratón */
- transform: translateY(-1px);
+    background-color: #4c7fb8;
+    /* Un poco más claro al pasar el ratón */
+    transform: translateY(-1px);
 }
 
 .spritebtn:active {
- transform: translateY(2px); /* Efecto de presionado */
- border-bottom-width: 2px;
- border-right-width: 2px;
- background-color: #244b78; /* Más oscuro al presionar */
+    transform: translateY(2px);
+    /* Efecto de presionado */
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+    background-color: #244b78;
+    /* Más oscuro al presionar */
 }
 
 /* Estilo para los iconos SVG dentro de los botones */
 .spritebtn svg {
     width: 65%;
     height: 65%;
-    fill: var(--accent-blue-light); /* El icono toma un color claro */
+    fill: var(--accent-blue-light);
+    /* El icono toma un color claro */
     transition: fill 0.2s ease;
 }
 
 .spritebtn:hover svg {
-    fill: #ffffff; /* El icono se vuelve blanco puro al pasar el ratón */
+    fill: #ffffff;
+    /* El icono se vuelve blanco puro al pasar el ratón */
 }
 
 /* Estilo para el botón de mute cuando está activo */
@@ -246,6 +372,7 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     box-shadow: inset 0 0 0 2px #333;
     border-color: #aaa;
 }
+
 .spritebtn.muted svg {
     fill: #aaa;
 }
@@ -258,10 +385,12 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
-    z-index: 12; /* Por encima de otros overlays */
-    
-    width: min(90vw, 800px); /* Ancho adaptable */
-    
+    z-index: 12;
+    /* Por encima de otros overlays */
+
+    width: min(90vw, 800px);
+    /* Ancho adaptable */
+
     background-color: rgba(6, 19, 31, 0.85);
     backdrop-filter: blur(var(--hud-blur));
     -webkit-backdrop-filter: blur(var(--hud-blur));
@@ -269,12 +398,13 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     border-radius: 12px;
     padding: 2rem;
     color: var(--text-light);
-    
+
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
+
 #gameplay-hints.visible {
     opacity: 1;
     pointer-events: all;
@@ -287,7 +417,7 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     text-align: center;
     margin-top: 0;
     margin-bottom: 2rem;
-    text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
 }
 
 .controls-section {
@@ -324,24 +454,29 @@ kbd.text-key { width: 28px; font-size: 1.1rem; }
     gap: 6px;
 }
 
-kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
+kbd.key-spacebar {
+    width: 140px;
+    font-size: 0.8rem;
+}
 
 /* --- MODIFICACIÓN: Estilos de Gamepad mejorados --- */
 .gamepad-icon {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    font-family: 'Arial Black', Gadget, sans-serif; /* Fuente más gruesa para las letras */
+    font-family: 'Arial Black', Gadget, sans-serif;
+    /* Fuente más gruesa para las letras */
     font-weight: 900;
     font-size: 1rem;
     background: #334155;
     color: var(--text-light);
     border: 1px solid #64748b;
     border-radius: 6px;
-    padding: 0; /* Reseteamos padding para controlar tamaño con width/height */
+    padding: 0;
+    /* Reseteamos padding para controlar tamaño con width/height */
     min-width: 32px;
     height: 32px;
-    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3);
     position: relative;
 }
 
@@ -352,14 +487,31 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 .gamepad-icon.xbox-y {
     border-radius: 50%;
     color: white;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     border-width: 2px;
 }
 
-.gamepad-icon.xbox-a { background-color: #107C10; border-color: #0d630d; }
-.gamepad-icon.xbox-b { background-color: #E51414; border-color: #b71010; }
-.gamepad-icon.xbox-x { background-color: #0078D7; border-color: #005fae; }
-.gamepad-icon.xbox-y { background-color: #FFB900; border-color: #cc9400; color: #333; text-shadow: none; }
+.gamepad-icon.xbox-a {
+    background-color: #107C10;
+    border-color: #0d630d;
+}
+
+.gamepad-icon.xbox-b {
+    background-color: #E51414;
+    border-color: #b71010;
+}
+
+.gamepad-icon.xbox-x {
+    background-color: #0078D7;
+    border-color: #005fae;
+}
+
+.gamepad-icon.xbox-y {
+    background-color: #FFB900;
+    border-color: #cc9400;
+    color: #333;
+    text-shadow: none;
+}
 
 /* Botones superiores (RB) */
 .gamepad-icon.xbox-rb {
@@ -371,11 +523,13 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 }
 
 /* Stick izquierdo y D-Pad */
-.ls-icon, .dpad-icon {
+.ls-icon,
+.dpad-icon {
     background: #2c3e50;
     border-radius: 50%;
     border: 2px solid #7f8c8d;
 }
+
 .ls-icon::before {
     content: '';
     width: 16px;
@@ -383,33 +537,69 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     border-radius: 50%;
     background: #1a2531;
     border: 1px solid #566573;
-    box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5);
 }
+
 .dpad-icon {
     background: transparent;
     border: none;
     box-shadow: none;
 }
-.dpad-icon::before, .dpad-icon::after {
+
+.dpad-icon::before,
+.dpad-icon::after {
     content: '';
     position: absolute;
     background-color: #2c3e50;
     border: 1px solid #7f8c8d;
     border-radius: 2px;
 }
-.dpad-icon::before { /* Vertical */ width: 10px; height: 26px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
-.dpad-icon::after { /* Horizontal */ width: 26px; height: 10px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+
+.dpad-icon::before {
+    /* Vertical */
+    width: 10px;
+    height: 26px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.dpad-icon::after {
+    /* Horizontal */
+    width: 26px;
+    height: 10px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
 
 /* Botones de sistema (Menu/View) */
-.xbox-menu, .xbox-view {
+.xbox-menu,
+.xbox-view {
     width: 28px;
     height: 28px;
     background: #2c3e50;
     border: 1px solid #7f8c8d;
     border-radius: 50%;
 }
-.xbox-menu::before { content: ''; width: 12px; height: 1.5px; background: var(--text-light); box-shadow: 0 -4px 0 var(--text-light), 0 4px 0 var(--text-light); }
-.xbox-view::before { content: ''; width: 8px; height: 8px; border: 1.5px solid var(--text-light); border-radius: 2px; position: relative; left: -2px; box-shadow: 3px -3px 0 -1.5px #2c3e50, 3px -3px 0 0px var(--text-light);
+
+.xbox-menu::before {
+    content: '';
+    width: 12px;
+    height: 1.5px;
+    background: var(--text-light);
+    box-shadow: 0 -4px 0 var(--text-light), 0 4px 0 var(--text-light);
+}
+
+.xbox-view::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border: 1.5px solid var(--text-light);
+    border-radius: 2px;
+    position: relative;
+    left: -2px;
+    box-shadow: 3px -3px 0 -1.5px #2c3e50, 3px -3px 0 0px var(--text-light);
 }
 
 .close-hint {
@@ -420,6 +610,7 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     border-top: 1px solid var(--hud-border-color);
     padding-top: 1.5rem;
 }
+
 .close-hint kbd {
     font-size: 0.8rem;
     height: 24px;
@@ -428,24 +619,37 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 }
 
 /* Lógica para mostrar/ocultar controles de mando */
-#gamepad-controls { display: none; }
-#gameplay-hints.gamepad-active #keyboard-controls { display: none; }
-#gameplay-hints.gamepad-active #gamepad-controls { display: grid; }
+#gamepad-controls {
+    display: none;
+}
+
+#gameplay-hints.gamepad-active #keyboard-controls {
+    display: none;
+}
+
+#gameplay-hints.gamepad-active #gamepad-controls {
+    display: grid;
+}
 
 /* ===== NUEVO: HUD DINÁMICO DE ESTADÍSTICAS (HTML) ===== */
 #game-stats-overlay {
     /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
     position: absolute;
-    bottom: 3vh; /* Ajustado para el nuevo visor */
-    left: 3vw;   /* Ajustado para el nuevo visor */
+    bottom: 3vh;
+    /* Ajustado para el nuevo visor */
+    left: 3vw;
+    /* Ajustado para el nuevo visor */
     z-index: 6;
-    pointer-events: none; /* No debe interferir con el juego */
-    
-    width: 280px; /* Ancho del panel */
-    
+    pointer-events: none;
+    /* No debe interferir con el juego */
+
+    width: 280px;
+    /* Ancho del panel */
+
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Espacio entre todos los items */
+    gap: 10px;
+    /* Espacio entre todos los items */
 
     /* --- NUEVO ESTILO DIAGONAL PARA COINCIDIR CON EL HUD SUPERIOR --- */
     background: linear-gradient(300deg, rgba(0, 59, 142, 0.7), rgba(6, 19, 31, 0.5) 70%);
@@ -454,21 +658,27 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     border-image-source: linear-gradient(to top, var(--accent-blue), transparent);
     border-image-slice: 1;
     border-left: 5px solid var(--accent-yellow);
-    border-radius: 0 10px 10px 0; /* El clip-path se encargará de la esquina superior derecha */
-    padding: 12px 20px 12px 16px; /* Padding ajustado para el corte */
+    border-radius: 0 10px 10px 0;
+    /* El clip-path se encargará de la esquina superior derecha */
+    padding: 12px 20px 12px 16px;
+    /* Padding ajustado para el corte */
     clip-path: polygon(0 0, 95% 0, 100% 100%, 0% 100%);
-    box-shadow: 
+    box-shadow:
         inset 0 0 15px rgba(126, 203, 255, 0.1),
         -5px 0 15px -5px var(--accent-yellow);
 
     color: var(--text-light);
     font-size: clamp(0.7rem, 1.8vw, 0.9rem);
-    text-shadow: 1px 1px 4px rgba(0,0,0,0.7); /* Sombra más oscura para legibilidad */
-    
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
+    /* Sombra más oscura para legibilidad */
+
     /* Animación de entrada */
-    transform: translateX(-120%); /* La animación se mantiene */
-    opacity: 0; /* La animación se mantiene */
-    animation: slideInHud 0.6s 0.5s ease-out forwards; /* La animación se mantiene */
+    transform: translateX(-120%);
+    /* La animación se mantiene */
+    opacity: 0;
+    /* La animación se mantiene */
+    animation: slideInHud 0.6s 0.5s ease-out forwards;
+    /* La animación se mantiene */
 }
 
 @keyframes slideInHud {
@@ -487,20 +697,26 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 #game-stats-overlay .stat-label {
     opacity: 0.8;
     text-transform: uppercase;
-    margin-right: 15px; /* Asegura espacio entre etiqueta y valor */
+    margin-right: 15px;
+    /* Asegura espacio entre etiqueta y valor */
 }
 
-#game-stats-overlay .stat-value, #statAssassinValue {
+#game-stats-overlay .stat-value,
+#statAssassinValue {
     color: var(--accent-yellow);
     font-size: clamp(0.8rem, 2vw, 1rem);
-    text-align: right; /* Alinea los valores a la derecha */
-    transition: color 0.2s ease-out, text-shadow 0.2s ease-out; /* Transición suave */
+    text-align: right;
+    /* Alinea los valores a la derecha */
+    transition: color 0.2s ease-out, text-shadow 0.2s ease-out;
+    /* Transición suave */
 }
 
 /* NUEVO: Estilo para el velocímetro cuando el impulso está activo */
 #game-stats-overlay .stat-value.boosting {
-    color: var(--accent-blue); /* Azul brillante */
-    text-shadow: 0 0 8px var(--accent-blue); /* Resplandor */
+    color: var(--accent-blue);
+    /* Azul brillante */
+    text-shadow: 0 0 8px var(--accent-blue);
+    /* Resplandor */
 }
 
 .stat-divider {
@@ -516,6 +732,7 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     gap: 4px;
     align-items: center;
 }
+
 .heart-icon {
     width: 16px;
     height: 16px;
@@ -523,77 +740,153 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     background-size: contain;
     background-repeat: no-repeat;
 }
+
 .heart-icon.filled {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23ff4d4d" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>');
 }
+
 .extra-lives {
     color: var(--accent-red);
     margin-left: 4px;
 }
 
-.weapon-status.reloading { color: var(--accent-red); }
-.weapon-status.ready { color: var(--accent-blue-light); }
+.weapon-status.reloading {
+    color: var(--accent-red);
+}
+
+.weapon-status.ready {
+    color: var(--accent-blue-light);
+}
+
 @keyframes weaponChangeAnim {
-    0% { transform: scale(1); opacity: 1; color: var(--text-light); }
-    50% { transform: scale(1.2); opacity: 0.5; color: var(--accent-yellow); }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(1);
+        opacity: 1;
+        color: var(--text-light);
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.5;
+        color: var(--accent-yellow);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .progress-bar-container {
-    width: 120px; /* Un poco más anchas */
-    height: 10px; /* Un poco más altas */
-    background-color: #222; /* Fondo más oscuro */
+    width: 120px;
+    /* Un poco más anchas */
+    height: 10px;
+    /* Un poco más altas */
+    background-color: #222;
+    /* Fondo más oscuro */
     border: 1px solid #555;
     border-radius: 5px;
     overflow: hidden;
 }
+
 .progress-bar {
     height: 100%;
     width: 0%;
     transition: width 0.1s ease-out, background-color 0.2s ease;
     border-radius: 4px;
 }
-.boost-bar { background: linear-gradient(to right, #007bff, #7ecbff); }
-.boost-bar.reloading { background: linear-gradient(to right, #ff6666, #ff0000); }
+
+.boost-bar {
+    background: linear-gradient(to right, #007bff, #7ecbff);
+}
+
+.boost-bar.reloading {
+    background: linear-gradient(to right, #ff6666, #ff0000);
+}
 
 /* NUEVO: Estilo para parpadeo con energía baja */
 .boost-bar.low-energy {
     animation: lowEnergyFlash 0.7s infinite step-end;
 }
+
 @keyframes lowEnergyFlash {
-    50% { background: linear-gradient(to right, #ff8c00, #ff4500); } /* Naranja/Rojo de advertencia */
+    50% {
+        background: linear-gradient(to right, #ff8c00, #ff4500);
+    }
+
+    /* Naranja/Rojo de advertencia */
 }
 
-.laser-bar { background: linear-gradient(to right, #ff4d4d, #b22222); }
-.laser-bar.active { box-shadow: 0 0 8px #ff4d4d; }
-.shield-bar { /* El color de fondo ahora es controlado por JavaScript */ }
-.shield-bar.reloading { background: linear-gradient(to right, #ff6666, #ff0000); }
-.shield-bar.active { box-shadow: 0 0 8px #add8e6; }
+.laser-bar {
+    background: linear-gradient(to right, #ff4d4d, #b22222);
+}
+
+.laser-bar.active {
+    box-shadow: 0 0 8px #ff4d4d;
+}
+
+.shield-bar {
+    /* El color de fondo ahora es controlado por JavaScript */
+}
+
+.shield-bar.reloading {
+    background: linear-gradient(to right, #ff6666, #ff0000);
+}
+
+.shield-bar.active {
+    box-shadow: 0 0 8px #add8e6;
+}
+
 /* La animación de impacto ahora no usa 'forwards' para permitir que el estilo de JS se reaplique */
-.shield-bar.hit { animation: shieldHitFlash 0.4s; }
+.shield-bar.hit {
+    animation: shieldHitFlash 0.4s;
+}
+
 @keyframes shieldHitFlash {
-    0% { background: #fff; }
-    50% { background: #add8e6; }
+    0% {
+        background: #fff;
+    }
+
+    50% {
+        background: #add8e6;
+    }
+
     /* Al final de la animación, el estilo inline de JS tomará el control de nuevo */
-    100% { }
+    100% {}
 }
 
 /* ========= Media Queries para Responsividad ========= */
 @media (max-width: 820px) {
-    kbd.key-spacebar { width: 80px; }
+    kbd.key-spacebar {
+        width: 80px;
+    }
 }
 
-@media (max-width: 600px) { 
+@media (max-width: 600px) {
+
     /* En pantallas pequeñas, el panel de controles ocupa más ancho */
-    #gameplay-hints { width: 90%; padding: 1.5rem; gap: 1rem; }
-    #fsBtn, #shareBtn, #githubBtn { display: none; }
+    #gameplay-hints {
+        width: 90%;
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+
+    #fsBtn,
+    #shareBtn,
+    #githubBtn {
+        display: none;
+    }
+
     #game-stats-overlay {
-        width: calc(100% - 20px); /* Ocupa casi todo el ancho */
+        width: calc(100% - 20px);
+        /* Ocupa casi todo el ancho */
         left: 10px;
         bottom: 10px;
-        transform: translateY(120%); /* Animación desde abajo */
+        transform: translateY(120%);
+        /* Animación desde abajo */
         animation: slideUpHud 0.6s 0.5s ease-out forwards;
     }
+
     @keyframes slideUpHud {
         to {
             transform: translateY(0);
@@ -610,16 +903,19 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 
 
 /* ========= ESTILOS PARA OVERLAYS Y MENÚS (AÑADIDO) ========= */
-#overlay, #infoOverlay, #controller-disconnect-overlay, #controller-connect-prompt {
+#overlay,
+#infoOverlay,
+#controller-disconnect-overlay,
+#controller-connect-prompt {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     /* Efecto glassmorphism - fondo semi-transparente para ver el ambiente marino */
-    background: rgba(6, 19, 31, 0.4);
-    backdrop-filter: blur(12px) saturate(1.2);
-    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    background: rgba(6, 19, 31, 0.35);
+    backdrop-filter: blur(6px) saturate(1.3);
+    -webkit-backdrop-filter: blur(6px) saturate(1.3);
     z-index: 10;
     display: grid;
     place-items: center;
@@ -631,8 +927,10 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     transition: background-color 0.5s ease, backdrop-filter 0.5s ease;
 }
 
-.info-card, #controller-disconnect-overlay .menu-card {
-    z-index: 11; /* Asegura que estén por encima del overlay principal */
+.info-card,
+#controller-disconnect-overlay .menu-card {
+    z-index: 11;
+    /* Asegura que estén por encima del overlay principal */
 }
 
 .menu-card {
@@ -644,7 +942,7 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     padding: clamp(1rem, 5vw, 2.5rem);
     max-width: 750px;
     width: 90%;
-    box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
 }
 
 /* Estilo especial para el menú inicial, sin desenfoque */
@@ -656,18 +954,19 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 #welcomeMessage {
     margin: 2rem 0;
     padding: 1.5rem;
-    background-color: rgba(0, 10, 20, 0.3); /* Más sutil para dejar ver el blur */
+    background-color: rgba(0, 10, 20, 0.3);
+    /* Más sutil para dejar ver el blur */
     border: 1px solid rgba(126, 203, 255, 0.25);
     border-radius: 8px;
     line-height: 1.6;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 #welcomeTitle {
     color: var(--accent-yellow);
     font-size: clamp(1.5rem, 4vw, 2rem);
     margin: 0 0 0.75rem;
-    text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 #welcomeSubtitle {
@@ -680,11 +979,15 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 
 /* Estilos para el logo del menú principal para centrarlo */
 #mainMenuHeader {
-    text-align: center; /* Asegura centrado para elementos inline */
+    text-align: center;
+    /* Asegura centrado para elementos inline */
 }
+
 #brandLogo {
-    display: block; /* Se comporta como un bloque para poder usar márgenes automáticos */
-    margin: 0 auto 12px auto; /* Centra horizontalmente y añade margen inferior */
+    display: block;
+    /* Se comporta como un bloque para poder usar márgenes automáticos */
+    margin: 0 auto 12px auto;
+    /* Centra horizontalmente y añade margen inferior */
     width: min(350px, 80vw);
     image-rendering: pixelated;
 }
@@ -708,15 +1011,18 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     object-fit: cover;
     animation: fadeInPanel 0.6s 0.2s ease-out backwards;
 }
+
 .menu-card p {
     margin: 0.8rem 0;
 }
+
 .menu-card ul {
     text-align: left;
     display: inline-block;
     list-style: none;
     padding: 0;
 }
+
 .menu-card ul li {
     margin-bottom: 0.5rem;
 }
@@ -736,7 +1042,9 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 }
 
 @keyframes blink-animation {
-    to { visibility: hidden; }
+    to {
+        visibility: hidden;
+    }
 }
 
 .menubtn {
@@ -752,6 +1060,7 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     border-radius: 8px;
     margin: 0.5rem;
 }
+
 .menubtn:hover {
     background-color: var(--accent-blue);
     color: var(--bg-dark);
@@ -761,13 +1070,14 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 #bossHealthContainer {
     /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
     position: absolute;
-    bottom: 3vh; /* Ajustado para el nuevo visor */
+    bottom: 3vh;
+    /* Ajustado para el nuevo visor */
     left: 50%;
     transform: translateX(-50%);
     width: 80%;
     max-width: 600px;
     height: 20px;
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(0, 0, 0, 0.5);
     border: 2px solid var(--accent-red);
     border-radius: 10px;
     z-index: 6;
@@ -796,13 +1106,15 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 
 .level-select-image {
     display: block;
-    margin: 1.5rem auto; /* Margen superior/inferior y centrado horizontal */
+    margin: 1.5rem auto;
+    /* Margen superior/inferior y centrado horizontal */
     max-width: 250px;
     width: 60%;
     border-radius: 10px;
     border: 3px solid var(--accent-blue);
     box-shadow: 0 0 15px rgba(126, 203, 255, 0.5);
-    background-color: var(--bg-dark); /* Fondo por si la imagen tiene transparencia */
+    background-color: var(--bg-dark);
+    /* Fondo por si la imagen tiene transparencia */
 }
 
 .levelbtn {
@@ -837,7 +1149,8 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 
 /* Estilo para el ícono de candado en botones deshabilitados */
 .levelbtn:disabled::before {
-    content: '🔒'; /* Puedes usar un SVG si prefieres */
+    content: '🔒';
+    /* Puedes usar un SVG si prefieres */
     font-size: 1.5rem;
 }
 
@@ -847,12 +1160,14 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 .info-card {
     max-width: 750px;
     position: relative;
-    padding-top: 80px; /* Espacio para el canvas de animación */
+    padding-top: 80px;
+    /* Espacio para el canvas de animación */
 }
 
 #infoAnimCanvas {
     position: absolute;
-    top: -60px; /* Que sobresalga un poco */
+    top: -60px;
+    /* Que sobresalga un poco */
     left: 50%;
     transform: translateX(-50%);
     width: 200px;
@@ -864,12 +1179,15 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 .creator-profile {
     display: flex;
     align-items: center;
-    gap: 1.5rem; /* Reducido para el panel */
+    gap: 1.5rem;
+    /* Reducido para el panel */
     text-align: left;
-    margin: 0; /* Reseteado para el panel */
+    margin: 0;
+    /* Reseteado para el panel */
     padding-bottom: 0;
     border-bottom: none;
-    flex-wrap: wrap; /* Para que se adapte en pantallas pequeñas */
+    flex-wrap: wrap;
+    /* Para que se adapte en pantallas pequeñas */
 }
 
 .profile-pic {
@@ -892,7 +1210,8 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 }
 
 .creator-bio {
-    font-family: monospace; /* Una fuente más legible para texto largo */
+    font-family: monospace;
+    /* Una fuente más legible para texto largo */
     font-size: 0.9rem;
     line-height: 1.5;
     opacity: 0.9;
@@ -905,34 +1224,43 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     padding: 10px 18px;
     margin-top: 1rem;
 }
+
 .social-btn svg {
     transition: transform 0.2s ease-out;
 }
+
 .social-btn:hover svg {
     transform: scale(1.2) rotate(-10deg);
 }
 
 .gallery {
-    margin: 0; /* Reseteado para el panel */
+    margin: 0;
+    /* Reseteado para el panel */
     padding-top: 0;
     border-top: none;
 }
+
 .gallery h4 {
     margin: 0 0 1.5rem;
     color: var(--accent-blue-light);
     text-align: left;
 }
+
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
 }
+
 .gallery-item {
     display: inline-block;
     position: relative;
-    max-width: 350px; /* Evita que la imagen sea demasiado ancha si es la única en la galería */
-    margin: 0 auto; /* Centra el item si el espacio de la grilla es mayor */
+    max-width: 350px;
+    /* Evita que la imagen sea demasiado ancha si es la única en la galería */
+    margin: 0 auto;
+    /* Centra el item si el espacio de la grilla es mayor */
 }
+
 .gallery-item img {
     max-width: 100%;
     width: 100%;
@@ -940,10 +1268,12 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     border: 2px solid var(--hud-border-color);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
 .gallery-item:hover img {
     transform: scale(1.05);
     box-shadow: 0 0 15px rgba(126, 203, 255, 0.4);
 }
+
 .gallery-caption {
     font-family: monospace;
     font-size: 0.8rem;
@@ -953,21 +1283,25 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 
 /* ===== NUEVA SECCIÓN: TECNOLOGÍAS ===== */
 .tech-stack {
-    margin: 0; /* Reseteado para el panel */
+    margin: 0;
+    /* Reseteado para el panel */
     padding-top: 0;
     border-top: none;
 }
+
 .tech-stack h4 {
     margin: 0 0 1.5rem;
     color: var(--accent-blue-light);
     text-align: left;
 }
+
 .tech-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1.5rem;
     text-align: left;
 }
+
 .tech-item {
     background: rgba(0, 24, 48, 0.4);
     border: 1px solid rgba(126, 203, 255, 0.15);
@@ -977,12 +1311,14 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     flex-direction: column;
     gap: 0.5rem;
 }
+
 .tech-icon {
     font-family: 'Press Start 2P', monospace;
     font-size: 1.2rem;
     color: var(--accent-yellow);
     margin-bottom: 0.5rem;
 }
+
 .tech-item p {
     font-family: monospace;
     font-size: 0.85rem;
@@ -1008,7 +1344,8 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
     font-size: clamp(0.8rem, 2vw, 0.9rem);
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-bottom: -1px; /* Solapa el borde inferior del contenedor */
+    margin-bottom: -1px;
+    /* Solapa el borde inferior del contenedor */
 }
 
 .info-tab-btn:hover {
@@ -1031,14 +1368,22 @@ kbd.key-spacebar { width: 140px; font-size: 0.8rem; }
 }
 
 @keyframes fadeInPanel {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ===== NUEVO: Estilo para el título de la misión ===== */
 #hud-objective-text .mission-title {
     color: var(--accent-yellow);
     font-weight: bold;
-    display: block; /* Asegura que esté en su propia línea */
+    display: block;
+    /* Asegura que esté en su propia línea */
     margin-bottom: 4px;
 }
