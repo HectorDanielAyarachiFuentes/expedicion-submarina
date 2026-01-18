@@ -511,33 +511,77 @@ export function draw() {
     // --- 4. EFECTOS DE ATAQUE MUNDIALES (Fuera del transform del cuerpo) ---
     // Barrido Smash
     if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
-        if (jefe.datosAtaque.carga > 0) { // Warning
-            ctx.fillStyle = jefe.enraged ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 50, 50, 0.3)';
-            // Barra parpadeante
-            if (Math.floor(time * 10) % 2 === 0) {
-                ctx.fillRect(0, jefe.datosAtaque.y - 30, W, 60);
+        if (jefe.datosAtaque.carga > 0) { // Warning: RAYO LÁSER DE CARGA
+            const y = jefe.datosAtaque.y;
+            const chargeRatio = 1 - (jefe.datosAtaque.carga / 1.2); // 0 a 1
+            const intensity = 0.5 + chargeRatio * 0.5;
+            const shake = 2 * intensity;
+
+            ctx.save();
+
+            // 1. Aura de Energía (Resplandor)
+            const glowWidth = 30 + Math.sin(time * 20) * 10;
+            const glowColor = jefe.enraged ? `rgba(255, 50, 50, ${intensity * 0.4})` : `rgba(200, 50, 255, ${intensity * 0.3})`;
+            ctx.fillStyle = glowColor;
+            ctx.fillRect(0, y - glowWidth / 2, W, glowWidth);
+
+            // 2. Núcleo del Rayo
+            ctx.shadowBlur = 10 + intensity * 10;
+            ctx.shadowColor = jefe.enraged ? '#ff0000' : '#d000ff';
+            ctx.fillStyle = '#fff';
+            const coreWidth = (4 + chargeRatio * 6) + Math.random() * 2;
+            ctx.fillRect(0, y - coreWidth / 2 + (Math.random() - 0.5) * shake, W, coreWidth);
+
+            // 3. Electricidad Inestable (Dientes de sierra y arcos)
+            ctx.strokeStyle = jefe.enraged ? '#ff9999' : '#e0b0ff';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 5;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            for (let x = 0; x < W; x += 15) {
+                const dy = (Math.random() - 0.5) * 30 * intensity;
+                ctx.lineTo(x, y + dy);
+            }
+            ctx.stroke();
+
+            // 4. Partículas Convergentes (Carga)
+            // Generar partículas "al vuelo" basadas en ruido visual simple
+            ctx.fillStyle = jefe.enraged ? '#ffcc00' : '#88ffff';
+            for (let i = 0; i < 10; i++) {
+                const px = (time * 800 + i * 150) % W;
+                const py = y + (Math.sin(px * 0.05 + time * 10) * 40);
+                const size = Math.random() * 3 + 1;
+                ctx.globalAlpha = Math.max(0, 1 - Math.abs(py - y) / 40); // Desvanecer lejos del centro
+                ctx.beginPath();
+                ctx.arc(px, py, size, 0, Math.PI * 2);
+                ctx.fill();
             }
 
-            // Línea guía
-            ctx.strokeStyle = '#ef4444';
-            ctx.setLineDash([20, 20]);
-            ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.moveTo(0, jefe.datosAtaque.y); ctx.lineTo(W, jefe.datosAtaque.y); ctx.stroke();
-            ctx.setLineDash([]);
-        } else { // Tentáculo gigante
+            ctx.restore();
+
+        } else { // Tentáculo gigante (Impacto)
             const tentaculoX = W - jefe.datosAtaque.progreso * (W + 200);
 
-            // Dibujar tentáculo gigante de ataque
+            // Dibujar tentáculo gigante de ataque con más fuerza
+            ctx.save();
+            ctx.shadowColor = jefe.enraged ? '#ff0000' : '#881337';
+            ctx.shadowBlur = 20;
+
             ctx.fillStyle = jefe.enraged ? '#991b1b' : '#be123c';
             ctx.strokeStyle = jefe.enraged ? '#7f1d1d' : '#881337';
             ctx.lineWidth = 10;
 
             ctx.beginPath();
-            ctx.moveTo(tentaculoX + 400, jefe.datosAtaque.y - 40); // Base fuera pantalla
-            ctx.lineTo(tentaculoX, jefe.datosAtaque.y); // Punta
-            ctx.lineTo(tentaculoX + 400, jefe.datosAtaque.y + 40);
+            ctx.moveTo(tentaculoX + 400, jefe.datosAtaque.y - 45); // Base fuera pantalla
+            // Forma más curva y orgánica
+            const midX = tentaculoX + 200;
+            const tipX = tentaculoX;
+            ctx.quadraticCurveTo(midX, jefe.datosAtaque.y - 10, tipX, jefe.datosAtaque.y); // Curva superior
+            ctx.quadraticCurveTo(midX, jefe.datosAtaque.y + 10, tentaculoX + 400, jefe.datosAtaque.y + 45); // Curva inferior
+
             ctx.fill();
             ctx.stroke();
+            ctx.restore();
         }
     }
 
