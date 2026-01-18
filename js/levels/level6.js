@@ -2,8 +2,8 @@
 'use strict';
 
 import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarNubeDeTinta, escombros } from '../game/game.js';
-import { 
-    torpedos, proyectiles 
+import {
+    torpedos, proyectiles
 } from '../game/armas/weapons.js';
 
 // --- CONSTANTES ÉPICAS ---
@@ -32,11 +32,11 @@ let phaseHistory = [];
 
 // --- TIPOS DE CRIATURAS ALUCINANTES ---
 const CREATURE_TYPES = [
-  { name: "Devorador", color: '#FF3355', speed: 200, size: 40, hp: 3, score: 150, behavior: 'vortexSpin', attack: 'blackHole', spawnEffect: () => { S.reproducir('boss_hit'); createShockwave(W / 2, H / 2, 1.5, '#FF3355'); } },
-  { name: "Gemelo", color: '#33FF55', speed: 120, size: 35, hp: 2, score: 200, behavior: 'mirrorClone', attack: 'duplicate', spawnEffect: () => S.reproducir('machinegun') },
-  { name: "Cronolord", color: '#3355FF', speed: 80, size: 50, hp: 4, score: 180, behavior: 'timeWarp', attack: 'slowTime', spawnEffect: () => S.reproducir('ink') }, // prettier-ignore
-  { name: "Fragmentador", color: '#FF33FF', speed: 250, size: 25, hp: 1, score: 250, behavior: 'fragment', attack: 'split', spawnEffect: () => { for (let i = 0; i < 3; i++) { setTimeout(() => generarExplosion(Math.random() * W, Math.random() * H, '#FF33FF', 40), i * 200); } } },
-  { name: "Titán", color: '#FFFF33', speed: 60, size: 80, hp: 8, score: 300, behavior: 'titan', attack: 'quake', spawnEffect: () => { screenShake = 15; S.reproducir('shotgun'); for (let i = 0; i < 5; i++) spawnFallingDebris(true); } }
+    { name: "Devorador", color: '#FF3355', speed: 200, size: 40, hp: 3, score: 150, behavior: 'vortexSpin', attack: 'blackHole', spawnEffect: () => { S.reproducir('boss_hit'); createShockwave(W / 2, H / 2, 1.5, '#FF3355'); } },
+    { name: "Gemelo", color: '#33FF55', speed: 120, size: 35, hp: 2, score: 200, behavior: 'mirrorClone', attack: 'duplicate', spawnEffect: () => S.reproducir('machinegun') },
+    { name: "Cronolord", color: '#3355FF', speed: 80, size: 50, hp: 4, score: 180, behavior: 'timeWarp', attack: 'slowTime', spawnEffect: () => S.reproducir('ink') }, // prettier-ignore
+    { name: "Fragmentador", color: '#FF33FF', speed: 250, size: 25, hp: 1, score: 250, behavior: 'fragment', attack: 'split', spawnEffect: () => { for (let i = 0; i < 3; i++) { setTimeout(() => generarExplosion(Math.random() * W, Math.random() * H, '#FF33FF', 40), i * 200); } } },
+    { name: "Titán", color: '#FFFF33', speed: 60, size: 80, hp: 8, score: 300, behavior: 'titan', attack: 'quake', spawnEffect: () => { screenShake = 15; S.reproducir('shotgun'); for (let i = 0; i < 5; i++) spawnFallingDebris(true); } }
 ];
 
 // --- NUEVAS ENTIDADES ESPECIALES ---
@@ -61,51 +61,51 @@ function createSanctuary() {
 }
 
 function spawnVortexParticle(epic = false) {
-  const angle = Math.random() * Math.PI * 2;
-  const distance = VORTEX_RADIUS * (0.6 + Math.random() * 0.4);
-  const size = epic ? 5 + Math.random() * 8 : 2 + Math.random() * 4;
-  vortexParticles.push({ x: W / 2 + Math.cos(angle) * distance, y: H / 2 + Math.sin(angle) * distance, angle: angle, distance: distance, speed: 1 + Math.random() * (epic ? 3 : 2), size: size, maxSize: size, life: 0, maxLife: 4 + Math.random() * 8, color: epic ? `hsl(${Math.random() * 60 + 200}, 100%, 70%)` : '#88EEFF', trail: [] });
+    const angle = Math.random() * Math.PI * 2;
+    const distance = VORTEX_RADIUS * (0.6 + Math.random() * 0.4);
+    const size = epic ? 5 + Math.random() * 8 : 2 + Math.random() * 4;
+    vortexParticles.push({ x: W / 2 + Math.cos(angle) * distance, y: H / 2 + Math.sin(angle) * distance, angle: angle, distance: distance, speed: 1 + Math.random() * (epic ? 3 : 2), size: size, maxSize: size, life: 0, maxLife: 4 + Math.random() * 8, color: epic ? `hsl(${Math.random() * 60 + 200}, 100%, 70%)` : '#88EEFF', trail: [] });
 }
 
 function spawnCreature(typeIndex = null) {
-  const type = typeIndex !== null ? CREATURE_TYPES[typeIndex] : CREATURE_TYPES[Math.floor(Math.random() * CREATURE_TYPES.length)];
-  const angle = Math.random() * Math.PI * 2;
-  const distance = VORTEX_RADIUS + 100 + Math.random() * 150;
-  const creature = { x: W / 2 + Math.cos(angle) * distance, y: H / 2 + Math.sin(angle) * distance, angle: angle, distance: distance, speed: type.speed, size: type.size, hp: type.hp, maxHp: type.hp, color: type.color, score: type.score, rotation: Math.random() * Math.PI * 2, rotationSpeed: (Math.random() - 0.5) * 0.2, type: type, attackCooldown: 2 + Math.random() * 3, id: Math.random().toString(36).substr(2, 9) };
-  type.spawnEffect();
-  creatures.push(creature);
-  return creature;
+    const type = typeIndex !== null ? CREATURE_TYPES[typeIndex] : CREATURE_TYPES[Math.floor(Math.random() * CREATURE_TYPES.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const distance = VORTEX_RADIUS + 100 + Math.random() * 150;
+    const creature = { x: W / 2 + Math.cos(angle) * distance, y: H / 2 + Math.sin(angle) * distance, angle: angle, distance: distance, speed: type.speed, size: type.size, hp: type.hp, maxHp: type.hp, color: type.color, score: type.score, rotation: Math.random() * Math.PI * 2, rotationSpeed: (Math.random() - 0.5) * 0.2, type: type, attackCooldown: 2 + Math.random() * 3, id: Math.random().toString(36).substr(2, 9) };
+    type.spawnEffect();
+    creatures.push(creature);
+    return creature;
 }
 
 function spawnFallingDebris(epic = false) {
-  const size = epic ? 80 + Math.random() * 100 : 30 + Math.random() * 70;
-  const speed = epic ? 500 + Math.random() * 300 : 300 + Math.random() * 200;
-  escombros.push({ x: Math.random() * W, y: -size, vx: (Math.random() - 0.5) * (epic ? 300 : 200), vy: speed, tamano: size, rotation: Math.random() * Math.PI * 2, vRot: (Math.random() - 0.5) * (epic ? 0.3 : 0.2), color: `hsl(${Math.random() * 40 + 10}, 80%, ${epic ? 60 : 50}%)`, isEpic: epic });
+    const size = epic ? 80 + Math.random() * 100 : 30 + Math.random() * 70;
+    const speed = epic ? 500 + Math.random() * 300 : 300 + Math.random() * 200;
+    escombros.push({ x: Math.random() * W, y: -size, vx: (Math.random() - 0.5) * (epic ? 300 : 200), vy: speed, tamano: size, rotation: Math.random() * Math.PI * 2, vRot: (Math.random() - 0.5) * (epic ? 0.3 : 0.2), color: `hsl(${Math.random() * 40 + 10}, 80%, ${epic ? 60 : 50}%)`, isEpic: epic });
 }
 
 function createShockwave(x, y, power, color = '#FF00FF') {
-  shockwaves.push({ x: x, y: y, radius: 10, maxRadius: 200 + power * 150, power: power, life: 0, maxLife: 0.8 + power * 0.2, color: color });
-  S.reproducir('choque');
+    shockwaves.push({ x: x, y: y, radius: 10, maxRadius: 200 + power * 150, power: power, life: 0, maxLife: 0.8 + power * 0.2, color: color });
+    S.reproducir('choque');
 }
 
 function createBlackHole(x, y, power) {
-  blackHoles.push(new BlackHole(x, y, power));
-  S.reproducir('boss_hit');
+    blackHoles.push(new BlackHole(x, y, power));
+    S.reproducir('boss_hit');
 }
 
 function createTimeWarp(x, y) {
-  timeWarps.push(new TimeWarp(x, y));
-  S.reproducir('ink');
+    timeWarps.push(new TimeWarp(x, y));
+    S.reproducir('ink');
 }
 
 function createGravityWell(x, y, dir) {
-  gravityWells.push(new GravityWell(x, y, dir));
-  S.reproducir('torpedo');
+    gravityWells.push(new GravityWell(x, y, dir));
+    S.reproducir('torpedo');
 }
 
 // --- SISTEMA DE FASES REVOLUCIONARIO ---
 const PHASE_BEHAVIORS = [
-    { name: "Vortex Primordial", start: () => { S.reproducir('music_0'); for (let i = 0; i < 15; i++) spawnCreature(Math.floor(Math.random() * 2)); }, update: (dt) => { if (Math.random() < 0.05) spawnCreature(0); }, end: () => {} },
+    { name: "Vortex Primordial", start: () => { S.reproducir('music_0'); for (let i = 0; i < 15; i++) spawnCreature(Math.floor(Math.random() * 2)); }, update: (dt) => { if (Math.random() < 0.05) spawnCreature(0); }, end: () => { } },
     { name: "Singularidades", start: () => { createBlackHole(W * 0.3, H * 0.3, 1.5); createBlackHole(W * 0.7, H * 0.7, 1.5); }, update: (dt) => { if (Math.random() < 0.015) createBlackHole(W * 0.2 + Math.random() * W * 0.6, H * 0.2 + Math.random() * H * 0.6, 0.8 + Math.random() * 1.2); }, end: () => { blackHoles = []; } },
     {
         name: "Terremoto Cósmico",
@@ -116,8 +116,8 @@ const PHASE_BEHAVIORS = [
     { name: "Distorsión Temporal", start: () => { S.reproducir('ink'); timeSlow = 0.6; for (let i = 0; i < 4; i++) createTimeWarp(W * 0.1 + Math.random() * W * 0.8, H * 0.1 + Math.random() * H * 0.8); }, update: (dt) => { if (Math.random() < 0.005) timeSlow = 0.4 + Math.random() * 0.4; }, end: () => { timeSlow = 1; timeWarps = []; } },
     { name: "Dimensión Espejo", start: () => { S.reproducir('machinegun'); mirrorMode = true; for (let i = 0; i < 8; i++) spawnCreature(1); }, update: (dt) => { if (Math.random() < 0.002) mirrorMode = !mirrorMode; }, end: () => { mirrorMode = false; } },
     { name: "Pozos Gravitacionales", start: () => { for (let i = 0; i < 6; i++) createGravityWell(W * 0.1 + Math.random() * W * 0.8, H * 0.1 + Math.random() * H * 0.8, Math.random() > 0.5 ? 'in' : 'out'); }, update: (dt) => { if (gravityWells.length < 4 && Math.random() < 0.02) createGravityWell(Math.random() * W, Math.random() * H, Math.random() > 0.5 ? 'in' : 'out'); }, end: () => { gravityWells = []; } },
-    { name: "Era de los Titanes", start: () => { for (let i = 0; i < 2; i++) setTimeout(() => spawnCreature(4), i * 1000); }, update: (dt) => { if (creatures.filter(c => c.type.name === 'Titán').length < 3 && Math.random() < 0.01) spawnCreature(4); }, end: () => {} },
-    { name: "Vortex del Juicio", start: () => { S.reproducir('music_1'); blackHoleMode = true; VORTEX_RADIUS = 350; VORTEX_FORCE = 450; for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; createBlackHole(W/2 + Math.cos(a) * 300, H/2 + Math.sin(a) * 300, 1.2); } }, update: (dt) => { if (Math.random() < 0.05) createShockwave(W/2, H/2, 2.5, '#00FFFF'); }, end: () => { blackHoleMode = false; VORTEX_RADIUS = 250; VORTEX_FORCE = 350; blackHoles = []; } }
+    { name: "Era de los Titanes", start: () => { for (let i = 0; i < 2; i++) setTimeout(() => spawnCreature(4), i * 1000); }, update: (dt) => { if (creatures.filter(c => c.type.name === 'Titán').length < 3 && Math.random() < 0.01) spawnCreature(4); }, end: () => { } },
+    { name: "Vortex del Juicio", start: () => { S.reproducir('music_1'); blackHoleMode = true; VORTEX_RADIUS = 350; VORTEX_FORCE = 450; for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; createBlackHole(W / 2 + Math.cos(a) * 300, H / 2 + Math.sin(a) * 300, 1.2); } }, update: (dt) => { if (Math.random() < 0.05) createShockwave(W / 2, H / 2, 2.5, '#00FFFF'); }, end: () => { blackHoleMode = false; VORTEX_RADIUS = 250; VORTEX_FORCE = 350; blackHoles = []; } }
 ];
 
 function applyVortexForce(entity, dt) {
@@ -205,14 +205,14 @@ export function init() {
 
 export function update(dt) {
     if (!estadoJuego || estadoJuego.nivel !== 6) return;
-    
-    let currentDt = dt * timeSlow; let inTimeWarp = false; for(const tw of timeWarps) { if(Math.hypot(jugador.x - tw.x, jugador.y - tw.y) < tw.radius) { inTimeWarp = true; break; } } if (!inTimeWarp) { dt = currentDt; }
+
+    let currentDt = dt * timeSlow; let inTimeWarp = false; for (const tw of timeWarps) { if (Math.hypot(jugador.x - tw.x, jugador.y - tw.y) < tw.radius) { inTimeWarp = true; break; } } if (!inTimeWarp) { dt = currentDt; }
     phaseTimer += dt; if (phaseTimer >= PHASE_DURATION) { PHASE_BEHAVIORS[currentPhase].end(); currentPhase = (phaseHistory.length + 1) % MAX_PHASES; phaseTimer = 0; phaseHistory.push(currentPhase); PHASE_BEHAVIORS[currentPhase].start(); } PHASE_BEHAVIORS[currentPhase].update(dt); vortexRotation += dt * (blackHoleMode ? 1.5 : 0.8);
 
     // --- ACTUALIZACIÓN DE ENTIDADES ---
 
     // Partículas del Vórtice
-    for (let i = vortexParticles.length - 1; i >= 0; i--) { const p = vortexParticles[i]; p.angle += dt * p.speed * (1/Math.max(0.1, p.distance/VORTEX_RADIUS)); p.life += dt; p.distance *= 1 - dt * 0.08; p.x = W / 2 + Math.cos(p.angle) * p.distance; p.y = H / 2 + Math.sin(p.angle) * p.distance; p.trail.push({ x: p.x, y: p.y }); if (p.trail.length > 10) p.trail.shift(); if (p.life > p.maxLife || p.distance < 15) { vortexParticles.splice(i, 1); if (Math.random() < 0.5) spawnVortexParticle(); } } if (Math.random() < 0.3) spawnVortexParticle(blackHoleMode);
+    for (let i = vortexParticles.length - 1; i >= 0; i--) { const p = vortexParticles[i]; p.angle += dt * p.speed * (1 / Math.max(0.1, p.distance / VORTEX_RADIUS)); p.life += dt; p.distance *= 1 - dt * 0.08; p.x = W / 2 + Math.cos(p.angle) * p.distance; p.y = H / 2 + Math.sin(p.angle) * p.distance; p.trail.push({ x: p.x, y: p.y }); if (p.trail.length > 10) p.trail.shift(); if (p.life > p.maxLife || p.distance < 15) { vortexParticles.splice(i, 1); if (Math.random() < 0.5) spawnVortexParticle(); } } if (Math.random() < 0.3) spawnVortexParticle(blackHoleMode);
 
     // Criaturas
     for (let i = creatures.length - 1; i >= 0; i--) {
@@ -333,18 +333,18 @@ export function update(dt) {
 
         if (d.y > H + d.tamano) escombros.splice(i, 1);
     }
-    
+
     // Entidades especiales
     if (sanctuary) sanctuary.pulse += dt * 5;
     shockwaves.forEach((w, i) => { w.life += dt; w.radius = w.maxRadius * (w.life / w.maxLife); if (w.life >= w.maxLife) shockwaves.splice(i, 1); });
-    blackHoles.forEach((bh, i) => { bh.life += dt; bh.radius = bh.maxRadius * Math.sin((bh.life/bh.maxLife) * Math.PI); bh.pulseTimer += dt; if (bh.life >= bh.maxLife) blackHoles.splice(i, 1); });
-    timeWarps.forEach((tw, i) => { tw.life += dt; if(tw.life >= tw.maxLife) timeWarps.splice(i, 1); });
+    blackHoles.forEach((bh, i) => { bh.life += dt; bh.radius = bh.maxRadius * Math.sin((bh.life / bh.maxLife) * Math.PI); bh.pulseTimer += dt; if (bh.life >= bh.maxLife) blackHoles.splice(i, 1); });
+    timeWarps.forEach((tw, i) => { tw.life += dt; if (tw.life >= tw.maxLife) timeWarps.splice(i, 1); });
     gravityWells.forEach((gw, i) => { gw.life += dt; if (gw.life >= gw.maxLife) gravityWells.splice(i, 1); });
 
     // Jugador
-    let playerDt = dt; for(const tw of timeWarps) { if(Math.hypot(jugador.x - tw.x, jugador.y - tw.y) < tw.radius) playerDt = dt / tw.timeFactor; }
+    let playerDt = dt; for (const tw of timeWarps) { if (Math.hypot(jugador.x - tw.x, jugador.y - tw.y) < tw.radius) playerDt = dt / tw.timeFactor; }
     applyAllForces(jugador, playerDt * 0.5);
-    if (blackHoleMode && Math.hypot(W/2 - jugador.x, H/2 - jugador.y) < VORTEX_RADIUS * 0.3) { if (estadoJuego.vidas > 0) estadoJuego.vidas--; estadoJuego.animVida = 0.6; S.reproducir('choque'); createShockwave(jugador.x, jugador.y, 2, '#FFFFFF'); jugador.x = Math.random() < 0.5 ? jugador.r : W - jugador.r; jugador.y = Math.random() * H; if (estadoJuego.vidas <= 0) perderJuego(); }
+    if (blackHoleMode && Math.hypot(W / 2 - jugador.x, H / 2 - jugador.y) < VORTEX_RADIUS * 0.3) { if (estadoJuego.vidas > 0) estadoJuego.vidas--; estadoJuego.animVida = 0.6; S.reproducir('choque'); createShockwave(jugador.x, jugador.y, 2, '#FFFFFF'); jugador.x = Math.random() < 0.5 ? jugador.r : W - jugador.r; jugador.y = Math.random() * H; if (estadoJuego.vidas <= 0) perderJuego(); }
     screenShake *= 0.95;
     estadoJuego.valorObjetivoNivel += dt;
 }
@@ -355,15 +355,15 @@ export function draw() {
     ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
 
     // Vórtice y Partículas
-    const gradColor = blackHoleMode ? '#220044' : '#002266'; const gradient = ctx.createRadialGradient(W/2, H/2, VORTEX_RADIUS * 0.1, W/2, H/2, VORTEX_RADIUS); gradient.addColorStop(0, blackHoleMode ? '#000' : '#004488'); gradient.addColorStop(0.5, gradColor); gradient.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gradient; ctx.fillRect(0, 0, W, H);
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of vortexParticles) { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = p.color; ctx.lineWidth = p.size/2; ctx.beginPath(); if(p.trail.length > 0) ctx.moveTo(p.trail[0].x, p.trail[0].y); p.trail.forEach(t => ctx.lineTo(t.x, t.y)); ctx.stroke(); } ctx.restore();
+    const gradColor = blackHoleMode ? '#220044' : '#002266'; const gradient = ctx.createRadialGradient(W / 2, H / 2, VORTEX_RADIUS * 0.1, W / 2, H / 2, VORTEX_RADIUS); gradient.addColorStop(0, blackHoleMode ? '#000' : '#004488'); gradient.addColorStop(0.5, gradColor); gradient.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gradient; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of vortexParticles) { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = p.color; ctx.lineWidth = p.size / 2; ctx.beginPath(); if (p.trail.length > 0) ctx.moveTo(p.trail[0].x, p.trail[0].y); p.trail.forEach(t => ctx.lineTo(t.x, t.y)); ctx.stroke(); } ctx.restore();
 
     // Entidades especiales y Escombros
-    timeWarps.forEach(tw => { ctx.fillStyle = `rgba(100, 150, 255, ${0.1 + 0.1 * Math.sin(tw.life*5)})`; ctx.beginPath(); ctx.arc(tw.x, tw.y, tw.radius, 0, Math.PI*2); ctx.fill(); });
-    gravityWells.forEach(gw => { ctx.strokeStyle = gw.direction === 'in' ? `rgba(255, 0, 0, ${0.5 * (1-gw.life/gw.maxLife)})` : `rgba(0, 255, 0, ${0.5 * (1-gw.life/gw.maxLife)})`; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(gw.x, gw.y, gw.radius * (gw.life/gw.maxLife), 0, Math.PI*2); ctx.stroke(); });
+    timeWarps.forEach(tw => { ctx.fillStyle = `rgba(100, 150, 255, ${0.1 + 0.1 * Math.sin(tw.life * 5)})`; ctx.beginPath(); ctx.arc(tw.x, tw.y, tw.radius, 0, Math.PI * 2); ctx.fill(); });
+    gravityWells.forEach(gw => { ctx.strokeStyle = gw.direction === 'in' ? `rgba(255, 0, 0, ${0.5 * (1 - gw.life / gw.maxLife)})` : `rgba(0, 255, 0, ${0.5 * (1 - gw.life / gw.maxLife)})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(gw.x, gw.y, gw.radius * (gw.life / gw.maxLife), 0, Math.PI * 2); ctx.stroke(); });
     blackHoles.forEach(bh => { ctx.fillStyle = `rgba(0, 0, 0, 0.8)`; ctx.beginPath(); ctx.arc(bh.x, bh.y, bh.radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = `rgba(150, 50, 255, ${0.8 * Math.sin(bh.pulseTimer * 5)})`; ctx.lineWidth = 5; ctx.stroke(); });
-    shockwaves.forEach(w => { ctx.strokeStyle = w.color; ctx.lineWidth = 8 * (1-w.life/w.maxLife); ctx.beginPath(); ctx.arc(w.x, w.y, w.radius, 0, Math.PI*2); ctx.stroke(); });
-    escombros.forEach(d => { ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); ctx.fillStyle = d.color; ctx.fillRect(-d.tamano/2, -d.tamano/2, d.tamano, d.tamano); ctx.strokeStyle = d.isEpic ? '#000' : '#333'; ctx.lineWidth=3; ctx.strokeRect(-d.tamano/2, -d.tamano/2, d.tamano, d.tamano); ctx.restore(); });
+    shockwaves.forEach(w => { ctx.strokeStyle = w.color; ctx.lineWidth = 8 * (1 - w.life / w.maxLife); ctx.beginPath(); ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2); ctx.stroke(); });
+    escombros.forEach(d => { ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rotation); ctx.fillStyle = d.color; ctx.fillRect(-d.tamano / 2, -d.tamano / 2, d.tamano, d.tamano); ctx.strokeStyle = d.isEpic ? '#000' : '#333'; ctx.lineWidth = 3; ctx.strokeRect(-d.tamano / 2, -d.tamano / 2, d.tamano, d.tamano); ctx.restore(); });
 
     // Santuario
     if (sanctuary) {
@@ -385,15 +385,18 @@ export function draw() {
         ctx.fillStyle = '#00FF00'; ctx.fillRect(sanctuary.x - sanctuary.radius, sanctuary.y - sanctuary.radius - 20, sanctuary.radius * 2 * (sanctuary.hp / sanctuary.maxHp), 8);
         ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.strokeRect(sanctuary.x - sanctuary.radius, sanctuary.y - sanctuary.radius - 20, sanctuary.radius * 2, 8);
     }
-    
+
     // Jugador espejo y Criaturas
     if (mirrorMode) { ctx.save(); ctx.globalAlpha = 0.4; ctx.translate(W - jugador.x, jugador.y); ctx.rotate(-jugador.a); ctx.fillStyle = jugador.color; ctx.beginPath(); ctx.moveTo(jugador.r, 0); ctx.lineTo(-jugador.r, -jugador.r * 0.7); ctx.lineTo(-jugador.r, jugador.r * 0.7); ctx.closePath(); ctx.fill(); ctx.restore(); }
-    for (const c of creatures) { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rotation); const damageEffect = c.hp / c.maxHp; ctx.fillStyle = c.color; ctx.globalAlpha = 0.6 + 0.4 * damageEffect; ctx.beginPath(); ctx.arc(0, 0, c.size / 2, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke(); const eyeAngle = Math.atan2(jugador.y - c.y, jugador.x - c.x) - c.rotation; ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(Math.cos(eyeAngle) * c.size/4, Math.sin(eyeAngle) * c.size/4, c.size/8, 0, Math.PI*2); ctx.fill(); ctx.restore(); if (c.hp < c.maxHp) { ctx.fillStyle = '#FF0000'; ctx.fillRect(c.x - c.size / 2, c.y - c.size/2 - 12, c.size * (c.hp / c.maxHp), 5); ctx.strokeStyle = '#000'; ctx.strokeRect(c.x - c.size / 2, c.y - c.size/2 - 12, c.size, 5); } }
-    
+    for (const c of creatures) { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rotation); const damageEffect = c.hp / c.maxHp; ctx.fillStyle = c.color; ctx.globalAlpha = 0.6 + 0.4 * damageEffect; ctx.beginPath(); ctx.arc(0, 0, c.size / 2, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke(); const eyeAngle = Math.atan2(jugador.y - c.y, jugador.x - c.x) - c.rotation; ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(Math.cos(eyeAngle) * c.size / 4, Math.sin(eyeAngle) * c.size / 4, c.size / 8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); if (c.hp < c.maxHp) { ctx.fillStyle = '#FF0000'; ctx.fillRect(c.x - c.size / 2, c.y - c.size / 2 - 12, c.size * (c.hp / c.maxHp), 5); ctx.strokeStyle = '#000'; ctx.strokeRect(c.x - c.size / 2, c.y - c.size / 2 - 12, c.size, 5); } }
+
     ctx.restore(); // Fin sacudida
 
     // --- UI ÉPICA ---
-    ctx.fillStyle = '#FFFFFF'; ctx.font = '18px "Press Start 2P", monospace'; ctx.textAlign = 'left'; const phaseName = PHASE_BEHAVIORS[currentPhase].name; ctx.shadowColor = '#000'; ctx.shadowBlur = 5; ctx.fillText(`FASE: ${phaseName.toUpperCase()}`, 20, 30);
-    const progress = phaseTimer / PHASE_DURATION; const progressWidth = 350; ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 3; ctx.strokeRect(20, 40, progressWidth, 15); ctx.fillStyle = `hsl(${(1-progress) * 120}, 100%, 50%)`; ctx.fillRect(22, 42, (progressWidth-4) * progress, 11); ctx.shadowBlur = 0;
-    if (blackHoleMode || screenShake > 10) { ctx.fillStyle = blackHoleMode ? '#FF00FF' : '#FF5555'; ctx.font = '24px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.shadowColor = '#000'; ctx.shadowBlur = 8; ctx.fillText(blackHoleMode ? `¡VORTEX DEL JUICIO!` : `¡TERREMOTO CÓSMICO!`, W / 2, 40); ctx.shadowBlur = 0; }
+    ctx.fillStyle = '#FFFFFF'; ctx.font = '18px "Press Start 2P", monospace'; ctx.textAlign = 'left'; const phaseName = PHASE_BEHAVIORS[currentPhase].name; ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
+    // MOVIDO ABAJO PARA EVITAR SOLAPAMIENTO: Y=120
+    const uiBaseY = 120;
+    ctx.fillText(`FASE: ${phaseName.toUpperCase()}`, 20, uiBaseY);
+    const progress = phaseTimer / PHASE_DURATION; const progressWidth = 350; ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 3; ctx.strokeRect(20, uiBaseY + 10, progressWidth, 15); ctx.fillStyle = `hsl(${(1 - progress) * 120}, 100%, 50%)`; ctx.fillRect(22, uiBaseY + 12, (progressWidth - 4) * progress, 11); ctx.shadowBlur = 0;
+    if (blackHoleMode || screenShake > 10) { ctx.fillStyle = blackHoleMode ? '#FF00FF' : '#FF5555'; ctx.font = '24px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.shadowColor = '#000'; ctx.shadowBlur = 8; ctx.fillText(blackHoleMode ? `¡VORTEX DEL JUICIO!` : `¡TERREMOTO CÓSMICO!`, W / 2, uiBaseY); ctx.shadowBlur = 0; }
 }
