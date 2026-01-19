@@ -761,6 +761,21 @@ function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 
 function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
 
 // --- Generadores de Efectos Especiales ---
+export function generarChorroDeAgua(x, y, dirY) {
+    const numParticulas = 40;
+    for (let i = 0; i < numParticulas; i++) {
+        generarParticula(particulasBurbujas, {
+            x: x + (Math.random() - 0.5) * 20,
+            y: y,
+            vx: (Math.random() - 0.5) * 80,
+            vy: dirY * (150 + Math.random() * 250),
+            r: Math.random() * 3 + 1,
+            vida: 0.8 + Math.random() * 1.2,
+            color: '#aaddff'
+        });
+    }
+}
+
 export function generarExplosion(x, y, color = '#ff8833', size = 80) {
     const numParticulas = clamp(Math.floor(size / 4), 15, 60);
     for (let i = 0; i < numParticulas; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * (size * 1.5); generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * (size / 30) + 1, vida: 0.4 + Math.random() * 0.4, color }); }
