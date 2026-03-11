@@ -4705,10 +4705,35 @@ function alternarPantallaCompleta() { if (!puedeUsarPantallaCompleta()) { docume
 /**
  * Ajusta el tamaño de todos los lienzos (canvas) para que coincidan con el tamaño de la ventana.
  * Con el nuevo HUD de superposición, los lienzos deben ocupar toda la pantalla.
+ * OPTIMIZACIÓN: Límite de resolución lógica para evitar la asfixia de fill-rate en monitores 4K.
  */
 function autoSize() {
-    const v = { w: innerWidth, h: innerHeight }; // Los lienzos ahora ocupan toda la pantalla.
-    [bgCanvas, cvs, fxCanvas, sonarCanvas, hudCanvas].forEach(c => { if (c) { c.width = v.w; c.height = v.h; } }); W = v.w; H = v.h; calcularCarriles(); if (!estadoJuego || !estadoJuego.enEjecucion) { renderizar(0); }
+    // Definimos un ancho lógico máximo (Full HD). 
+    // Evita que el juego consuma toda la CPU/GPU en monitores enormes dibujando 20M píxeles/frame.
+    const MAX_LOGICAL_WIDTH = 1920; 
+    let scale = 1;
+
+    // Si la pantalla física es más ancha de lo permitido, bajamos la escala.
+    // El tamaño visual (CSS width/height = 100vw/100vh) no cambia, por lo que el navegador estira la imagen automáticamente.
+    if (innerWidth > MAX_LOGICAL_WIDTH) {
+        scale = MAX_LOGICAL_WIDTH / innerWidth;
+    }
+
+    const v = { w: Math.round(innerWidth * scale), h: Math.round(innerHeight * scale) }; 
+    [bgCanvas, cvs, fxCanvas, sonarCanvas, hudCanvas].forEach(c => { 
+        if (c) { 
+            c.width = v.w; 
+            c.height = v.h; 
+        } 
+    }); 
+    
+    W = v.w; 
+    H = v.h; 
+    calcularCarriles(); 
+    
+    if (!estadoJuego || !estadoJuego.enEjecucion) { 
+        renderizar(0); 
+    }
 }
 // ========= Función de Bucle de Juego (se exporta a main.js) =========
 // Este es el corazón del juego, el bucle que se ejecuta continuamente.
