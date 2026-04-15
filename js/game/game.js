@@ -1697,16 +1697,24 @@ function actualizarAnimacionMenu(dt) {
             }
         }
 
-        // Actualizar tiburones perseguidores
+        // Actualizar depredadores perseguidores
         for (const shark of menuFlyBy.chasingSharks) {
             shark.x += shark.vx * dt;
             shark.y = lerp(shark.y, menuFlyBy.y, dt * 2.0); // Seguir suavemente en el eje Y
             shark.timerFrame += dt;
-            if (shark.timerFrame >= SHARK_ANIMATION_SPEED) {
-                shark.timerFrame -= SHARK_ANIMATION_SPEED;
-                if (SHARK_SPRITE_DATA) {
-                    shark.frame = (shark.frame + 1) % SHARK_SPRITE_DATA.frames.length;
+            
+            const animSpeed = shark.tipo === 'orca' ? ORCA_ANIMATION_SPEED : SHARK_ANIMATION_SPEED;
+            const spriteData = shark.tipo === 'orca' ? ORCA_SPRITE_DATA : SHARK_SPRITE_DATA;
+            if (shark.timerFrame >= animSpeed) {
+                shark.timerFrame -= animSpeed;
+                if (spriteData) {
+                    shark.frame = (shark.frame + 1) % spriteData.frames.length;
                 }
+            }
+            
+            // Generar estela si son orcas
+            if (shark.tipo === 'orca' && Math.random() < 0.2) {
+                generarParticula(particulasBurbujas, { x: shark.x - Math.sign(shark.vx)*20, y: shark.y + (Math.random() - 0.5) * 20, vx: shark.vx * 0.2, vy: (Math.random() - 0.5) * 20, r: Math.random() * 2 + 1, vida: 0.5 + Math.random() * 0.5, color: '' });
             }
         }
 
@@ -1721,8 +1729,9 @@ function actualizarAnimacionMenu(dt) {
             }
         }
 
-        // Desactivar cuando sale de la pantalla
-        if ((menuFlyBy.vx > 0 && menuFlyBy.x > W + 200) || (menuFlyBy.vx < 0 && menuFlyBy.x < -200)) {
+        // Desactivar cuando sale de la pantalla relativa a la cámara
+        const currentCamX = estadoJuego ? estadoJuego.cameraX : 0;
+        if ((menuFlyBy.vx > 0 && menuFlyBy.x > currentCamX + W + 200) || (menuFlyBy.vx < 0 && menuFlyBy.x < currentCamX - 200)) {
             menuFlyBy.active = false;
             menuFlyBy.cooldown = 8.0 + Math.random() * 10; // Enfriamiento de 8 a 18 segundos
 
@@ -1740,33 +1749,42 @@ function actualizarAnimacionMenu(dt) {
         menuFlyBy.cooldown -= dt;
         if (menuFlyBy.cooldown <= 0) {
             menuFlyBy.active = true;
+            const currentCamX = estadoJuego ? estadoJuego.cameraX : 0;
+            const currentCamY = estadoJuego ? estadoJuego.cameraY : 0;
             const desdeIzquierda = Math.random() > 0.5;
             menuFlyBy.vx = (desdeIzquierda ? 1 : -1) * (900 + Math.random() * 500); // Muy rápido
-            menuFlyBy.x = desdeIzquierda ? -200 : W + 200;
-            menuFlyBy.y = H * 0.2 + Math.random() * H * 0.6; // Altura aleatoria
+            menuFlyBy.x = desdeIzquierda ? currentCamX - 200 : currentCamX + W + 200;
+            menuFlyBy.y = currentCamY + H * 0.2 + Math.random() * H * 0.6; // Altura aleatoria
             menuFlyBy.rotation = (Math.random() - 0.5) * 0.25; // Inclinación aleatoria
             S.reproducir('torpedo'); // Sonido de "whoosh"
 
-            // --- ¡NUEVO! Generar tiburones perseguidores ---
+            // --- ¡NUEVO! Generar perseguidores ---
             menuFlyBy.chasingSharks = [];
             menuFlyBy.fireCooldown = 0.1; // Disparar casi de inmediato
-            if (sharkListo) {
-                const numSharks = 2 + Math.floor(Math.random() * 2); // 2 o 3 tiburones
-                for (let i = 0; i < numSharks; i++) {
-                    const sharkX = menuFlyBy.x - (Math.sign(menuFlyBy.vx) * (150 + i * 80 + Math.random() * 50));
-                    const sharkY = menuFlyBy.y + (Math.random() - 0.5) * 200;
+            
+            // 30% de probabilidad de que sean Orcas en lugar de tiburones
+            menuFlyBy.chaserType = (orcaListo && Math.random() < 0.3) ? 'orca' : 'shark';
+            
+            if ((menuFlyBy.chaserType === 'shark' && sharkListo) || (menuFlyBy.chaserType === 'orca' && orcaListo)) {
+                const numChasers = 2 + Math.floor(Math.random() * 2); // 2 o 3 persiguiendo
+                for (let i = 0; i < numChasers; i++) {
+                    const chX = menuFlyBy.x - (Math.sign(menuFlyBy.vx) * (150 + i * 80 + Math.random() * 50));
+                    const chY = menuFlyBy.y + (Math.random() - 0.5) * 200;
 
-                    const shark = {
-                        x: sharkX, y: sharkY,
+                    const chaser = {
+                        x: chX, y: chY,
                         vx: menuFlyBy.vx * (0.85 + Math.random() * 0.1), // Un poco más lentos
-                        vy: 0, r: 50, w: 128, h: 128,
+                        vy: 0, 
+                        r: menuFlyBy.chaserType === 'orca' ? 60 : 50, 
+                        w: menuFlyBy.chaserType === 'orca' ? 160 : 128, 
+                        h: menuFlyBy.chaserType === 'orca' ? 160 : 128,
                         capturado: false, frame: 0, timerFrame: 0,
                         semillaFase: Math.random() * Math.PI * 2,
-                        tipo: 'shark',
+                        tipo: menuFlyBy.chaserType,
                         isChaser: true // Bandera para identificarlos
                     };
-                    animales.push(shark); // Añadir al array principal para que se dibujen
-                    menuFlyBy.chasingSharks.push(shark);
+                    animales.push(chaser); // Añadir al array principal para que se dibujen
+                    menuFlyBy.chasingSharks.push(chaser);
                 }
             }
         }
@@ -3607,19 +3625,29 @@ function dibujarFondoParallax() {
     if (bgListo && bgAncho > 0) {
         bgCtx.imageSmoothingEnabled = false;
         const ratio = bgAncho / bgAlto;
-        const alturaDibujoBg = H;
-        const anchoDibujoBg = alturaDibujoBg * ratio;
-        const bgOffsetLooping = ((bgOffset % anchoDibujoBg) + anchoDibujoBg) % anchoDibujoBg;
-        for (let x = -bgOffsetLooping; x < W; x += anchoDibujoBg) {
-            bgCtx.drawImage(bgImg, Math.round(x), 0, anchoDibujoBg, alturaDibujoBg);
+        const alturaDibujoBg = Math.ceil(H);
+        const anchoDibujoBg = Math.ceil(alturaDibujoBg * ratio);
+        
+        // Evitar saltos de coma flotante recalculando el inicio en enteros
+        let subBgOffset = bgOffset % anchoDibujoBg;
+        if (subBgOffset < 0) subBgOffset += anchoDibujoBg;
+        const startX = -Math.floor(subBgOffset);
+
+        for (let x = startX; x < W; x += anchoDibujoBg) {
+            // Dibujamos con +1 al ancho para superponer ligeramente los bordes y ocultar la línea
+            bgCtx.drawImage(bgImg, x, 0, anchoDibujoBg + 1, alturaDibujoBg);
         }
     }
 
     if (fgListo && fgAncho > 0 && fgAlto > 0) {
-        const yBase = H - fgAlto;
-        const fgOffsetLooping = ((fgOffset % fgAncho) + fgAncho) % fgAncho;
-        for (let xx = -fgOffsetLooping; xx < W; xx += fgAncho) {
-            bgCtx.drawImage(fgImg, Math.round(xx), Math.round(yBase), fgAncho, fgAlto);
+        const yBase = Math.floor(H - fgAlto);
+        let subFgOffset = fgOffset % fgAncho;
+        if (subFgOffset < 0) subFgOffset += fgAncho;
+        const startX = -Math.floor(subFgOffset);
+
+        for (let x = startX; x < W; x += fgAncho) {
+            // Dibujamos con +1 al ancho para evitar gaps
+            bgCtx.drawImage(fgImg, x, yBase, fgAncho + 1, fgAlto);
         }
     }
 }
@@ -4516,20 +4544,46 @@ function iniciarAnimacionMuerte() {
         });
     }
 
-    // Spawnea tiburones hambrientos
-    const numSharks = 2 + Math.floor(Math.random() * 2);
-    for (let i = 0; i < numSharks; i++) {
-        const y = Math.random() * H;
-        const x = (i % 2 === 0) ? (estadoJuego.cameraX - 200) : (estadoJuego.cameraX + W + 200);
-        animales.push({
-            x: x, y: y, vx: (x > W / 2 ? -1 : 1) * 400, vy: 0, r: 50, w: 128, h: 128,
-            capturado: false, frame: 0, timerFrame: 0,
-            semillaFase: Math.random() * Math.PI * 2,
-            tipo: 'shark',
-            isPilotHunter: true, // ¡Bandera especial!
-            targetPilot: null
-        });
+    // Selección aleatoria de la escena de muerte (0: Tiburones, 1: Orcas, 2: Ahogamiento)
+    estadoJuego.deathSceneType = Math.floor(Math.random() * 3);
+    
+    // Fallback: si salen orcas pero no están cargadas, usamos tiburones.
+    if (estadoJuego.deathSceneType === 1 && !orcaListo) {
+        estadoJuego.deathSceneType = 0;
     }
+
+    if (estadoJuego.deathSceneType === 0) {
+        // Escena 0: Tiburones hambrientos
+        const numSharks = 2 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < numSharks; i++) {
+            const y = Math.random() * H;
+            const x = (i % 2 === 0) ? (estadoJuego.cameraX - 200) : (estadoJuego.cameraX + W + 200);
+            animales.push({
+                x: x, y: y, vx: (x > W / 2 ? -1 : 1) * 400, vy: 0, r: 50, w: 128, h: 128,
+                capturado: false, frame: 0, timerFrame: 0,
+                semillaFase: Math.random() * Math.PI * 2,
+                tipo: 'shark',
+                isPilotHunter: true, // ¡Bandera especial!
+                targetPilot: null
+            });
+        }
+    } else if (estadoJuego.deathSceneType === 1) {
+        // Escena 1: Horda de Orcas
+        const numOrcas = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < numOrcas; i++) {
+            const y = Math.random() * H;
+            const x = (i % 2 === 0) ? (estadoJuego.cameraX - 300) : (estadoJuego.cameraX + W + 300);
+            animales.push({
+                x: x, y: y, vx: (x > W / 2 ? -1 : 1) * 500, vy: 0, r: 60, w: 160, h: 160,
+                capturado: false, frame: 0, timerFrame: 0,
+                semillaFase: Math.random() * Math.PI * 2,
+                tipo: 'orca',
+                isPilotHunter: true, // ¡Bandera especial!
+                targetPilot: null
+            });
+        }
+    }
+    // Escena 2: Ahogamiento (no spawneamos cazadores, se hunden solos)
 }
 
 export function perderJuego() {
@@ -4959,6 +5013,19 @@ function actualizarAnimacionMuerte(dt, originalDt) {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.rotacion += p.vRot * dt;
+
+        // Si la escena es de ahogamiento (2), soltamos burbujas mientras mueren ahogados
+        if (estadoJuego.deathSceneType === 2 && Math.random() < 0.15) {
+            generarParticula(particulasBurbujas, {
+                x: p.x + (Math.random() - 0.5) * 5,
+                y: p.y - 5,
+                vx: (Math.random() - 0.5) * 10,
+                vy: -30 - Math.random() * 20,
+                r: Math.random() * 2 + 1,
+                vida: 1 + Math.random(),
+                color: '' // Blanca (burbuja normal)
+            });
+        }
     }
 
     // Actualizar trozos humanos
@@ -5008,9 +5075,9 @@ function actualizarAnimacionMuerte(dt, originalDt) {
         if (d.vida <= 0 || d.y > H + 50) { whaleDebris.splice(i, 1); }
     }
 
-    // Actualizar tiburones cazadores
+    // Actualizar cazadores (Tiburones o Orcas)
     for (const a of animales) {
-        if (a.tipo === 'shark' && a.isPilotHunter) {
+        if ((a.tipo === 'shark' || a.tipo === 'orca') && a.isPilotHunter) {
             if (!a.targetPilot || pilotos.indexOf(a.targetPilot) === -1) {
                 // Buscar nuevo piloto
                 let closestPilot = null;
@@ -5027,7 +5094,7 @@ function actualizarAnimacionMuerte(dt, originalDt) {
             if (a.targetPilot) {
                 const target = a.targetPilot;
                 const angle = Math.atan2(target.y - a.y, target.x - a.x);
-                const speed = 700; // Velocidad de caza
+                const speed = a.tipo === 'orca' ? 850 : 700; // Velocidad de caza (orcas son más rápidas)
                 a.vx = lerp(a.vx, Math.cos(angle) * speed, dt * 5);
                 a.vy = lerp(a.vy, Math.sin(angle) * speed, dt * 5);
                 if (Math.hypot(target.x - a.x, target.y - a.y) < a.r * 0.7) { generarTrozosHumanos(target.x, target.y); const pilotIndex = pilotos.indexOf(target); if (pilotIndex > -1) pilotos.splice(pilotIndex, 1); a.targetPilot = null; }
@@ -5039,7 +5106,16 @@ function actualizarAnimacionMuerte(dt, originalDt) {
         }
         // Movimiento y animación
         a.x += a.vx * dt; a.y += a.vy * dt; a.timerFrame += dt;
-        if (a.timerFrame >= SHARK_ANIMATION_SPEED) { a.timerFrame -= SHARK_ANIMATION_SPEED; if (SHARK_SPRITE_DATA) { a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length; } }
+        if (a.tipo === 'shark') {
+            if (a.timerFrame >= SHARK_ANIMATION_SPEED) { a.timerFrame -= SHARK_ANIMATION_SPEED; if (SHARK_SPRITE_DATA) { a.frame = (a.frame + 1) % SHARK_SPRITE_DATA.frames.length; } }
+        } else if (a.tipo === 'orca') {
+            const ORCA_ANIMATION_SPEED = 0.06;
+            if (a.timerFrame >= ORCA_ANIMATION_SPEED) { a.timerFrame -= ORCA_ANIMATION_SPEED; if (ORCA_SPRITE_DATA) { a.frame = (a.frame + 1) % ORCA_SPRITE_DATA.frames.length; } }
+            // Generar estela burbujas al cazar
+            if (a.isPilotHunter && Math.random() < 0.2) {
+                generarParticula(particulasBurbujas, { x: a.x - Math.sign(a.vx)*40, y: a.y + (Math.random() - 0.5) * 20, vx: a.vx * 0.2, vy: (Math.random() - 0.5) * 20, r: Math.random() * 2 + 1, vida: 0.5 + Math.random() * 0.5, color: '' });
+            }
+        }
     }
 
     // Actualizar partículas de fondo
