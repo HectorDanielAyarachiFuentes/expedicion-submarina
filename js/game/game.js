@@ -147,6 +147,7 @@ const muteBtn = document.getElementById('muteBtn');
 const helpBtn = document.getElementById('helpBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const infoBtn = document.getElementById('infoBtn');
+const cheatBtn = document.getElementById('cheatBtn');
 const githubBtn = document.getElementById('githubBtn');
 const fsBtn = document.getElementById('fsBtn');
 const shareBtn = document.getElementById('shareBtn');
@@ -440,33 +441,48 @@ let robotImg = null, robotListo = false, spriteAncho = 96, spriteAlto = 64, robo
 cargarImagen('img/subastian.png', function (img) { if (img) { robotImg = img; robotListo = true; const altoObjetivo = 64; const ratio = img.width / img.height; spriteAlto = altoObjetivo; spriteAncho = Math.round(altoObjetivo * ratio); } });
 let criaturasImg = null, criaturasListas = false, cFrameAncho = 0, cFrameAlto = 0, cFilas = 0;
 cargarImagen('img/sprites/criaturas.png', function (img) { if (img) { criaturasImg = img; cFrameAncho = Math.floor(img.width / 2); cFilas = Math.max(1, Math.floor(img.height / cFrameAncho)); cFrameAlto = Math.floor(img.height / cFilas); criaturasListas = true; } });
-let fgImg = null, fgListo = false, fgOffset = 0, fgAncho = 0, fgAlto = 0;
-cargarImagen('img/Fondos/bg_front.png', function (img) { if (img) { fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height; } });
+// --- Fondos Temáticos ---
+export const FONDOS_TEMAS = {
+    'default': { back: null, front: null },
+    'abyssal': { back: null, front: null },
+    'kelp': { back: null, front: null },
+    'volcanic': { back: null, front: null }
+};
 
-// --- Fondos con Parallax ---
-let bgImg = null, bgListo = false, bgAncho = 0, bgAlto = 0;
-let bgOffset = 0; // Offset para el scroll del fondo
-const BG_DRIFT_SPEED = 8; // Velocidad de deriva constante para el fondo (píxeles/seg)
-const FG_DRIFT_SPEED = 25; // Velocidad de deriva constante para el primer plano (píxeles/seg)
+let bgImg = null, bgListo = false, bgAncho = 0, bgAlto = 0, bgOffset = 0;
+let fgImg = null, fgListo = false, fgAncho = 0, fgAlto = 0, fgOffset = 0;
 
-cargarImagen('img/Fondos/bg_back.png', function (img) {
-    if (img) {
-        bgImg = img;
-        bgListo = true;
-        bgAncho = img.width;
-        bgAlto = img.height;
-        console.log("Imagen de fondo cargada.");
-        // >>> NUEVO: Forzar un redibujado del fondo <<<
-        // Si el juego ya ha empezado a renderizar (lo que es probable),
-        // esta llamada asegura que el fondo se dibuje inmediatamente
-        // en lugar de esperar al siguiente ciclo del gameLoop.
-        if (estadoJuego) {
-            dibujarFondoParallax();
+const BG_DRIFT_SPEED = 8;
+const FG_DRIFT_SPEED = 25;
+
+function cargarTema(tema, bPath, fPath) {
+    cargarImagen(bPath, function (img) {
+        if (img) {
+            FONDOS_TEMAS[tema].back = img;
+            // Configurar 'default' como inicial
+            if (tema === 'default') {
+                bgImg = img; bgListo = true; bgAncho = img.width; bgAlto = img.height;
+                if (estadoJuego) dibujarFondoParallax();
+            }
         }
-    } else {
-        console.error("No se pudo cargar 'img/Fondos/bg_back.png'. Asegúrate de que el archivo existe.");
-    }
-});
+    });
+    cargarImagen(fPath, function (img) {
+        if (img) {
+            FONDOS_TEMAS[tema].front = img;
+            if (tema === 'default') {
+                fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height;
+            }
+        }
+    });
+}
+
+// Cargar todos los temas generados (forzando recarga de caché para tomar los fondos corregidos)
+const cacheBuster = "?v=" + Date.now();
+cargarTema('default', 'img/Fondos/bg_back.png' + cacheBuster, 'img/Fondos/bg_front.png' + cacheBuster);
+cargarTema('abyssal', 'img/Fondos/bg_abyssal_back.png' + cacheBuster, 'img/Fondos/bg_abyssal_front.png' + cacheBuster);
+cargarTema('kelp', 'img/Fondos/bg_kelp_back.png' + cacheBuster, 'img/Fondos/bg_kelp_front.png' + cacheBuster);
+cargarTema('volcanic', 'img/Fondos/bg_volcanic_back.png' + cacheBuster, 'img/Fondos/bg_volcanic_front.png' + cacheBuster);
+
 
 // --- Spritesheets Animados (con JSON) ---
 // Cada uno de estos sprites tiene una imagen y un archivo JSON que define los frames.
@@ -1337,6 +1353,11 @@ function reiniciar(nivelDeInicio = 1) {
 
     jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0, inclinacion: 0 };
     jugador.direccion = 1; // 1 para derecha, -1 para izquierda
+    
+    // Configurar tema del nivel inicial
+    const configInicial = Levels.CONFIG_NIVELES[nivelDeInicio - 1];
+    configurarTemaFondo(configInicial ? configInicial.theme : 'default');
+    
     Levels.initLevel(nivelDeInicio);
 
     escombros = [];
@@ -3732,14 +3753,18 @@ function dibujarFondoParallax() {
     }
 
     if (fgListo && fgAncho > 0 && fgAlto > 0) {
-        const yBase = Math.floor(H - fgAlto);
-        let subFgOffset = fgOffset % fgAncho;
-        if (subFgOffset < 0) subFgOffset += fgAncho;
+        const ratioFg = fgAncho / fgAlto;
+        const alturaDibujoFg = Math.ceil(H);
+        const anchoDibujoFg = Math.ceil(alturaDibujoFg * ratioFg);
+        
+        const yBase = Math.floor(H - alturaDibujoFg);
+        let subFgOffset = fgOffset % anchoDibujoFg;
+        if (subFgOffset < 0) subFgOffset += anchoDibujoFg;
         const startX = -Math.floor(subFgOffset);
 
-        for (let x = startX; x < W; x += fgAncho) {
+        for (let x = startX; x < W; x += anchoDibujoFg) {
             // Dibujamos con +1 al ancho para evitar gaps
-            bgCtx.drawImage(fgImg, x, yBase, fgAncho + 1, fgAlto);
+            bgCtx.drawImage(fgImg, x, yBase, anchoDibujoFg + 1, alturaDibujoFg);
         }
     }
 }
@@ -4763,7 +4788,15 @@ function comprobarCompletadoNivel() {
     }
 }
 function activarTransicionNivel(proximoNivel) { estadoJuego.faseJuego = 'transition'; estadoJuego.enEjecucion = false; const config = Levels.CONFIG_NIVELES[proximoNivel - 1]; if (mainMenu) mainMenu.style.display = 'none'; if (levelTitle) levelTitle.textContent = config.nombre; if (levelDesc) levelDesc.textContent = config.objetivo; if (levelTransition) levelTransition.style.display = 'block'; if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); } setTimeout(() => { iniciarSiguienteNivel(proximoNivel); }, 4000); }
-function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; Weapons.initWeapons(); estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) gameplayHints.classList.remove('visible'); }
+function iniciarSiguienteNivel(nivel) { if (!estadoJuego) return; estadoJuego.nivel = nivel; estadoJuego.valorObjetivoNivel = 0; animales = []; Weapons.initWeapons(); estadoJuego.proyectilesTinta = []; Levels.initLevel(nivel); const config = Levels.CONFIG_NIVELES[nivel - 1]; configurarTemaFondo(config ? config.theme : 'default'); if (overlay) overlay.style.display = 'none'; estadoJuego.faseJuego = 'playing'; estadoJuego.enEjecucion = true; estadoJuego.bloqueoEntrada = 0.5; if (gameplayHints) gameplayHints.classList.remove('visible'); }
+
+// Funcio auxiliar para cambiar el tema
+export function configurarTemaFondo(tema) {
+    const t = FONDOS_TEMAS[tema] || FONDOS_TEMAS['default'];
+    if (t.back) { bgImg = t.back; bgListo = true; bgAncho = t.back.width; bgAlto = t.back.height; }
+    if (t.front) { fgImg = t.front; fgListo = true; fgAncho = t.front.width; fgAlto = t.front.height; }
+    if (estadoJuego) dibujarFondoParallax();
+}
 function mostrarVistaMenuPrincipal(desdePausa) {
     if (!mainMenu) return;
 
@@ -5501,6 +5534,21 @@ export function init() {
                         creatorPic.style.opacity = 1;
                     }, 500); // Coincide con la transición CSS
                 }, 4000); // Cambiar imagen cada 4 segundos
+            }
+        };
+    }
+    if (cheatBtn) {
+        cheatBtn.onclick = () => {
+            const cheat = prompt("Introduce un código secreto (o escribe 'nemo' para desbloquear todos los niveles):");
+            if (cheat && (cheat.toLowerCase() === 'nemo' || cheat.toLowerCase() === 'desbloquear')) {
+                nivelMaximoAlcanzado = Levels.CONFIG_NIVELES.length;
+                try { localStorage.setItem(CLAVE_NIVEL_MAX, String(nivelMaximoAlcanzado)); } catch (e) { }
+                alert(`¡Código Mágico Aceptado!\nHas desbloqueado los ${nivelMaximoAlcanzado} niveles escondidos en la región abisal.`);
+                if (!estadoJuego || !estadoJuego.enEjecucion) {
+                    mostrarVistaMenuPrincipal(false); 
+                }
+            } else if (cheat) {
+                alert("Secuencia de comandos no reconocida.");
             }
         };
     }

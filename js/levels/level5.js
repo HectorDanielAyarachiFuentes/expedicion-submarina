@@ -125,7 +125,7 @@ export function init() {
     
     escombros.length = 0;
     corrientes = [];
-    proyectilesEnemigos = [];
+    proyectilesEnemigos.length = 0;
     
     spawnTimerEscombros = 0.5;
     spawnTimerCorrientes = 3.0;
