@@ -618,21 +618,48 @@ export let particulas = [], particulasExplosion = [], particulasTinta = [], part
 let trozosHumanos = [];
 let escombrosSubmarino = [];
 const SUBMARINE_DEBRIS_PATHS = [
-    // Placas de metal retorcidas
-    new Path2D('M-20,-15 L20,-20 L25,18 C 10,25 -10,22 -20,15 Z'), // Placa grande
-    new Path2D('M-15,-10 L15,-12 L18,10 L-12,15 Z'), // Placa mediana
-    new Path2D('M-10,-5 Q 5,-8 12,0 L5,8 Q -5,10 -10,5 Z'), // Trozo curvo
-    // Tuberías y componentes
-    new Path2D('M-25,-3 L25,-3 L25,3 L-25,3 Z'), // Tubo recto
-    new Path2D('M-15,-5 L10,-5 L10,5 C -5,15 -15,5 -15,-5 Z'), // Tubo doblado
-    // Fragmento de la cabina (vidrio roto)
-    new Path2D('M-15,-15 L 0, -18 L 18, -10 L 15, 15 L -10, 10 Z'),
-    // --- NUEVO: Fragmentos más pequeños y detallados ---
-    new Path2D('M-5,-2 L5,-2 L5,2 L-5,2 Z'), // Remache o tornillo
-    new Path2D('M-8,0 C-3,5 3,-5 8,0'), // Cable/alambre retorcido
-    new Path2D('M-6,-6 L6,6 M6,-6 L-6,6'), // Cruz de metal rota
-    new Path2D('M-5,-8 L5,0 L-5,8 Z'), // Esquirla pequeña y afilada
-    new Path2D('M-4,-4 a 4 4 0 1 1 8 0 a 4 4 0 1 1 -8 0'), // Arandela o tuerca
+    // Placas de casco exterior gruesas y abolladas
+    { 
+        path: new Path2D('M-22,-18 L22,-20 L27,15 L15,8 L5,22 L-10,14 -22,12 Z'), 
+        detail: new Path2D('M-12,-8 A 2 2 0 1 1 -8,-8 M8,-10 A 2 2 0 1 1 12,-10'), // Remaches
+        isGlass: false 
+    },
+    { 
+        path: new Path2D('M-18,-12 L15,-15 L20,0 L18,12 L-5,18 L-18,6 Z'), 
+        detail: new Path2D('M-8,-2 L8,-2 M-8,2 L8,2'), // Rejilla rota
+        isGlass: false 
+    },
+    // Engranaje pesado o bloque de motor interior
+    { 
+        path: new Path2D('M-12,-12 L-5,-16 L5,-16 L12,-12 L16,-5 L16,5 L12,12 L5,16 L-5,16 L-12,12 L-16,5 L-16,-5 Z'), 
+        detail: new Path2D('M0,-6 A 6 6 0 1 0 0,6 A 6 6 0 1 0 0,-6 M0,-2 A 2 2 0 1 1 0,2 A 2 2 0 1 1 0,-2'), // Eje central
+        isGlass: false, 
+        isEngine: true 
+    },
+    // Tuberías de alta presión contorsionadas
+    { 
+        path: new Path2D('M-25,-5 L25,-5 L22,5 L-20,5 Z'), 
+        cables: true, 
+        isGlass: false 
+    },
+    { 
+        path: new Path2D('M-15,-6 L12,-6 L12,15 L0,15 L0,6 L-15,6 Z'), 
+        detail: new Path2D('M-8,-6 L-8,6 M5,-6 L5,6'), // Válvulas o abrazaderas rotas
+        isGlass: false 
+    },
+    // Fragmentos masivos del domo de cristal blindado (ventana del piloto)
+    { 
+        path: new Path2D('M-20,-15 L0,-20 L15,-5 L10,15 L-15,10 Z'), 
+        isGlass: true 
+    },
+    { 
+        path: new Path2D('M-8,-12 L10,-15 L15,0 L5,10 L-8,0 Z'), 
+        isGlass: true 
+    },
+    // Tornillería y fragmentos cortantes pequeños
+    { path: new Path2D('M-6,-3 L6,-3 L6,3 L-6,3 Z'), isGlass: false },
+    { path: new Path2D('M-8,-8 L6,4 M6,-8 L-6,4'), isGlass: false, cables: true },
+    { path: new Path2D('M-5,-4 L5,0 L-5,6 Z'), isGlass: false }
 ];
 const PILOT_DEBRIS_PATHS = [
     // Torsos (más gráficos)
@@ -845,27 +872,36 @@ function generarTrozosHumanos(x, y) {
 }
 
 function generarEscombrosSubmarino(x, y) {
-    const numTrozos = 40; // Aumentamos la cantidad para una explosión más densa
+    const numTrozos = 45; // Aumentamos para una explosión más densa, catastrófica
     for (let i = 0; i < numTrozos; i++) {
         const ang = Math.random() * Math.PI * 2;
-        const spd = 150 + Math.random() * 350;
-        const vida = 2.5 + Math.random() * 2.5;
-        const escala = 0.3 + Math.random() * 0.7; // Hacemos los trozos más pequeños y variados
-        const colores = ['#f7b500', '#d69d00', '#ffc733', '#444', '#222', '#ff8c00']; // Amarillos, grises oscuros, naranja quemado
+        const spd = 100 + Math.random() * 450;
+        const vida = 3.5 + Math.random() * 3.0; // Tardan más en desaparecer para lucirse en cámara lenta
+        const escala = 0.4 + Math.random() * 0.9; // Fragmentos muy variables, algunos enormes
+        const coloresAcero = ['#6a737d', '#444c56', '#2f363d', '#ffc733', '#d69d00']; // Acero naval, titanio oscuro y restos de armadura principal amarilla
+        const objPath = SUBMARINE_DEBRIS_PATHS[Math.floor(Math.random() * SUBMARINE_DEBRIS_PATHS.length)];
+
         escombrosSubmarino.push({
             x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
-            vRot: (Math.random() - 0.5) * 10,
+            vRot: (Math.random() - 0.5) * 15, // Giran más salvajemente
             rotacion: Math.random() * Math.PI * 2,
-            vida: vida, vidaMax: vida, color: colores[Math.floor(Math.random() * colores.length)],
-            path: SUBMARINE_DEBRIS_PATHS[Math.floor(Math.random() * SUBMARINE_DEBRIS_PATHS.length)],
-            escala: escala
+            vida: vida, vidaMax: vida, 
+            color: objPath.isGlass ? 'rgba(150, 220, 255, 0.4)' : coloresAcero[Math.floor(Math.random() * coloresAcero.length)],
+            pathInfo: objPath, // Pasamos el objeto completo para tener el `detail`
+            escala: escala,
+            tieneSangre: Math.random() < 0.35 // 35% de que la máquina quede horrorosamente rociada con sangre de los tripulantes
         });
     }
-    // Pequeñas chispas y humo
-    for (let i = 0; i < 60; i++) { // Más chispas para mayor impacto visual
+    // Violentísimas chispas y partes calcinadas (humo espeso)
+    for (let i = 0; i < 80; i++) { // Muchísimas más partículas para el shock impact
         const ang = Math.random() * Math.PI * 2;
-        const spd = 50 + Math.random() * 200;
-        generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 1 + Math.random() * 2.5, vida: 1.0 + Math.random() * 1.0, color: ['#ffc733', '#ff8c00', '#fff'][Math.floor(Math.random() * 3)] });
+        const spd = 50 + Math.random() * 300;
+        generarParticula(particulasExplosion, { 
+            x, y, 
+            vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, 
+            r: 2 + Math.random() * 4.5, vida: 1.0 + Math.random() * 1.5, 
+            color: ['#ffc733', '#ff4500', '#fff', '#222'][Math.floor(Math.random() * 4)] 
+        });
     }
 }
 
@@ -3581,18 +3617,74 @@ function renderizar(dt) {
         ctx.restore();
     }
 
-    // Dibujar escombros del submarino
+    // Dibujar restos mejorados y retorcidos del submarino destruido
     for (const d of escombrosSubmarino) {
         ctx.save();
         ctx.translate(d.x, d.y);
         ctx.rotate(d.rotacion);
         ctx.scale(d.escala, d.escala);
         ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
-        ctx.fillStyle = d.color;
-        ctx.strokeStyle = '#1a1a1a'; // Borde oscuro, casi negro
-        ctx.lineWidth = 3;
-        ctx.fill(d.path);
-        ctx.stroke(d.path);
+        
+        const info = d.pathInfo;
+        
+        if (info.isGlass) {
+            // Cristales blindados (con bordes brillantes y tintado acuático)
+            ctx.fillStyle = 'rgba(150, 220, 255, 0.3)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.lineWidth = 1.5;
+            ctx.fill(info.path);
+            ctx.stroke(info.path);
+        } else {
+            // Renderizado "Falso 3D" metalico:
+            // 1. Capa de Grosor / Sombra tridimensional
+            ctx.fillStyle = '#050505';
+            ctx.translate(3, 4); // Despliegue de "profundidad"
+            ctx.fill(info.path);
+            ctx.translate(-3, -4);
+            
+            // 2. Chapa de Metal y Pintura Base
+            ctx.fillStyle = d.color;
+            ctx.strokeStyle = '#151515';
+            ctx.lineWidth = 2.5;
+            ctx.fill(info.path);
+            ctx.stroke(info.path);
+            
+            // 3. Destellos en los bordes y desgaste (Bisel)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.lineWidth = 1;
+            ctx.stroke(info.path);
+
+            // 4. Detalles internos y mecánicos
+            if (info.detail) {
+                ctx.strokeStyle = '#000';
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.fill(info.detail);
+                ctx.stroke(info.detail);
+            }
+            if (info.cables) {
+                ctx.strokeStyle = '#c75b39'; // Cobre cortocircuitado
+                ctx.lineWidth = 2;
+                ctx.stroke(info.path);
+            }
+            if (info.isEngine) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)'; // Oscureded por aceite
+                ctx.fill(info.path);
+            }
+        }
+        
+        // 5. Salpicaduras Gore de tripulación brutalmente desmembrada
+        if (d.tieneSangre && !info.isGlass) {
+            ctx.fillStyle = 'rgba(139, 0, 0, 0.85)'; // Rojo Oscuro intenso
+            ctx.shadowColor = '#4a0000';
+            ctx.shadowBlur = 4;
+            ctx.beginPath();
+            ctx.arc(2, 2, 6, 0, Math.PI * 2);
+            ctx.arc(-4, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // Apagar
+        }
+
         ctx.restore();
     }
 
@@ -5037,16 +5129,26 @@ function actualizarAnimacionMuerte(dt, originalDt) {
         }
     }
 
-    // Actualizar escombros del submarino
+    // Actualizar escombros masivos del submarino en el agua
     for (let i = escombrosSubmarino.length - 1; i >= 0; i--) {
         const d = escombrosSubmarino[i];
-        d.vy += 200 * dt; // Gravedad un poco menor que los trozos humanos
+        d.vy += 220 * dt; // Gravedad hundiendo los pesados escombros de naufragio
         d.vx *= 0.99; // Fricción
         d.vy *= 0.99;
         d.x += d.vx * dt;
         d.y += d.vy * dt;
         d.rotacion += d.vRot * dt;
         d.vida -= dt;
+
+        // Si están rociados de sangre, van soltando el rastro sangriento a medida que caen
+        if (d.tieneSangre && d.vida > 0 && Math.random() < 0.15 * (estadoJuego.velocidadJuego)) {
+             generarParticula(particulasExplosion, { 
+                x: d.x + (Math.random()-0.5)*10, y: d.y + (Math.random()-0.5)*10, 
+                vx: d.vx*0.2, vy: d.vy*0.3 - 20, // Sangre flota un poquito más lento que el plomo
+                r: 1 + Math.random()*2.5, vida: 0.5 + Math.random(), color: '#8b0000' 
+            });
+        }
+
         if (d.vida <= 0 || d.y > H + 100) {
             escombrosSubmarino.splice(i, 1);
         }
