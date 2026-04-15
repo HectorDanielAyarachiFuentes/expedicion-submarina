@@ -3735,12 +3735,20 @@ function dibujarFondoParallax() {
     bgCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
     bgCtx.fillRect(0, 0, W, H);
 
+    // Factor de alejamiento (zoom out) del fondo. 
+    // Usamos 1.0 para que cubra la pantalla completa y evitar horizontes cortados.
+    const bgZoomFactor = 1.0;
+
     if (bgListo && bgAncho > 0) {
         bgCtx.imageSmoothingEnabled = false;
         const ratio = bgAncho / bgAlto;
-        const alturaDibujoBg = Math.ceil(H);
+        const alturaDibujoBg = Math.ceil(H * bgZoomFactor);
         const anchoDibujoBg = Math.ceil(alturaDibujoBg * ratio);
         
+        // Se ancla el dibujo en la parte inferior de la pantalla (H - altura) 
+        // para que la parte superior sea el cielo acuático (color sólido dibujado antes).
+        const yBaseBg = Math.floor(H - alturaDibujoBg);
+
         // Evitar saltos de coma flotante recalculando el inicio en enteros
         let subBgOffset = bgOffset % anchoDibujoBg;
         if (subBgOffset < 0) subBgOffset += anchoDibujoBg;
@@ -3748,13 +3756,16 @@ function dibujarFondoParallax() {
 
         for (let x = startX; x < W; x += anchoDibujoBg) {
             // Dibujamos con +1 al ancho para superponer ligeramente los bordes y ocultar la línea
-            bgCtx.drawImage(bgImg, x, 0, anchoDibujoBg + 1, alturaDibujoBg);
+            bgCtx.drawImage(bgImg, x, yBaseBg, anchoDibujoBg + 1, alturaDibujoBg);
         }
     }
 
     if (fgListo && fgAncho > 0 && fgAlto > 0) {
+        // El front se dibuja un poco más pequeño según solicita el director visual.
+        // fgZoomFactor hace que las rocas y elementos frontales no cubran tanta altura.
+        const fgZoomFactor = 0.55;
         const ratioFg = fgAncho / fgAlto;
-        const alturaDibujoFg = Math.ceil(H);
+        const alturaDibujoFg = Math.ceil(H * fgZoomFactor);
         const anchoDibujoFg = Math.ceil(alturaDibujoFg * ratioFg);
         
         const yBase = Math.floor(H - alturaDibujoFg);
@@ -3779,9 +3790,9 @@ function dibujarSonar() {
     sonarCtx.save();
 
     // --- 1. Definir el centro y radio del sonar ---
-    const SONAR_RADIUS = 100; // Radio en píxeles del minimapa
+    const SONAR_RADIUS = 65; // Radio en píxeles del minimapa
     const SONAR_WORLD_RADIUS = 2800; // Radio en unidades del juego que cubre el sonar
-    const PADDING = 25;
+    const PADDING = 20;
     const centerX = W - SONAR_RADIUS - PADDING;
     const centerY = H - SONAR_RADIUS - PADDING;
     const time = estadoJuego.tiempoTranscurrido;
