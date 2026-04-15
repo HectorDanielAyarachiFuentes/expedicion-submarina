@@ -298,6 +298,7 @@ export const S = (function () {
                 else if (k === 'laser_beam' || k === 'boost' || k === 'gatling_spinup' || k === 'gatling_fire') {
                     el.loop = true; el.volume = 0.45; // Un volumen adecuado para efectos continuos
                 }
+                else if (k === 'shotgun') { el.volume = 0.2; } // Reducir volumen del escopetazo
                 else { el.volume = 0.5; }
                 el.addEventListener('error', function (e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = { element: el, source: null };
             } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); }
@@ -1735,6 +1736,7 @@ function actualizarAnimacionMenu(dt) {
             menuFlyBy.chasingSharks = [];
         }
     } else {
+        if (!robotListo || !sharkListo) return; // Esperar a que las imágenes estén cargadas en la web
         menuFlyBy.cooldown -= dt;
         if (menuFlyBy.cooldown <= 0) {
             menuFlyBy.active = true;
