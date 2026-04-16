@@ -25,7 +25,11 @@ html,
 body {
     margin: 0;
     height: 100%;
+    /* Ponemos la imagen de fondo de nuevo para evitar que el menú se vea de un color sólido azul antes de iniciar el juego */
     background: var(--bg-dark);
+    background-image: url('img/Fondos/bg_back.png');
+    background-size: cover;
+    background-position: center;
     font-family: 'Press Start 2P', monospace;
     overflow: hidden;
 }
@@ -41,9 +45,11 @@ canvas {
     display: block;
 }
 
-/* ... (El resto de estilos de canvas permanece igual) ... */
+/* El fondo arranca invisible para evitar el destello de color sólido.
+   El JS lo hará visible después de pintar el primer frame. */
 #bgCanvas {
     z-index: 0;
+    visibility: hidden;
 }
 
 #gameCanvas {

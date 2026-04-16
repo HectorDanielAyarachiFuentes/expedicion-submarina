@@ -10,6 +10,15 @@ init();
 // Inicia el bucle de animación/juego que se ejecutará continuamente.
 requestAnimationFrame(gameLoop);
 
+// Revelamos el bgCanvas sólo cuando el primer frame ya está pintado,
+// así nunca se ve el color sólido azul de fondo del body.
+requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+        const bg = document.getElementById('bgCanvas');
+        if (bg) bg.style.visibility = 'visible';
+    });
+});
+
 // Manejar la pantalla de carga inicial
 window.addEventListener('load', () => {
     const loader = document.getElementById('initial-loader');

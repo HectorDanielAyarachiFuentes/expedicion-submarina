@@ -476,12 +476,11 @@ function cargarTema(tema, bPath, fPath) {
     });
 }
 
-// Cargar todos los temas generados (forzando recarga de caché para tomar los fondos corregidos)
-const cacheBuster = "?v=" + Date.now();
-cargarTema('default', 'img/Fondos/bg_back.png' + cacheBuster, 'img/Fondos/bg_front.png' + cacheBuster);
-cargarTema('abyssal', 'img/Fondos/bg_abyssal_back.png' + cacheBuster, 'img/Fondos/bg_abyssal_front.png' + cacheBuster);
-cargarTema('kelp', 'img/Fondos/bg_kelp_back.png' + cacheBuster, 'img/Fondos/bg_kelp_front.png' + cacheBuster);
-cargarTema('volcanic', 'img/Fondos/bg_volcanic_back.png' + cacheBuster, 'img/Fondos/bg_volcanic_front.png' + cacheBuster);
+// Cargar todos los temas de fondo
+cargarTema('default', 'img/Fondos/bg_back.png', 'img/Fondos/bg_front.png');
+cargarTema('abyssal', 'img/Fondos/bg_abyssal_back.png', 'img/Fondos/bg_abyssal_front.png');
+cargarTema('kelp', 'img/Fondos/bg_kelp_back.png', 'img/Fondos/bg_kelp_front.png');
+cargarTema('volcanic', 'img/Fondos/bg_volcanic_back.png', 'img/Fondos/bg_volcanic_front.png');
 
 
 // --- Spritesheets Animados (con JSON) ---
