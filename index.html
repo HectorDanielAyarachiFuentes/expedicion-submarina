@@ -39,10 +39,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 
 <body>
+    <!-- Script inline para evitar mostrar el loader si la página se reinicia -->
+    <script>
+        // Si ya cargamos el juego en esta sesión, inyectamos un estilo para ocultarlo de inmediato y evitar flashes
+        if (sessionStorage.getItem('expedicion_loaded')) {
+            document.write('<style>#initial-loader { display: none !important; }</style>');
+        }
+    </script>
+    
     <!-- ===== PANTALLA DE CARGA INICIAL ===== -->
     <div id="initial-loader">
         <div class="initial-loader-content">

@@ -14,12 +14,18 @@ requestAnimationFrame(gameLoop);
 window.addEventListener('load', () => {
     const loader = document.getElementById('initial-loader');
     if (loader) {
-        // Añadimos un pequeño retraso para asegurar que la barra de carga se muestre bien
-        setTimeout(() => {
-            loader.classList.add('fade-out');
+        // Verificamos si es la primera carga de la sesión
+        if (!sessionStorage.getItem('expedicion_loaded')) {
+            // Guardamos que ya se cargó para los próximos reinicios sutiles
+            sessionStorage.setItem('expedicion_loaded', 'true');
+            // Añadimos un pequeño retraso la primera vez para asegurar que la barra se aprecie
             setTimeout(() => {
-                loader.remove();
-            }, 800); // 800ms coincide con la transición en CSS
-        }, 500);
+                loader.classList.add('fade-out');
+                setTimeout(() => loader.remove(), 800); // 800ms coincide con la transición CSS
+            }, 500);
+        } else {
+            // Si ya se ha cargado antes (reinicio de página), eliminamos de inmediato sin animación retrasada
+            loader.remove();
+        }
     }
 });
