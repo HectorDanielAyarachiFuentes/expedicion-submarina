@@ -1409,3 +1409,122 @@ kbd.key-spacebar {
     /* Asegura que esté en su propia línea */
     margin-bottom: 4px;
 }
+
+/* ========= ESTILOS PARA PESTAÑAS DE CARGA INICIAL (AÑADIDO) ========= */
+#initial-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-dark);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+}
+
+#initial-loader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.initial-loader-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.loader-sub-container {
+    position: relative;
+    width: 96px;
+    height: 64px; /* Altura aproximada */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: floatingSub 2s ease-in-out infinite;
+}
+
+.loader-submarine {
+    width: 96px;
+    image-rendering: pixelated;
+    position: absolute;
+    z-index: 2;
+}
+
+/* Efecto del propulsor trasero */
+.loader-thruster {
+    position: absolute;
+    left: -20px;
+    top: 55%;
+    transform: translateY(-50%);
+    width: 25px;
+    height: 12px;
+    background: linear-gradient(to right, transparent, #00ffff);
+    border-radius: 50% 0 0 50%;
+    opacity: 0;
+    z-index: 1;
+    animation: thrusterPulse 1.5s infinite;
+}
+
+@keyframes thrusterPulse {
+    0%, 40%, 100% { opacity: 0; transform: translateY(-50%) scaleX(0.5); }
+    50%, 90% { opacity: 1; transform: translateY(-50%) scaleX(1.2); }
+}
+
+/* Disparo de láser rojo frontal */
+.loader-laser {
+    position: absolute;
+    right: -120px;
+    top: 65%;
+    transform: translateY(-50%);
+    width: 120px;
+    height: 4px;
+    background: #ff4d4d;
+    box-shadow: 0 0 10px #ff4d4d, 0 0 5px #ff0000;
+    opacity: 0;
+    z-index: 3;
+    transform-origin: left center;
+    animation: laserShoot 3s infinite 1s;
+}
+
+@keyframes laserShoot {
+    0%, 85%, 100% { opacity: 0; transform: translateY(-50%) scaleX(0); }
+    88% { opacity: 1; transform: translateY(-50%) scaleX(1); }
+    92% { opacity: 1; transform: translateY(-50%) scaleX(1); }
+    95% { opacity: 0; transform: translateY(-50%) scaleX(0); }
+}
+
+@keyframes floatingSub {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+.loader-bar-container {
+    width: 250px;
+    height: 12px;
+    background-color: #222;
+    border: 2px solid var(--accent-blue);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loader-bar {
+    width: 0%;
+    height: 100%;
+    background-color: var(--accent-yellow);
+    box-shadow: 0 0 10px var(--accent-yellow);
+    animation: fakeLoading 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fakeLoading {
+    0% { width: 0%; }
+    40% { width: 45%; }
+    70% { width: 80%; }
+    100% { width: 100%; }
+}

@@ -43,6 +43,21 @@
 </head>
 
 <body>
+    <!-- ===== PANTALLA DE CARGA INICIAL ===== -->
+    <div id="initial-loader">
+        <div class="initial-loader-content">
+            <div class="loader-sub-container">
+                <div class="loader-thruster"></div> <!-- Efecto de propulsión -->
+                <img src="img/subastian.png" alt="Submarino" class="loader-submarine">
+                <div class="loader-laser"></div> <!-- Disparo láser -->
+            </div>
+            <h2 class="loader-text blinking-text">INICIALIZANDO SISTEMAS...</h2>
+            <div class="loader-bar-container">
+                <div class="loader-bar"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Canvas del juego (detrás de todo) -->
     <canvas id="bgCanvas"></canvas>
     <canvas id="gameCanvas"></canvas>
