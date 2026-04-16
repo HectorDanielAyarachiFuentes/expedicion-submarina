@@ -368,6 +368,20 @@ export function updateWeapons(ctx) {
         const laserEndX = laserStartX + Math.cos(laserAngle) * laserLength;
         const laserEndY = laserStartY + Math.sin(laserAngle) * laserLength;
 
+        // Función auxiliar: intersección rayo-círculo (reutilizada para animales y jefe)
+        function laserHitsCircle(cx, cy, radius) {
+            const toCX = cx - laserStartX;
+            const toCY = cy - laserStartY;
+            const laserDX = laserEndX - laserStartX;
+            const laserDY = laserEndY - laserStartY;
+            const laserLenSq = laserDX * laserDX + laserDY * laserDY;
+            const t = Math.max(0, Math.min(1, (toCX * laserDX + toCY * laserDY) / laserLenSq));
+            const closestX = laserStartX + t * laserDX;
+            const closestY = laserStartY + t * laserDY;
+            const distSq = (cx - closestX) * (cx - closestX) + (cy - closestY) * (cy - closestY);
+            return distSq < radius * radius;
+        }
+
         for (let j = animales.length - 1; j >= 0; j--) {
             const a = animales[j];
             if (a.capturado) continue;
@@ -375,34 +389,7 @@ export function updateWeapons(ctx) {
             // Simple circle-line segment collision
             const animalRadius = a.r || a.w / 2;
 
-            // Vector from start of laser to animal
-            const toAnimalX = a.x - laserStartX;
-            const toAnimalY = a.y - laserStartY;
-
-            // Vector of the laser beam
-            const laserDX = laserEndX - laserStartX;
-            const laserDY = laserEndY - laserStartY;
-            
-            const laserLenSq = laserDX * laserDX + laserDY * laserDY;
-            
-            // Project animal's center onto the laser line
-            const t = (toAnimalX * laserDX + toAnimalY * laserDY) / laserLenSq;
-            
-            let closestX, closestY;
-            if (t < 0) {
-                closestX = laserStartX;
-                closestY = laserStartY;
-            } else if (t > 1) {
-                closestX = laserEndX;
-                closestY = laserEndY;
-            } else {
-                closestX = laserStartX + t * laserDX;
-                closestY = laserStartY + t * laserDY;
-            }
-
-            const distSq = (a.x - closestX) * (a.x - closestX) + (a.y - closestY) * (a.y - closestY);
-
-            if (distSq < animalRadius * animalRadius) {
+            if (laserHitsCircle(a.x, a.y, animalRadius)) {
                 if (a.hp !== undefined) {
                     if (!a.laserHitTimer || a.laserHitTimer <= 0) {
                         a.hp -= WEAPON_CONFIG.laser.danoPorTick;
@@ -425,7 +412,26 @@ export function updateWeapons(ctx) {
                 }
             }
         }
+
+        // --- Daño del láser al JEFE (boss) ---
+        // El jefe tiene su propia hitbox y no está en el array de animales.
+        if (estadoJuego.jefe && estadoJuego.jefe.hp > 0) {
+            const jefe = estadoJuego.jefe;
+            // Usamos la hitbox del jefe: centrada en jefe.x, jefe.y con radio aproximado
+            const jefeRadius = Math.max(jefe.w, jefe.h) / 2;
+            if (laserHitsCircle(jefe.x, jefe.y, jefeRadius)) {
+                if (!jefe.laserHitTimer || jefe.laserHitTimer <= 0) {
+                    // El láser hace el doble de daño al jefe (danoPorTick * 2)
+                    jefe.hp -= WEAPON_CONFIG.laser.danoPorTick * 2;
+                    jefe.laserHitTimer = WEAPON_CONFIG.laser.cooldownTick;
+                    jefe.timerGolpe = 0.15; // Flash de impacto
+                    S.reproducir('boss_hit');
+                    generarExplosion(jefe.x, jefe.y, '#ff8833', 20);
+                }
+            }
+        }
     }
+
 
     // --- Lógica de Despliegue/Repliegue de la Gatling ---
     // Se ejecuta siempre, incluso si no es el arma activa, para poder replegarla.

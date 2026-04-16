@@ -60,8 +60,49 @@ export function update(dt) {
 
     const jefe = estadoJuego.jefe;
 
+    // --- SECUENCIA DE MUERTE ANIMADA ---
+    if (jefe.muriendo) {
+        jefe.timerMuerte -= dt;
+        jefe.timerExplosion = (jefe.timerExplosion || 0) - dt;
+
+        // Sacudida violenta
+        jefe.shakeX = (Math.random() - 0.5) * 30 * (1 + (2.5 - jefe.timerMuerte));
+        jefe.shakeY = (Math.random() - 0.5) * 30 * (1 + (2.5 - jefe.timerMuerte));
+
+        // Explosiones en cascada sobre el cuerpo
+        if (jefe.timerExplosion <= 0) {
+            const progreso = 1 - (jefe.timerMuerte / 2.5); // 0 a 1
+            const cadencia = Math.max(0.04, 0.25 - progreso * 0.21); // cada vez más frecuente
+            jefe.timerExplosion = cadencia;
+
+            // Posición aleatoria dentro del cuerpo del Kraken
+            const rx = (Math.random() - 0.5) * jefe.w * 0.8;
+            const ry = (Math.random() - 0.5) * jefe.h * 0.8;
+            const colores = ['#ff4500', '#ff8c00', '#ffd700', '#ff0000', '#ffffff', '#ff69b4'];
+            const color = colores[Math.floor(Math.random() * colores.length)];
+            const tamano = 40 + Math.random() * 80 * progreso;
+            generarExplosion(jefe.x + rx, jefe.y + ry, color, tamano);
+            S.reproducir('boss_hit');
+        }
+
+        // Cuando termina la animación: mega-explosión final y eliminar
+        if (jefe.timerMuerte <= 0) {
+            _finalizarMuerteJefe(jefe);
+        }
+        return; // No procesar IA ni colisiones mientras muere
+    }
+
     // --- IA Y ATAQUES DEL JEFE ---
     jefe.timerGolpe = Math.max(0, jefe.timerGolpe - dt);
+    // Decrementar el timer de impacto del láser para que pueda volver a recibir daño
+    if (jefe.laserHitTimer > 0) jefe.laserHitTimer -= dt;
+
+    // Comprobar si el jefe murió por daño externo (ej: láser desde weapons.js)
+    if (jefe.hp <= 0) {
+        matarJefe(jefe);
+        return;
+    }
+
 
     // Movimiento
     const ondulacionBase = Math.sin(estadoJuego.tiempoTranscurrido * (jefe.enraged ? 1.5 : 0.5));
@@ -149,7 +190,67 @@ export function update(dt) {
     chequearColisionesProyectiles(jefe);
 }
 
+// --- FUNCIONES DE MUERTE DEL JEFE ---
+
+/**
+ * Inicia la secuencia animada de muerte del Kraken.
+ * El jefe entra en fase 'muriendo' y se destruye en 2.5 segundos.
+ */
+function matarJefe(jefe) {
+    if (!estadoJuego.jefe || jefe.muriendo) return; // Evitar doble ejecución
+    jefe.hp = 0;
+    jefe.muriendo = true;
+    jefe.timerMuerte = 2.5;   // Duración de la animación de muerte
+    jefe.timerExplosion = 0;  // Dispara primera explosión de inmediato
+    jefe.shakeX = 0;
+    jefe.shakeY = 0;
+
+    estadoJuego.puntuacion += 5000;
+
+    // Limpiar tinta al instante (no puede dañar estando muerto)
+    estadoJuego.proyectilesTinta.length = 0;
+
+    // Ocultar la barra de vida
+    const bossHealthContainer = document.getElementById('bossHealthContainer');
+    if (bossHealthContainer) bossHealthContainer.style.display = 'none';
+
+    // Primera explosión grande para anunciar la muerte
+    generarExplosion(jefe.x, jefe.y, '#ffffff', 200);
+    S.reproducir('boss_hit');
+}
+
+/**
+ * Ejecuta la mega-explosión final y elimina al jefe del juego.
+ */
+function _finalizarMuerteJefe(jefe) {
+    // Mega-explosión central
+    generarExplosion(jefe.x, jefe.y, '#ffffff', 500);
+
+    // Explosiones en abanico en todas direcciones
+    const numExplosiones = 20;
+    for (let i = 0; i < numExplosiones; i++) {
+        const angulo = (i / numExplosiones) * Math.PI * 2;
+        const dist = 80 + Math.random() * 180;
+        const colores = ['#ff4500', '#ff8c00', '#ffd700', '#8a2be2', '#ff00ff', '#ffffff'];
+        generarExplosion(
+            jefe.x + Math.cos(angulo) * dist,
+            jefe.y + Math.sin(angulo) * dist,
+            colores[i % colores.length],
+            80 + Math.random() * 120
+        );
+    }
+
+    // Eliminar al jefe definitivamente
+    estadoJuego.jefe = null;
+
+    // Completar el nivel 800ms después para que se vea la explosión final
+    setTimeout(() => {
+        estadoJuego.valorObjetivoNivel = 1;
+    }, 800);
+}
+
 // --- FUNCIONES AUXILIARES DE ATAQUES ---
+
 
 function iniciarAtaqueSmash(jefe) {
     jefe.estado = 'attacking_smash';
@@ -322,13 +423,10 @@ function recibirDano(jefe, proyectil, cantidad) {
     jefe.timerGolpe = 0.15;
     S.reproducir('boss_hit');
     if (jefe.hp <= 0) {
-        estadoJuego.valorObjetivoNivel = 1;
-        estadoJuego.puntuacion += 5000;
-        // Efecto muerte épica
-        generarExplosion(jefe.x, jefe.y, '#ffffff', 300);
-        for (let i = 0; i < 10; i++) generarExplosion(jefe.x + (Math.random() - 0.5) * 200, jefe.y + (Math.random() - 0.5) * 300, '#8a2be2', 100);
+        matarJefe(jefe);
     }
 }
+
 
 // --- FUNCIONES AUXILIARES DE DIBUJO ---
 
@@ -381,6 +479,96 @@ function dibujarTentaculoDetallado(ctx, jefe, t, tiempo) {
 }
 
 /**
+ * Dibuja el cuerpo + tentáculos del Kraken en coordenadas locales.
+ * Asume que el contexto ya está centrado en (jefe.x, jefe.y).
+ * @param {boolean} muriendo - Si true, aplica efectos especiales de muerte.
+ */
+function _dibujarCuerpoJefe(ctx, jefe, time, muriendo) {
+    // Tentáculos (en coords mundo, los dibujamos antes del translate del cuerpo)
+    // Durante muerte: los tentáculos salen disparados hacia afuera
+    if (muriendo) {
+        const progreso = 1 - (jefe.timerMuerte / 2.5);
+        jefe.tentaculos.forEach((t, idx) => {
+            const tMod = {
+                ...t,
+                angulo: t.angulo + progreso * Math.PI * (idx % 2 === 0 ? 1 : -1),
+                largo: t.largo * (1 + progreso * 1.5)
+            };
+            dibujarTentaculoDetallado(ctx, { ...jefe, x: 0, y: 0 }, tMod, time);
+        });
+    } else {
+        jefe.tentaculos.forEach(t => dibujarTentaculoDetallado(ctx, { ...jefe, x: 0, y: 0 }, t, time));
+    }
+
+    // Cuerpo elíptico con gradiente
+    const breath = muriendo ? 1.0 : 1 + Math.sin(time * 2) * 0.03;
+    ctx.save();
+    ctx.scale(breath, breath);
+
+    const gradBody = ctx.createRadialGradient(-20, -20, 10, 0, 0, jefe.w / 2);
+    if (muriendo) {
+        // Color durante la muerte: rojo naranja ardiendo
+        gradBody.addColorStop(0, '#ff8c00');
+        gradBody.addColorStop(0.4, '#dc2626');
+        gradBody.addColorStop(1, '#1a0000');
+    } else if (jefe.enraged) {
+        gradBody.addColorStop(0, '#ef4444');
+        gradBody.addColorStop(0.5, '#b91c1c');
+        gradBody.addColorStop(1, '#450a0a');
+    } else {
+        gradBody.addColorStop(0, '#a78bfa');
+        gradBody.addColorStop(0.5, '#7c3aed');
+        gradBody.addColorStop(1, '#4c1d95');
+    }
+
+    ctx.fillStyle = gradBody;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, jefe.w / 2, jefe.h / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Manchas / poros
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    for (let k = 0; k < 5; k++) {
+        ctx.beginPath();
+        ctx.arc(Math.cos(k * 2.5) * 40, Math.sin(k * 3.0) * 80, 8 + k, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Ojos (durante muerte: espirales y rojos)
+    const eyeOffset = 40;
+    const eyeY = -50;
+    const eyeTam = 28;
+
+    [[- eyeOffset, eyeY], [eyeOffset, eyeY]].forEach(([ex, ey], idx) => {
+        ctx.save();
+        ctx.translate(ex, ey);
+
+        // Esclerótica
+        ctx.fillStyle = muriendo ? '#ff4400' : (jefe.enraged ? '#fef3c7' : '#fff');
+        ctx.beginPath(); ctx.arc(0, 0, eyeTam, 0, Math.PI * 2); ctx.fill();
+
+        // Iris
+        ctx.fillStyle = muriendo ? '#ff0000' : (jefe.enraged ? '#dc2626' : '#2563eb');
+        const pupilaAng = muriendo ? time * 8 * (idx === 0 ? 1 : -1) : 0;
+        const px2 = Math.cos(pupilaAng) * eyeTam * 0.3;
+        const py2 = Math.sin(pupilaAng) * eyeTam * 0.3;
+        ctx.beginPath(); ctx.arc(px2, py2, eyeTam * 0.5, 0, Math.PI * 2); ctx.fill();
+
+        // Pupila
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(px2, py2, eyeTam * 0.25, 0, Math.PI * 2); ctx.fill();
+
+        // Brillo
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath(); ctx.arc(px2 - 5, py2 - 5, 4, 0, Math.PI * 2); ctx.fill();
+
+        ctx.restore();
+    });
+
+    ctx.restore(); // breath scale
+}
+
+/**
  * Bucle de dibujado del nivel. Dibuja al jefe y sus ataques.
  */
 export function draw() {
@@ -389,6 +577,36 @@ export function draw() {
     const jefe = estadoJuego.jefe;
     const time = estadoJuego.tiempoTranscurrido;
     ctx.save();
+
+    // --- EFECTOS VISUALES DE MUERTE ---
+    if (jefe.muriendo) {
+        const progreso = 1 - (jefe.timerMuerte / 2.5); // 0=inicio, 1=fin
+
+        // Opacidad va de 1 a 0 en la última mitad
+        const alpha = progreso < 0.5 ? 1.0 : 1.0 - ((progreso - 0.5) * 2);
+        ctx.globalAlpha = Math.max(0, alpha);
+
+        // Escala: se infla un poco y luego se contrae antes de desaparecer
+        const escala = 1 + Math.sin(progreso * Math.PI) * 0.3;
+        ctx.translate(
+            jefe.x + (jefe.shakeX || 0),
+            jefe.y + (jefe.shakeY || 0)
+        );
+        ctx.scale(escala, escala);
+
+        // Flash rojo-blanco intermitente
+        const flickerFreq = 10 + progreso * 30;
+        if (Math.sin(time * flickerFreq) > 0) {
+            ctx.filter = 'brightness(3) saturate(0)';
+        } else {
+            ctx.filter = 'brightness(1.5) hue-rotate(180deg)';
+        }
+
+        // Dibujar usando coordenadas locales (ya hicimos translate arriba)
+        _dibujarCuerpoJefe(ctx, jefe, time, true);
+        ctx.restore();
+        return;
+    }
 
     // Vibración si está enfurecido
     if (jefe.enraged) {
