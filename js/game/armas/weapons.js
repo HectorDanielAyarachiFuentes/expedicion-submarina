@@ -573,10 +573,37 @@ export function updateWeapons(ctx) {
 
     // --- Lógica de Colisión de Proyectiles ---
     function chequearColisionProyectil(proyectil, ctx) {
-        // Optimización con Spatial Grid
+        // --- PRIORIDAD 1: VERIFICAR AL JEFE (boss) ---
+        // El jefe NO está en animales[], por eso se verifica primero y por separado.
+        if (estadoJuego.jefe && estadoJuego.jefe.estado !== 'muriendo' && estadoJuego.jefe.hp > 0) {
+            const jefe = estadoJuego.jefe;
+            const hitboxX = jefe.x - jefe.w / 2;
+            const hitboxY = jefe.y - jefe.h / 2;
+            if (proyectil.x > hitboxX && proyectil.x < hitboxX + jefe.w &&
+                proyectil.y > hitboxY && proyectil.y < hitboxY + jefe.h) {
+                const damage = proyectil.isVertical !== undefined ? WEAPON_CONFIG.torpedo.dano : 1;
+                jefe.hp = Math.max(0, jefe.hp - damage);
+                if (jefe.timerGolpe !== undefined) jefe.timerGolpe = 0.15;
+                S.reproducir('boss_hit');
+                generarTrozoBallena(proyectil.x, proyectil.y, 3, 100);
+                generarGotasSangre(proyectil.x, proyectil.y);
+                if (jefe.hp <= 0) {
+                    jefe.hp = 0;
+                    jefe.estado = 'muriendo';
+                    jefe.timerMuerte = 5.0;
+                    generarExplosion(jefe.x, jefe.y, '#FFFFFF', 150);
+                    S.reproducir('explosion_grande');
+                }
+                return true; // El proyectil fue consumido por el jefe
+            }
+        }
+
+        // --- PRIORIDAD 2: VERIFICAR ANIMALES NORMALES ---
         if (spatialGrid) {
             const candidatos = spatialGrid.retrieve(proyectil);
             for (const a of candidatos) {
+                // Saltar al jefe, ya se procesó arriba
+                if (estadoJuego.jefe && a === estadoJuego.jefe) continue;
                 if (!a.capturado && proyectil.x < a.x + a.w / 2 && proyectil.x + (proyectil.w || 0) > a.x - a.w / 2 && proyectil.y < a.y + a.h / 2 && proyectil.y + (proyectil.h || 0) > a.y - a.h / 2) {
                     return procesarImpacto(a);
                 }

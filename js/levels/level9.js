@@ -2,9 +2,7 @@
 'use strict';
 
 import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarAnimal, limpiarTodosLosAnimales, agregarPuntos, whaleImg, whaleListo, WHALE_SPRITE_DATA, generarTrozoBallena, generarGotasSangre, generarBurbujasDeSangre, lerp } from '../game/game.js';
-import { 
-    torpedos, proyectiles 
-} from '../game/armas/weapons.js';
+
 
 // --- ESTADO DEL NIVEL 9 ---
 let levelState = {};
@@ -80,6 +78,7 @@ export function init() {
         tiempoRestante: sub.meta,
         jefe: null,
         whalePieces: [], // Para la animación de muerte
+        nivelCompletado: false, // Guard para evitar doble-llamada a completarSubnivel
     };
 
     estadoJuego.jefe = null;
@@ -120,6 +119,11 @@ export function update(dt) {
 
         if (jefe.estado === 'muriendo') {
             // --- LÓGICA DE MUERTE ÉPICA ---
+            // Si los trozos no fueron generados (ej: el jefe murió por weapons.js directo), generarlos ahora
+            if (levelState.whalePieces.length === 0) {
+                startWhaleBreakup(jefe);
+            }
+
             jefe.timerMuerte -= dt;
 
             // Actualizar trozos
@@ -143,13 +147,15 @@ export function update(dt) {
                 generarExplosion(explosionX, explosionY, '#FFFFFF', 50 + Math.random() * 100);
             }
 
-            if (jefe.timerMuerte <= 0) {
+            if (jefe.timerMuerte <= 0 && !levelState.nivelCompletado) {
+                levelState.nivelCompletado = true;
                 levelState.progresoSubnivel = 1;
                 completarSubnivel();
                 levelState.jefe = null; // El jefe desaparece
             }
             return; // No hacer nada más si está muriendo
         }
+
 
         jefe.timerGolpe = Math.max(0, jefe.timerGolpe - dt);
 
@@ -209,21 +215,9 @@ export function update(dt) {
             jugador.x -= 50;
         }
 
-        const hitbox = { x: jefe.x - jefe.w / 2, y: jefe.y - jefe.h / 2, w: jefe.w, h: jefe.h };
-        for (let i = torpedos.length - 1; i >= 0; i--) {
-            const t = torpedos[i];
-            if (t.x > hitbox.x && t.x < hitbox.x + hitbox.w && t.y > hitbox.y && t.y < hitbox.y + hitbox.h) {
-                recibirDanoJefe(t, 10);
-                torpedos.splice(i, 1);
-            }
-        }
-        for (let i = proyectiles.length - 1; i >= 0; i--) {
-            const p = proyectiles[i];
-            if (p.x > hitbox.x && p.x < hitbox.x + hitbox.w && p.y > hitbox.y && p.y < hitbox.y + hitbox.h) {
-                recibirDanoJefe(p, 1);
-                proyectiles.splice(i, 1);
-            }
-        }
+        // NOTA: El daño de torpedos y proyectiles al jefe es manejado por armas/weapons.js
+        // directamente via chequearColisionProyectil, que tiene acceso a estadoJuego.jefe.
+        // No es necesario procesar los arrays torpedos/proyectiles aquí.
     }
 }
 
@@ -239,16 +233,10 @@ function recibirDanoJefe(proyectil, cantidad) {
     
     if (jefe.hp <= 0) {
         jefe.estado = 'muriendo';
-        jefe.timerMuerte = 5.0; // 5 segundos de animación de muerte
-        jefe.hp = 0; // Para que la barra de vida no se vaya a negativo
-
-        // --- CORRECCIÓN: Marcar el objetivo como cumplido inmediatamente ---
-        // Esto evita que el juego se quede atascado si se sigue disparando al jefe.
+        jefe.timerMuerte = 5.0;
+        jefe.hp = 0;
         levelState.progresoSubnivel = 1;
-        if (levelState.progresoSubnivel >= SUBNIVELES[levelState.subnivelActual].meta) {
-             // No llamamos a completarSubnivel() aquí para permitir que la animación de muerte termine.
-             // La animación llamará a completarSubnivel() cuando finalice.
-        }
+        estadoJuego.jefe = jefe;
         startWhaleBreakup(jefe);
     }
 }
@@ -352,10 +340,12 @@ function completarSubnivel() {
     
     levelState.subnivelActual++;
     if (levelState.subnivelActual >= SUBNIVELES.length) {
-        estadoJuego.valorObjetivoNivel = 1;
+        // --- VICTORIA: El nivel 9 está completado ---
+        estadoJuego.valorObjetivoNivel = 1; // Activa comprobarCompletadoNivel() en game.js
         const bossHealthContainer = document.getElementById('bossHealthContainer');
         if (bossHealthContainer) bossHealthContainer.style.display = 'none';
         estadoJuego.jefe = null;
+        levelState.jefe = null;
         return;
     }
 
