@@ -451,6 +451,11 @@ export const FONDOS_TEMAS = {
 
 let bgImg = null, bgListo = false, bgAncho = 0, bgAlto = 0, bgOffset = 0;
 let fgImg = null, fgListo = false, fgAncho = 0, fgAlto = 0, fgOffset = 0;
+// Desplazamiento vertical del fondo (usado en nivel 5 para parallax de ascenso)
+export let bgOffsetY = 0;
+export let fgOffsetY = 0;
+export function setBgOffsetY(v) { bgOffsetY = v; }
+export function setFgOffsetY(v) { fgOffsetY = v; }
 
 const BG_DRIFT_SPEED = 8;
 const FG_DRIFT_SPEED = 25;
@@ -1941,8 +1946,10 @@ function actualizar(dt) {
     // --- LÓGICA DE CÁMARA Y POSICIÓN DEL JUGADOR ---
     if (usaCamera) {
         // En niveles con scroll, el jugador se mantiene en el centro y el mundo se mueve.
-        // El jugador ahora está confinado a los límites verticales de la pantalla.
-        jugador.y = clamp(jugador.y, jugador.r, H - jugador.r);
+        // En el Nivel 5 (ascenso vertical), aplicamos un "techo" para no permitir
+        // que el jugador suba hasta el borde superior, tipo "runner".
+        const limiteSuperior = isLevel5 ? H * 0.35 : jugador.r;
+        jugador.y = clamp(jugador.y, limiteSuperior, H - jugador.r);
 
         // --- NUEVA LÓGICA DE CÁMARA CON "ZONA MUERTA" ---
         // La cámara solo se mueve si el jugador sale de una zona central,
@@ -1990,6 +1997,13 @@ function actualizar(dt) {
 
         bgOffset = (estadoJuego.cameraX * 0.3) + timeDriftBg;
         fgOffset = (estadoJuego.cameraX * 1.0) + timeDriftFg;
+
+        // En niveles no verticales, resetear el offset vertical para que no se acumule
+        if (!isLevel5) {
+            bgOffsetY = 0;
+            fgOffsetY = 0;
+        }
+
     } else {
         // En niveles de jefe, todo está estático.
         bgOffset = 0;
@@ -3723,10 +3737,7 @@ function dibujarFondoParallax() {
     if (!estadoJuego || !bgCtx) return;
 
     // Colores para el ciclo día/noche
-    // Día: Azul océano profundo (#1a4b6e -> r:26, g:75, b:110)
-    // Noche: Azul casi negro (#06131f -> r:6, g:19, b:31)
-    const factor = estadoJuego.dayNightFactor || 0; // 0 = día, 1 = noche
-
+    const factor = estadoJuego.dayNightFactor || 0;
     const r = Math.round(26 + (6 - 26) * factor);
     const g = Math.round(75 + (19 - 75) * factor);
     const b = Math.round(110 + (31 - 110) * factor);
@@ -3734,47 +3745,94 @@ function dibujarFondoParallax() {
     bgCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
     bgCtx.fillRect(0, 0, W, H);
 
-    // Factor de alejamiento (zoom out) del fondo. 
-    // Usamos 1.0 para que cubra la pantalla completa y evitar horizontes cortados.
-    const bgZoomFactor = 1.0;
+    const isLevel5 = estadoJuego.nivel === 5;
 
+    // Fondo (lejano)
     if (bgListo && bgAncho > 0) {
         bgCtx.imageSmoothingEnabled = false;
+        const bgZoomFactor = 1.0;
         const ratio = bgAncho / bgAlto;
         const alturaDibujoBg = Math.ceil(H * bgZoomFactor);
         const anchoDibujoBg = Math.ceil(alturaDibujoBg * ratio);
         
-        // Se ancla el dibujo en la parte inferior de la pantalla (H - altura) 
-        // para que la parte superior sea el cielo acuático (color sólido dibujado antes).
-        const yBaseBg = Math.floor(H - alturaDibujoBg);
-
-        // Evitar saltos de coma flotante recalculando el inicio en enteros
         let subBgOffset = bgOffset % anchoDibujoBg;
         if (subBgOffset < 0) subBgOffset += anchoDibujoBg;
         const startX = -Math.floor(subBgOffset);
 
-        for (let x = startX; x < W; x += anchoDibujoBg) {
-            // Dibujamos con +1 al ancho para superponer ligeramente los bordes y ocultar la línea
-            bgCtx.drawImage(bgImg, x, yBaseBg, anchoDibujoBg + 1, alturaDibujoBg);
+        if (isLevel5) {
+            // Parallax Vertical Reflexivo Seamless para Nivel 5
+            const tileH = alturaDibujoBg;
+            const baseWorldIndex = Math.floor(bgOffsetY / tileH);
+            const subY = bgOffsetY % tileH;
+            
+            for (let x = startX; x < W; x += anchoDibujoBg) {
+                for (let i = -1; i <= 2; i++) {
+                    const tileWorldIndex = baseWorldIndex - i;
+                    const isNormal = Math.abs(tileWorldIndex % 2) === 0;
+                    const tileY = Math.floor(H - tileH) + subY - (i * tileH);
+                    
+                    if (isNormal) {
+                        bgCtx.drawImage(bgImg, x, tileY, anchoDibujoBg + 1, tileH);
+                    } else {
+                        bgCtx.save();
+                        bgCtx.translate(x, tileY + tileH);
+                        bgCtx.scale(1, -1);
+                        bgCtx.drawImage(bgImg, 0, 0, anchoDibujoBg + 1, tileH);
+                        bgCtx.restore();
+                    }
+                }
+            }
+        } else {
+            // Nivel Normal Horizontal
+            const yBaseBg = Math.floor(H - alturaDibujoBg);
+            for (let x = startX; x < W; x += anchoDibujoBg) {
+                bgCtx.drawImage(bgImg, x, yBaseBg, anchoDibujoBg + 1, alturaDibujoBg);
+            }
         }
     }
 
+    // Primer Plano (Cercano)
     if (fgListo && fgAncho > 0 && fgAlto > 0) {
-        // El front se dibuja un poco más pequeño según solicita el director visual.
-        // fgZoomFactor hace que las rocas y elementos frontales no cubran tanta altura.
         const fgZoomFactor = 0.55;
         const ratioFg = fgAncho / fgAlto;
         const alturaDibujoFg = Math.ceil(H * fgZoomFactor);
         const anchoDibujoFg = Math.ceil(alturaDibujoFg * ratioFg);
         
-        const yBase = Math.floor(H - alturaDibujoFg);
         let subFgOffset = fgOffset % anchoDibujoFg;
         if (subFgOffset < 0) subFgOffset += anchoDibujoFg;
         const startX = -Math.floor(subFgOffset);
 
-        for (let x = startX; x < W; x += anchoDibujoFg) {
-            // Dibujamos con +1 al ancho para evitar gaps
-            bgCtx.drawImage(fgImg, x, yBase, anchoDibujoFg + 1, alturaDibujoFg);
+        if (isLevel5) {
+            // Parallax Vertical Reflexivo Seamless para Nivel 5
+            const tileH = alturaDibujoFg;
+            // Aseguramos valores positivos para el módulo y división
+            const absFgOffsetY = Math.max(0, fgOffsetY);
+            const baseWorldIndex = Math.floor(absFgOffsetY / tileH);
+            const subY = absFgOffsetY % tileH;
+            
+            for (let x = startX; x < W; x += anchoDibujoFg) {
+                for (let i = -1; i <= 3; i++) {
+                    const tileWorldIndex = baseWorldIndex - i;
+                    const isNormal = Math.abs(tileWorldIndex % 2) === 0;
+                    const tileY = Math.floor(H - tileH) + subY - (i * tileH);
+                    
+                    if (isNormal) {
+                        bgCtx.drawImage(fgImg, x, tileY, anchoDibujoFg + 1, tileH);
+                    } else {
+                        bgCtx.save();
+                        bgCtx.translate(x, tileY + tileH);
+                        bgCtx.scale(1, -1);
+                        bgCtx.drawImage(fgImg, 0, 0, anchoDibujoFg + 1, tileH);
+                        bgCtx.restore();
+                    }
+                }
+            }
+        } else {
+            // Nivel Normal Horizontal
+            const yBase = Math.floor(H - alturaDibujoFg);
+            for (let x = startX; x < W; x += anchoDibujoFg) {
+                bgCtx.drawImage(fgImg, x, yBase, anchoDibujoFg + 1, alturaDibujoFg);
+            }
         }
     }
 }

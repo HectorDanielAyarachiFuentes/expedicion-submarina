@@ -1,7 +1,7 @@
 'use strict';
 
 // Importamos lo que necesitamos de game.js
-import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarParticula, particulasBurbujas, proyectilesEnemigos, escombros } from '../game/game.js';
+import { estadoJuego, jugador, W, H, ctx, S, clamp, perderJuego, generarExplosion, generarParticula, particulasBurbujas, proyectilesEnemigos, escombros, setBgOffsetY, setFgOffsetY } from '../game/game.js';
 import { 
     torpedos, proyectiles 
 } from '../game/armas/weapons.js';
@@ -14,6 +14,10 @@ let levelTimer = 0; // Timer para aumentar la dificultad progresivamente
 
 const VELOCIDAD_ASCENSO_INICIAL = 200;
 let velocidadAscensoActual = VELOCIDAD_ASCENSO_INICIAL;
+
+// Acumuladores para el parallax vertical del fondo
+let _bgOffsetYAcum = 0;
+let _fgOffsetYAcum = 0;
 
 // --- Formas SVG de múltiples capas para más realismo ---
 const formasEscombrosSVG = [];
@@ -131,6 +135,12 @@ export function init() {
     spawnTimerCorrientes = 3.0;
     levelTimer = 0;
     velocidadAscensoActual = VELOCIDAD_ASCENSO_INICIAL;
+
+    // Resetear los offsets verticales del fondo
+    _bgOffsetYAcum = 0;
+    _fgOffsetYAcum = 0;
+    setBgOffsetY(0);
+    setFgOffsetY(0);
     
     jugador.x = W / 2;
     jugador.y = H - 100;
@@ -143,7 +153,13 @@ export function update(dt) {
     levelTimer += dt;
     velocidadAscensoActual = Math.min(VELOCIDAD_ASCENSO_INICIAL * 2.5, VELOCIDAD_ASCENSO_INICIAL + levelTimer * 4);
 
-    // --- LÓGICA DEL NIVEL 5 ---
+    // --- PARALLAX VERTICAL: mover el fondo hacia abajo para simular que subimos ---
+    // El fondo (lejano) al 30% de velocidad, el primer plano (cercano) al 80%
+    _bgOffsetYAcum += velocidadAscensoActual * 0.30 * dt;
+    _fgOffsetYAcum += velocidadAscensoActual * 0.80 * dt;
+    setBgOffsetY(_bgOffsetYAcum);
+    setFgOffsetY(_fgOffsetYAcum);
+
 
     // 1. SCROLL VERTICAL y movimiento de entidades
     // jugador.y -= velocidadAscensoActual * dt; // Eliminado el ascenso automático. ¡Ahora tú tienes el control!
