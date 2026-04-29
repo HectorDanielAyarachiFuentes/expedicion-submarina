@@ -437,8 +437,73 @@ function guardarNivelMaximo() { try { const proximoNivelDesbloqueado = Math.min(
 // =================================================================================
 
 // --- Sprites Principales ---
-let robotImg = null, robotListo = false, spriteAncho = 96, spriteAlto = 64, robotEscala = 2;
-cargarImagen('img/subastian.png', function (img) { if (img) { robotImg = img; robotListo = true; const altoObjetivo = 64; const ratio = img.width / img.height; spriteAlto = altoObjetivo; spriteAncho = Math.round(altoObjetivo * ratio); } });
+let robotImg = null, robotListo = false, spriteAncho = 506, spriteAlto = 527, robotEscala = 0.35; 
+export let HECTOR_SPRITE_DATA = null;
+let robotImgCargada = false;
+let robotJsonCargado = false;
+export let HECTOR_FRAME_KEYS = [];
+function comprobarRobotListo() {
+    if (robotImgCargada && robotJsonCargado) {
+        // Extraer las claves de los frames disponibles en el JSON
+        HECTOR_FRAME_KEYS = Object.keys(HECTOR_SPRITE_DATA.frames).sort((a, b) => {
+            // Intentar ordenar numéricamente si las claves son 'sprite_N'
+            const numA = parseInt(a.replace('sprite_', ''));
+            const numB = parseInt(b.replace('sprite_', ''));
+            return numA - numB;
+        });
+        robotListo = true;
+    }
+}
+
+cargarImagen('img/sprites/Hector.png', function (img) {
+    if (img) {
+        robotImg = img;
+        robotImgCargada = true;
+        comprobarRobotListo();
+    } else {
+        console.error("No se pudo cargar la imagen 'img/sprites/Hector.png'.");
+    }
+});
+
+cargarJson('js/json_sprites/Hector.json', function (data) {
+    if (data) {
+        HECTOR_SPRITE_DATA = data;
+        robotJsonCargado = true;
+        comprobarRobotListo();
+    }
+});
+
+/**
+ * Función auxiliar para dibujar el submarino Hector con su animación.
+ * @param {CanvasRenderingContext2D} targetCtx - El contexto de destino (ctx, infoAnimCtx, etc.)
+ * @param {number} x - Posición X
+ * @param {number} y - Posición Y
+ * @param {number} escala - Escala del dibujo
+ * @param {number} frame - Frame actual (0-65)
+ * @param {boolean} smoothing - Si se debe activar el suavizado de imagen
+ */
+function dibujarHector(targetCtx, x, y, escala, frame, smoothing = true) {
+    if (!robotListo || !HECTOR_SPRITE_DATA || HECTOR_FRAME_KEYS.length === 0) {
+        // Fallback si no está cargado
+        targetCtx.fillStyle = '#7ef';
+        targetCtx.beginPath();
+        targetCtx.arc(x, y, 26 * escala, 0, Math.PI * 2);
+        targetCtx.fill();
+        return;
+    }
+
+    targetCtx.imageSmoothingEnabled = smoothing;
+    // Usamos el índice de frame sobre el array de claves disponibles
+    const frameKey = HECTOR_FRAME_KEYS[frame % HECTOR_FRAME_KEYS.length];
+    const frameData = HECTOR_SPRITE_DATA.frames[frameKey];
+    
+    if (frameData) {
+        const f = frameData.frame;
+        const dw = f.w * escala, dh = f.h * escala;
+        targetCtx.drawImage(robotImg, f.x, f.y, f.w, f.h, Math.round(x - dw / 2), Math.round(y - dh / 2), dw, dh);
+    }
+}
+
 let criaturasImg = null, criaturasListas = false, cFrameAncho = 0, cFrameAlto = 0, cFilas = 0;
 cargarImagen('img/sprites/criaturas.png', function (img) { if (img) { criaturasImg = img; cFrameAncho = Math.floor(img.width / 2); cFilas = Math.max(1, Math.floor(img.height / cFrameAncho)); cFrameAlto = Math.floor(img.height / cFilas); criaturasListas = true; } });
 // --- Fondos Temáticos ---
@@ -1355,7 +1420,7 @@ function reiniciar(nivelDeInicio = 1) {
     trozosHumanos = [];
     delete estadoJuego.darknessOverride; // Limpiamos la oscuridad del nivel 2, si existiera.
 
-    jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0, inclinacion: 0 };
+    jugador = { x: W * 0.18, y: H / 2, r: 26, garra: null, vy: 0, inclinacion: 0, frame: 0, timerFrame: 0 };
     jugador.direccion = 1; // 1 para derecha, -1 para izquierda
     
     // Configurar tema del nivel inicial
@@ -3395,17 +3460,17 @@ function renderizar(dt) {
                 ctx.restore();
             }
 
-            // --- Dibuja el Submarino ---
-            if (robotListo) {
-                ctx.imageSmoothingEnabled = false;
-                const dw = spriteAncho * robotEscala, dh = spriteAlto * robotEscala;
-                ctx.drawImage(robotImg, Math.round(-dw / 2), Math.round(-dh / 2), dw, dh);
-            } else {
-                ctx.fillStyle = '#7ef';
-                ctx.beginPath();
-                ctx.arc(0, 0, jugador.r, 0, Math.PI * 2);
-                ctx.fill();
+            // --- Dibuja el Submarino (Hector) ---
+            if (!estadoJuego.juegoPausadoPorDesconexion && !estadoJuego.juegoPausadoPorConexionMando) {
+                const dt = 1/60; 
+                jugador.timerFrame += dt;
+                if (jugador.timerFrame > 0.05) {
+                    jugador.frame = (jugador.frame + 1);
+                    // No hacemos % 66 aquí, lo manejamos dentro de dibujarHector con HECTOR_FRAME_KEYS.length
+                    jugador.timerFrame = 0;
+                }
             }
+            dibujarHector(ctx, 0, 0, 0.35, jugador.frame);
             ctx.restore();
 
             // --- Dibuja el Propulsor ---
@@ -4259,10 +4324,8 @@ function dibujarAnimacionMenu() {
     }
     ctx.rotate(menuFlyBy.rotation);
 
-    ctx.imageSmoothingEnabled = false;
-    const dw = spriteAncho * robotEscala;
-    const dh = spriteAlto * robotEscala;
-    ctx.drawImage(robotImg, -dw / 2, -dh / 2, dw, dh);
+    const frame = Math.floor(estadoJuego.tiempoTranscurrido * 20) % (HECTOR_FRAME_KEYS.length || 1);
+    dibujarHector(ctx, 0, 0, 0.35, frame);
 
     ctx.restore();
 }
@@ -5369,10 +5432,9 @@ function renderizarSubmarinoBailarin(t) {
     infoAnimCtx.translate(posX, posY);
     infoAnimCtx.rotate(rotacion);
     infoAnimCtx.scale(escala, escala);
-    infoAnimCtx.imageSmoothingEnabled = false;
-    const dw = spriteAncho * 2.5;
-    const dh = spriteAlto * 2.5;
-    infoAnimCtx.drawImage(robotImg, -dw / 2, -dh / 2, dw, dh);
+    const frameCount = HECTOR_FRAME_KEYS.length || 1;
+    const frame = Math.floor(tiempo * 20) % frameCount;
+    dibujarHector(infoAnimCtx, 0, 0, 0.8, frame);
     infoAnimCtx.restore();
 
 }
