@@ -3458,6 +3458,19 @@ function renderizar(dt) {
                 ctx.translate(propOffsetX, 0);
                 const propSize = 40;
 
+                // --- Eje de conexión (rod) ---
+                // Se dibuja antes de la hélice para que quede por detrás del centro de esta
+                ctx.save();
+                ctx.fillStyle = '#4a555c'; // Color acero oscuro
+                ctx.fillRect(0, -3, 20, 6); 
+                // Sombra inferior del eje para darle volumen
+                ctx.fillStyle = '#2d333b';
+                ctx.fillRect(0, 1, 20, 2); 
+                // Base/Acople más grueso en la unión con el submarino
+                ctx.fillStyle = '#6a737d';
+                ctx.fillRect(14, -5, 8, 10);
+                ctx.restore();
+
                 // Efecto de desenfoque de movimiento (motion blur) a alta velocidad
                 if (propellerCurrentSpeed > 35) {
                     ctx.globalAlpha = 0.35;
@@ -3484,6 +3497,53 @@ function renderizar(dt) {
                 }
             }
             dibujarHector(ctx, 0, 0, 0.35, jugador.frame);
+
+            // --- Carcasa de la Luz Frontal ---
+            ctx.save();
+            const lightDist = spriteAlto * robotEscala * 0.5 - 11; // Distancia exacta del origen del rayo
+            ctx.translate(lightDist - 5, 0); // Ajustado para encajar en el cristal frontal
+            
+            // Base/Anclaje del foco
+            ctx.fillStyle = '#4a555c'; 
+            ctx.fillRect(-4, -6, 6, 12);
+            ctx.fillStyle = '#2d333b'; // Sombra del anclaje
+            ctx.fillRect(-4, 0, 6, 6);
+            
+            // Carcasa amarilla principal
+            ctx.fillStyle = '#ffb300'; // Amarillo a juego con Hector
+            ctx.beginPath();
+            ctx.moveTo(2, -8);
+            ctx.lineTo(8, -5);
+            ctx.lineTo(8, 5);
+            ctx.lineTo(2, 8);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Sombra en la carcasa amarilla
+            ctx.fillStyle = '#cc8c00';
+            ctx.beginPath();
+            ctx.moveTo(2, 2);
+            ctx.lineTo(8, 2);
+            ctx.lineTo(8, 5);
+            ctx.lineTo(2, 8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Lente de cristal
+            ctx.fillStyle = estadoJuego.luzVisible ? '#e0f7fa' : '#334455'; 
+            ctx.beginPath();
+            ctx.ellipse(8, 0, 2.5, 4.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Brillo intenso si está prendido
+            if (estadoJuego.luzVisible) {
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.ellipse(9, -1, 1.5, 2.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
             ctx.restore();
 
             // --- Dibuja el Propulsor ---
