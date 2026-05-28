@@ -1956,10 +1956,23 @@ function actualizar(dt) {
         // La posición de las burbujas debe considerar la inclinación y dirección
         const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
         const finalAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
-        const offset = -40; // Detrás del centro del submarino
+        const localX = -40; // Detrás del centro del submarino
+        const localY = 32;  // Abajo hacia la tobera de escape
 
-        const burbujaX = jugador.x + offset * Math.cos(finalAngle);
-        const burbujaY = jugador.y + offset * Math.sin(finalAngle);
+        let burbujaX, burbujaY;
+        if (isLevel5) {
+            burbujaX = jugador.x + localX * Math.cos(finalAngle) - localY * Math.sin(finalAngle);
+            burbujaY = jugador.y + localX * Math.sin(finalAngle) + localY * Math.cos(finalAngle);
+        } else {
+            const inc = jugador.inclinacion;
+            if (jugador.direccion === 1) {
+                burbujaX = jugador.x + localX * Math.cos(inc) - localY * Math.sin(inc);
+                burbujaY = jugador.y + localX * Math.sin(inc) + localY * Math.cos(inc);
+            } else {
+                burbujaX = jugador.x - localX * Math.cos(inc) + localY * Math.sin(inc);
+                burbujaY = jugador.y + localX * Math.sin(inc) + localY * Math.cos(inc);
+            }
+        }
         generarBurbujaPropulsion(burbujaX, burbujaY, isLevel5, -jugador.direccion);
     }
 
@@ -3483,9 +3496,13 @@ function renderizar(dt) {
 
                 ctx.save();
                 ctx.translate(px, py);
-                // Ahora podemos usar el `anguloFinal` que definimos antes, que es el ángulo del mundo.
-                ctx.rotate(anguloFinal);
-                ctx.translate(-35, 0); // Posicionar detrás del submarino
+                if (isLevel5) {
+                    ctx.rotate(anguloFinal);
+                } else {
+                    ctx.scale(jugador.direccion, 1);
+                    ctx.rotate(jugador.inclinacion * jugador.direccion);
+                }
+                ctx.translate(-35, 32); // Posicionar en la tobera de escape
 
                 if (isBoosting) {
                     // --- NUEVO EFECTO DE BOOST ESPECTACULAR ---
@@ -3555,15 +3572,34 @@ function renderizar(dt) {
 
                     // 6. Emisión de partículas (MEJORADA)
                     if (Math.random() < 0.95) {
+                        let originX, originY, bX, bY;
+                        if (isLevel5) {
+                            originX = px - 35 * Math.cos(anguloFinal) - 32 * Math.sin(anguloFinal);
+                            originY = py - 35 * Math.sin(anguloFinal) + 32 * Math.cos(anguloFinal);
+                            bX = px - 40 * Math.cos(anguloFinal) - 32 * Math.sin(anguloFinal);
+                            bY = py - 40 * Math.sin(anguloFinal) + 32 * Math.cos(anguloFinal);
+                        } else {
+                            const inc = jugador.inclinacion;
+                            if (jugador.direccion === 1) {
+                                originX = px - 35 * Math.cos(inc) - 32 * Math.sin(inc);
+                                originY = py - 35 * Math.sin(inc) + 32 * Math.cos(inc);
+                                bX = px - 40 * Math.cos(inc) - 32 * Math.sin(inc);
+                                bY = py - 40 * Math.sin(inc) + 32 * Math.cos(inc);
+                            } else {
+                                originX = px + 35 * Math.cos(inc) + 32 * Math.sin(inc);
+                                originY = py - 35 * Math.sin(inc) + 32 * Math.cos(inc);
+                                bX = px + 40 * Math.cos(inc) + 32 * Math.sin(inc);
+                                bY = py - 40 * Math.sin(inc) + 32 * Math.cos(inc);
+                            }
+                        }
+
                         const numParticles = 4 + Math.floor(Math.random() * 4);
                         for (let i = 0; i < numParticles; i++) {
                             const particleAngle = anguloFinal + Math.PI + (Math.random() - 0.5) * 0.4;
                             const particleSpeed = 500 + Math.random() * 400;
-                            const originX = px - 35 * Math.cos(anguloFinal);
-                            const originY = py - 35 * Math.sin(anguloFinal);
                             generarParticula(particulasExplosion, { x: originX, y: originY, vx: Math.cos(particleAngle) * particleSpeed, vy: Math.sin(particleAngle) * particleSpeed, r: 1.5 + Math.random() * 2.5, vida: 0.5 + Math.random() * 0.5, color: ['#ffffff', '#afeeee', '#87ceeb'][Math.floor(Math.random() * 3)] });
                         }
-                        for (let i = 0; i < 8; i++) { generarBurbujaPropulsion(px - 40 * Math.cos(anguloFinal), py - 40 * Math.sin(anguloFinal) + (Math.random() - 0.5) * 30, isLevel5); }
+                        for (let i = 0; i < 8; i++) { generarBurbujaPropulsion(bX, bY + (Math.random() - 0.5) * 30, isLevel5); }
                     }
                 } else {
                     // --- EFECTO NORMAL (SIN BOOST) ---
