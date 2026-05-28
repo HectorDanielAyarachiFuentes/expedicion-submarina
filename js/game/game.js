@@ -115,7 +115,7 @@ function cargarJson(url, cb) {
 
 // --- Lienzos (Canvas) ---
 // Cada canvas representa una capa del juego para optimizar el renderizado.
-const bgCanvas = document.getElementById('bgCanvas'), bgCtx = bgCanvas.getContext('2d');
+const bgCanvas = document.getElementById('bgCanvas'), bgCtx = bgCanvas.getContext('2d', { alpha: false });
 export const cvs = document.getElementById('gameCanvas');
 export const ctx = cvs.getContext('2d');
 const fxCanvas = document.getElementById('fxCanvas'), fx = fxCanvas.getContext('2d');
@@ -3657,11 +3657,9 @@ function renderizar(dt) {
         ctx.save();
         for (const p of proyectilesEnemigos) {
             ctx.fillStyle = p.color;
-            ctx.shadowColor = p.color;
-            ctx.shadowBlur = 10;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fill();
+            // ctx.shadowColor = p.color; // OPTIMIZADO
+            // ctx.shadowBlur = 10; // OPTIMIZADO
+            ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
         }
         ctx.restore();
 
@@ -3775,13 +3773,13 @@ function renderizar(dt) {
         // 5. Salpicaduras Gore de tripulación brutalmente desmembrada
         if (d.tieneSangre && !info.isGlass) {
             ctx.fillStyle = 'rgba(139, 0, 0, 0.85)'; // Rojo Oscuro intenso
-            ctx.shadowColor = '#4a0000';
-            ctx.shadowBlur = 4;
+            // ctx.shadowColor = '#4a0000'; // OPTIMIZADO
+            // ctx.shadowBlur = 4; // OPTIMIZADO
             ctx.beginPath();
             ctx.arc(2, 2, 6, 0, Math.PI * 2);
             ctx.arc(-4, 0, 4, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 0; // Apagar
+            // ctx.shadowBlur = 0; // OPTIMIZADO
         }
 
         ctx.restore();
@@ -3996,11 +3994,11 @@ function dibujarSonar() {
     // --- 5. Dibujar los "pings" de los enemigos y el jugador ---
     // El jugador está siempre en el centro del minimapa.
     sonarCtx.fillStyle = '#87CEEB'; // Color del jugador
-    sonarCtx.shadowColor = '#87CEEB';
-    sonarCtx.shadowBlur = 8;
+    // sonarCtx.shadowColor = '#87CEEB'; // OPTIMIZADO
+    // sonarCtx.shadowBlur = 8; // OPTIMIZADO
     sonarCtx.fillRect(centerX - 6, centerY - 1.5, 12, 3); // Cruz horizontal
     sonarCtx.fillRect(centerX - 1.5, centerY - 6, 3, 12); // Cruz vertical
-    sonarCtx.shadowBlur = 0;
+    // sonarCtx.shadowBlur = 0; // OPTIMIZADO
 
     for (const a of animales) {
         const dx = a.x - jugador.x;
@@ -4018,8 +4016,8 @@ function dibujarSonar() {
             const pingSize = (isBoss ? 6 : (isHostile ? 4 : 3)) * pulse;
 
             sonarCtx.fillStyle = isHostile ? 'rgba(255, 80, 80, 0.9)' : 'rgba(100, 255, 150, 0.9)';
-            sonarCtx.shadowColor = sonarCtx.fillStyle;
-            sonarCtx.shadowBlur = 10;
+            // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
+            // sonarCtx.shadowBlur = 10; // OPTIMIZADO
 
             sonarCtx.save();
             sonarCtx.translate(pingX, pingY);
@@ -4035,7 +4033,7 @@ function dibujarSonar() {
             sonarCtx.restore();
         }
     }
-    sonarCtx.shadowBlur = 0;
+    // sonarCtx.shadowBlur = 0; // OPTIMIZADO
 
     // Si hay un jefe, marcarlo de forma especial
     if (estadoJuego.jefe) {
@@ -4055,11 +4053,11 @@ function dibujarSonar() {
     }
 
     // --- NUEVO: Dibujar pings de proyectiles ---
-    sonarCtx.shadowBlur = 5;
+    // sonarCtx.shadowBlur = 5; // OPTIMIZADO
 
     // Proyectiles del jugador (balas)
     sonarCtx.fillStyle = 'rgba(200, 220, 255, 0.9)';
-    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
     for (const p of Weapons.proyectiles) {
         const dx = p.x - jugador.x;
         const dy = p.y - jugador.y;
@@ -4077,7 +4075,7 @@ function dibujarSonar() {
 
     // Torpedos del jugador
     sonarCtx.fillStyle = 'rgba(170, 230, 255, 1.0)';
-    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
     for (const t of Weapons.torpedos) {
         const dx = t.x - jugador.x;
         const dy = t.y - jugador.y;
@@ -4094,7 +4092,7 @@ function dibujarSonar() {
 
     // Proyectiles enemigos
     sonarCtx.fillStyle = 'rgba(255, 150, 150, 0.9)';
-    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
     for (const p of proyectilesEnemigos) {
         const dx = p.x - jugador.x;
         const dy = p.y - jugador.y;
@@ -4109,7 +4107,7 @@ function dibujarSonar() {
 
     // Minas del jugador
     sonarCtx.fillStyle = 'rgba(255, 180, 50, 0.9)';
-    sonarCtx.shadowColor = sonarCtx.fillStyle;
+    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
     for (const m of Weapons.minas) {
         const dx = m.x - jugador.x;
         const dy = m.y - jugador.y;
@@ -4135,7 +4133,7 @@ function dibujarSonar() {
         const pulse = 0.8 + Math.sin(time * 40) * 0.2; // Pulso de intensidad
 
         sonarCtx.strokeStyle = `rgba(255, 100, 100, ${pulse})`;
-        sonarCtx.shadowColor = 'rgba(255, 100, 100, 1)';
+        // sonarCtx.shadowColor = 'rgba(255, 100, 100, 1)'; // OPTIMIZADO
         sonarCtx.lineWidth = 3;
 
         sonarCtx.beginPath();
@@ -4146,8 +4144,8 @@ function dibujarSonar() {
 
     // --- NUEVO: Dibujar escombros y rocas ---
     sonarCtx.fillStyle = 'rgba(160, 140, 120, 0.7)'; // Color marrón/gris para rocas
-    sonarCtx.shadowColor = sonarCtx.fillStyle;
-    sonarCtx.shadowBlur = 4;
+    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
+    // sonarCtx.shadowBlur = 4; // OPTIMIZADO
     for (const e of escombros) {
         const dx = e.x - jugador.x;
         const dy = e.y - jugador.y;
@@ -4163,8 +4161,8 @@ function dibujarSonar() {
     if (estadoJuego.jefe && estadoJuego.jefe.lasers) {
         const pulse = 0.7 + Math.sin(time * 20) * 0.3;
         sonarCtx.strokeStyle = `rgba(255, 120, 120, ${pulse})`;
-        sonarCtx.shadowColor = 'rgba(255, 120, 120, 1)';
-        sonarCtx.shadowBlur = 8;
+        // sonarCtx.shadowColor = 'rgba(255, 120, 120, 1)'; // OPTIMIZADO
+        // sonarCtx.shadowBlur = 8; // OPTIMIZADO
         sonarCtx.lineWidth = 1.5;
 
         for (const laser of estadoJuego.jefe.lasers) {
@@ -4199,8 +4197,8 @@ function dibujarSonar() {
 
         // 1. Proyectiles de Tinta
         sonarCtx.fillStyle = 'rgba(50, 50, 50, 0.8)';
-        sonarCtx.shadowColor = 'black';
-        sonarCtx.shadowBlur = 6;
+        // sonarCtx.shadowColor = 'black'; // OPTIMIZADO
+        // sonarCtx.shadowBlur = 6; // OPTIMIZADO
         for (const ink of estadoJuego.proyectilesTinta) {
             const dx = ink.x - jugador.x;
             const dy = ink.y - jugador.y;
@@ -4224,8 +4222,8 @@ function dibujarSonar() {
                 const pulse = 0.5 + Math.sin(time * 15) * 0.5;
                 sonarCtx.strokeStyle = `rgba(255, 80, 80, ${pulse})`;
                 sonarCtx.lineWidth = 3;
-                sonarCtx.shadowColor = 'red';
-                sonarCtx.shadowBlur = 10;
+                // sonarCtx.shadowColor = 'red'; // OPTIMIZADO
+                // sonarCtx.shadowBlur = 10; // OPTIMIZADO
 
                 sonarCtx.beginPath();
                 sonarCtx.moveTo(centerX - SONAR_RADIUS, pingY);
@@ -4241,8 +4239,8 @@ function dibujarSonar() {
                 const pingSize = 12 * pulse;
 
                 sonarCtx.fillStyle = 'rgba(255, 60, 60, 0.9)';
-                sonarCtx.shadowColor = sonarCtx.fillStyle;
-                sonarCtx.shadowBlur = 12;
+                // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
+                // sonarCtx.shadowBlur = 12; // OPTIMIZADO
 
                 sonarCtx.save();
                 sonarCtx.translate(pingX, pingY);
@@ -4253,7 +4251,7 @@ function dibujarSonar() {
         }
     }
 
-    sonarCtx.shadowBlur = 0;
+    // sonarCtx.shadowBlur = 0; // OPTIMIZADO
 
     sonarCtx.restore(); // Quita el clipping
 
@@ -4264,8 +4262,8 @@ function dibujarSonar() {
 
     // Acento amarillo, como en el HUD
     sonarCtx.strokeStyle = 'rgba(255, 221, 119, 1)';
-    sonarCtx.shadowColor = 'rgba(255, 221, 119, 0.7)';
-    sonarCtx.shadowBlur = 10;
+    // sonarCtx.shadowColor = 'rgba(255, 221, 119, 0.7)'; // OPTIMIZADO
+    // sonarCtx.shadowBlur = 10; // OPTIMIZADO
     sonarCtx.lineWidth = 4;
     sonarCtx.beginPath();
     // Dibujar el acento en el lado derecho
@@ -4274,7 +4272,7 @@ function dibujarSonar() {
     sonarCtx.moveTo(centerX + SONAR_RADIUS * Math.cos(angle1), centerY + SONAR_RADIUS * Math.sin(angle1));
     sonarCtx.lineTo(centerX + SONAR_RADIUS * Math.cos(angle2), centerY + SONAR_RADIUS * Math.sin(angle2));
     sonarCtx.stroke();
-    sonarCtx.shadowBlur = 0;
+    // sonarCtx.shadowBlur = 0; // OPTIMIZADO
 
     sonarCtx.restore();
 }
@@ -4501,9 +4499,7 @@ function dibujarMascaraLuz() {
         for (const p of particulasPolvoMarino) {
             const particleAlpha = p.opacidad * (0.5 + p.profundidad * 0.5);
             fx.fillStyle = `rgba(207, 233, 255, ${particleAlpha})`;
-            fx.beginPath();
-            fx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            fx.fill();
+            fx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
         }
         fx.restore();
 
@@ -5444,14 +5440,14 @@ function dibujarParticulas() {
     ctx.save();
     // Partículas de polvo y ambiente (detrás de todo)
     ctx.globalCompositeOperation = 'lighter';
-    for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
+    for (const p of particulas) { ctx.globalAlpha = clamp(p.baseA * (0.65 + 0.35 * Math.sin(p.tw)), 0, 1); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2); }
 
     // Partículas de explosión (brillantes)
-    for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
+    for (const p of particulasExplosion) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2); }
 
     // Partículas de tinta/humo (oscuras)
     ctx.globalCompositeOperation = 'source-over';
-    for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }
+    for (const p of particulasTinta) { ctx.globalAlpha = clamp(p.vida / p.vidaMax, 0, 1) * 0.8; ctx.fillStyle = p.color; ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2); }
 
     // Burbujas (solo contorno)
     ctx.strokeStyle = '#aae2ff';
