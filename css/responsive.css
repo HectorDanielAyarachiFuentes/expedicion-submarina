@@ -6,8 +6,6 @@
 }
 
 @media (max-width: 600px) {
-
-    /* En pantallas pequeñas, el panel de controles ocupa más ancho */
     #gameplay-hints {
         width: 90%;
         padding: 1.5rem;
@@ -22,12 +20,10 @@
 
     #game-stats-overlay {
         width: calc(100% - 20px);
-        /* Ocupa casi todo el ancho */
         left: 10px;
         bottom: 10px;
         transform: translateY(120%);
-        /* Animación desde abajo */
-        animation: slideUpHud 0.6s 0.5s ease-out forwards;
+        animation: slideUpHud .6s .5s ease-out forwards;
     }
 
     @keyframes slideUpHud {
@@ -36,8 +32,4 @@
             opacity: 1;
         }
     }
-}
-
-@media (pointer: coarse) {
-    /* En dispositivos táctiles, los hints se ocultan por defecto, pero se pueden mostrar con el botón '?' */
 }

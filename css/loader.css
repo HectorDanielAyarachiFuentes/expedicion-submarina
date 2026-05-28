@@ -1,4 +1,4 @@
-/* ========= ESTILOS PARA PESTAÑAS DE CARGA INICIAL (AÑADIDO) ========= */
+/* ========= Pantalla de Carga Inicial ========= */
 #initial-loader {
     position: fixed;
     top: 0;
@@ -10,7 +10,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+    transition: opacity .8s ease-out, visibility .8s ease-out;
 }
 
 #initial-loader.fade-out {
@@ -30,7 +30,7 @@
 .loader-sub-container {
     position: relative;
     width: 96px;
-    height: 64px; /* Altura aproximada */
+    height: 64px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -60,7 +60,7 @@
 }
 
 @keyframes thrusterPulse {
-    0%, 40%, 100% { opacity: 0; transform: translateY(-50%) scaleX(0.5); }
+    0%, 40%, 100% { opacity: 0; transform: translateY(-50%) scaleX(.5); }
     50%, 90% { opacity: 1; transform: translateY(-50%) scaleX(1.2); }
 }
 
@@ -72,8 +72,8 @@
     transform: translateY(-50%);
     width: 120px;
     height: 4px;
-    background: #ff4d4d;
-    box-shadow: 0 0 10px #ff4d4d, 0 0 5px #ff0000;
+    background: var(--accent-red-light);
+    box-shadow: 0 0 10px var(--accent-red-light), 0 0 5px #ff0000;
     opacity: 0;
     z-index: 3;
     transform-origin: left center;
@@ -95,7 +95,7 @@
 .loader-bar-container {
     width: 250px;
     height: 12px;
-    background-color: #222;
+    background-color: var(--bar-bg);
     border: 2px solid var(--accent-blue);
     border-radius: 6px;
     overflow: hidden;
@@ -107,7 +107,7 @@
     height: 100%;
     background-color: var(--accent-yellow);
     box-shadow: 0 0 10px var(--accent-yellow);
-    animation: fakeLoading 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: fakeLoading 2.5s cubic-bezier(.4, 0, .2, 1) forwards;
 }
 
 @keyframes fakeLoading {

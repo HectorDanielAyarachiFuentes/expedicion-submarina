@@ -1,15 +1,13 @@
-/* ========= ESTILOS PARA LA VENTANA DE INFORMACIÓN (MEJORADA) ========= */
+/* ========= Ventana de Información ========= */
 .info-card {
     max-width: 750px;
     position: relative;
     padding-top: 80px;
-    /* Espacio para el canvas de animación */
 }
 
 #infoAnimCanvas {
     position: absolute;
     top: -60px;
-    /* Que sobresalga un poco */
     left: 50%;
     transform: translateX(-50%);
     width: 200px;
@@ -22,14 +20,11 @@
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    /* Reducido para el panel */
     text-align: left;
     margin: 0;
-    /* Reseteado para el panel */
     padding-bottom: 0;
     border-bottom: none;
     flex-wrap: wrap;
-    /* Para que se adapte en pantallas pequeñas */
 }
 
 .profile-pic {
@@ -46,29 +41,28 @@
 }
 
 .creator-info h3 {
-    margin: 0 0 0.5rem;
+    margin: 0 0 .5rem;
     color: var(--accent-yellow);
     font-size: 1.2rem;
 }
 
 .creator-bio {
-    font-family: monospace;
-    /* Una fuente más legible para texto largo */
-    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    font-size: .9rem;
     line-height: 1.5;
-    opacity: 0.9;
+    opacity: .9;
 }
 
 .social-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.8rem;
+    gap: .8rem;
     padding: 10px 18px;
     margin-top: 1rem;
 }
 
 .social-btn svg {
-    transition: transform 0.2s ease-out;
+    transition: transform .2s ease-out;
 }
 
 .social-btn:hover svg {
@@ -77,7 +71,6 @@
 
 .gallery {
     margin: 0;
-    /* Reseteado para el panel */
     padding-top: 0;
     border-top: none;
 }
@@ -98,9 +91,7 @@
     display: inline-block;
     position: relative;
     max-width: 350px;
-    /* Evita que la imagen sea demasiado ancha si es la única en la galería */
     margin: 0 auto;
-    /* Centra el item si el espacio de la grilla es mayor */
 }
 
 .gallery-item img {
@@ -108,25 +99,24 @@
     width: 100%;
     border-radius: 8px;
     border: 2px solid var(--hud-border-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform .3s ease, box-shadow .3s ease;
 }
 
 .gallery-item:hover img {
     transform: scale(1.05);
-    box-shadow: 0 0 15px rgba(126, 203, 255, 0.4);
+    box-shadow: 0 0 15px rgba(var(--accent-blue-rgb), .4);
 }
 
 .gallery-caption {
-    font-family: monospace;
-    font-size: 0.8rem;
-    margin-top: 0.5rem;
-    opacity: 0.8;
+    font-family: var(--font-mono);
+    font-size: .8rem;
+    margin-top: .5rem;
+    opacity: .8;
 }
 
-/* ===== NUEVA SECCIÓN: TECNOLOGÍAS ===== */
+/* ===== Tecnologías ===== */
 .tech-stack {
     margin: 0;
-    /* Reseteado para el panel */
     padding-top: 0;
     border-top: none;
 }
@@ -145,31 +135,31 @@
 }
 
 .tech-item {
-    background: rgba(0, 24, 48, 0.4);
-    border: 1px solid rgba(126, 203, 255, 0.15);
+    background: rgba(0, 24, 48, .4);
+    border: 1px solid rgba(var(--accent-blue-rgb), .15);
     border-radius: 8px;
     padding: 1rem 1.2rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: .5rem;
 }
 
 .tech-icon {
-    font-family: 'Press Start 2P', monospace;
+    font-family: var(--font-pixel);
     font-size: 1.2rem;
     color: var(--accent-yellow);
-    margin-bottom: 0.5rem;
+    margin-bottom: .5rem;
 }
 
 .tech-item p {
-    font-family: monospace;
-    font-size: 0.85rem;
+    font-family: var(--font-mono);
+    font-size: .85rem;
     line-height: 1.5;
-    opacity: 0.8;
+    opacity: .8;
     margin: 0;
 }
 
-/* ===== NUEVO: ESTILOS PARA PESTAÑAS DE INFORMACIÓN ===== */
+/* ===== Pestañas de Información ===== */
 .info-tabs {
     display: flex;
     border-bottom: 1px solid var(--hud-border-color);
@@ -177,22 +167,21 @@
 }
 
 .info-tab-btn {
-    font-family: 'Press Start 2P', monospace;
+    font-family: var(--font-pixel);
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
-    color: rgba(233, 243, 255, 0.6);
-    padding: 0.8rem 1.2rem;
-    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    color: rgba(233, 243, 255, .6);
+    padding: .8rem 1.2rem;
+    font-size: clamp(.8rem, 2vw, .9rem);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all .2s ease;
     margin-bottom: -1px;
-    /* Solapa el borde inferior del contenedor */
 }
 
 .info-tab-btn:hover {
     color: var(--text-light);
-    background-color: rgba(126, 203, 255, 0.1);
+    background-color: rgba(var(--accent-blue-rgb), .1);
 }
 
 .info-tab-btn.active {
@@ -202,7 +191,7 @@
 
 .info-tab-panel {
     display: none;
-    animation: fadeInPanel 0.4s ease;
+    animation: fadeInPanel .4s ease;
 }
 
 .info-tab-panel.active {
@@ -214,7 +203,6 @@
         opacity: 0;
         transform: translateY(10px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);

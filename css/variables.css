@@ -1,8 +1,7 @@
 /* ========= Variables y Estilos Globales ========= */
 :root {
+    /* --- Colores base --- */
     --bg-dark: #06131f;
-    /* Azul muy oscuro, casi negro */
-    --bg-card: #001830;
     --text-light: #e9f3ff;
     --accent-blue: #7ecbff;
     --accent-blue-dark: #003b8e;
@@ -11,25 +10,34 @@
     --accent-red: #b22222;
     --accent-red-light: #ff4d4d;
 
-    --hud-bg-color: rgba(6, 19, 31, 0.5);
-    /* Más transparente */
+    /* --- Colores RGB para uso con rgba() --- */
+    --accent-blue-rgb: 126, 203, 255;
+    --bg-dark-rgb: 6, 19, 31;
+    --accent-blue-dark-rgb: 0, 59, 142;
+
+    /* --- HUD --- */
+    --hud-bg-color: rgba(var(--bg-dark-rgb), .5);
     --hud-blur: 12px;
-    /* Más desenfoque */
-    --hud-border-color: rgba(126, 203, 255, 0.4);
+    --hud-border-color: rgba(var(--accent-blue-rgb), .4);
     --status-bar-height: 60px;
-    /* Reducido para un look más moderno */
-    --total-hud-height: var(--status-bar-height);
+
+    /* --- Funcionales --- */
+    --bar-bg: #222;
+    --glow-inset: inset 0 0 15px rgba(var(--accent-blue-rgb), .1);
+
+    /* --- Fuentes --- */
+    --font-pixel: 'Press Start 2P', monospace;
+    --font-mono: monospace;
 }
 
 html,
 body {
     margin: 0;
     height: 100%;
-    /* Ponemos la imagen de fondo de nuevo para evitar que el menú se vea de un color sólido azul antes de iniciar el juego */
     background: var(--bg-dark);
     background-image: url('../img/Fondos/bg_back.png');
     background-size: cover;
     background-position: center;
-    font-family: 'Press Start 2P', monospace;
+    font-family: var(--font-pixel);
     overflow: hidden;
 }

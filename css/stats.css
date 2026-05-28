@@ -1,51 +1,35 @@
-/* ===== NUEVO: HUD DINÁMICO DE ESTADÍSTICAS (HTML) ===== */
+/* ===== HUD DINÁMICO DE ESTADÍSTICAS ===== */
 #game-stats-overlay {
-    /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
     position: absolute;
     bottom: 3vh;
-    /* Ajustado para el nuevo visor */
     left: 3vw;
-    /* Ajustado para el nuevo visor */
     z-index: 6;
     pointer-events: none;
-    /* No debe interferir con el juego */
-
     width: 280px;
-    /* Ancho del panel */
-
     display: flex;
     flex-direction: column;
     gap: 10px;
-    /* Espacio entre todos los items */
 
-    /* --- NUEVO ESTILO DIAGONAL PARA COINCIDIR CON EL HUD SUPERIOR --- */
-    background: linear-gradient(300deg, rgba(0, 59, 142, 0.7), rgba(6, 19, 31, 0.5) 70%);
+    /* Estilo diagonal para coincidir con el HUD superior */
+    background: linear-gradient(300deg, rgba(var(--accent-blue-dark-rgb), .7), rgba(var(--bg-dark-rgb), .5) 70%);
     border-style: solid;
     border-width: 2px;
     border-image-source: linear-gradient(to top, var(--accent-blue), transparent);
     border-image-slice: 1;
     border-left: 5px solid var(--accent-yellow);
     border-radius: 0 10px 10px 0;
-    /* El clip-path se encargará de la esquina superior derecha */
     padding: 12px 20px 12px 16px;
-    /* Padding ajustado para el corte */
     clip-path: polygon(0 0, 95% 0, 100% 100%, 0% 100%);
-    box-shadow:
-        inset 0 0 15px rgba(126, 203, 255, 0.1),
-        -5px 0 15px -5px var(--accent-yellow);
+    box-shadow: var(--glow-inset), -5px 0 15px -5px var(--accent-yellow);
 
     color: var(--text-light);
-    font-size: clamp(0.7rem, 1.8vw, 0.9rem);
-    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
-    /* Sombra más oscura para legibilidad */
+    font-size: clamp(.7rem, 1.8vw, .9rem);
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, .7);
 
     /* Animación de entrada */
     transform: translateX(-120%);
-    /* La animación se mantiene */
     opacity: 0;
-    /* La animación se mantiene */
-    animation: slideInHud 0.6s 0.5s ease-out forwards;
-    /* La animación se mantiene */
+    animation: slideInHud .6s .5s ease-out forwards;
 }
 
 @keyframes slideInHud {
@@ -62,35 +46,30 @@
 }
 
 #game-stats-overlay .stat-label {
-    opacity: 0.8;
+    opacity: .8;
     text-transform: uppercase;
     margin-right: 15px;
-    /* Asegura espacio entre etiqueta y valor */
 }
 
 #game-stats-overlay .stat-value,
 #statAssassinValue {
     color: var(--accent-yellow);
-    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-size: clamp(.8rem, 2vw, 1rem);
     text-align: right;
-    /* Alinea los valores a la derecha */
-    transition: color 0.2s ease-out, text-shadow 0.2s ease-out;
-    /* Transición suave */
+    transition: color .2s ease-out, text-shadow .2s ease-out;
 }
 
-/* NUEVO: Estilo para el velocímetro cuando el impulso está activo */
+/* Velocímetro cuando el impulso está activo */
 #game-stats-overlay .stat-value.boosting {
     color: var(--accent-blue);
-    /* Azul brillante */
     text-shadow: 0 0 8px var(--accent-blue);
-    /* Resplandor */
 }
 
 .stat-divider {
     border: none;
     height: 1px;
     background-color: var(--hud-border-color);
-    opacity: 0.4;
+    opacity: .4;
     margin: 4px 0;
 }
 
@@ -131,13 +110,11 @@
         opacity: 1;
         color: var(--text-light);
     }
-
     50% {
         transform: scale(1.2);
-        opacity: 0.5;
+        opacity: .5;
         color: var(--accent-yellow);
     }
-
     100% {
         transform: scale(1);
         opacity: 1;
@@ -146,11 +123,8 @@
 
 .progress-bar-container {
     width: 120px;
-    /* Un poco más anchas */
     height: 10px;
-    /* Un poco más altas */
-    background-color: #222;
-    /* Fondo más oscuro */
+    background-color: var(--bar-bg);
     border: 1px solid #555;
     border-radius: 5px;
     overflow: hidden;
@@ -159,41 +133,32 @@
 .progress-bar {
     height: 100%;
     width: 0%;
-    transition: width 0.1s ease-out, background-color 0.2s ease;
+    transition: width .1s ease-out, background-color .2s ease;
     border-radius: 4px;
 }
 
 .boost-bar {
-    background: linear-gradient(to right, #007bff, #7ecbff);
+    background: linear-gradient(to right, #007bff, var(--accent-blue));
 }
 
 .boost-bar.reloading {
     background: linear-gradient(to right, #ff6666, #ff0000);
 }
 
-/* NUEVO: Estilo para parpadeo con energía baja */
 .boost-bar.low-energy {
-    animation: lowEnergyFlash 0.7s infinite step-end;
+    animation: lowEnergyFlash .7s infinite step-end;
 }
 
 @keyframes lowEnergyFlash {
-    50% {
-        background: linear-gradient(to right, #ff8c00, #ff4500);
-    }
-
-    /* Naranja/Rojo de advertencia */
+    50% { background: linear-gradient(to right, #ff8c00, #ff4500); }
 }
 
 .laser-bar {
-    background: linear-gradient(to right, #ff4d4d, #b22222);
+    background: linear-gradient(to right, var(--accent-red-light), var(--accent-red));
 }
 
 .laser-bar.active {
-    box-shadow: 0 0 8px #ff4d4d;
-}
-
-.shield-bar {
-    /* El color de fondo ahora es controlado por JavaScript */
+    box-shadow: 0 0 8px var(--accent-red-light);
 }
 
 .shield-bar.reloading {
@@ -204,20 +169,12 @@
     box-shadow: 0 0 8px #add8e6;
 }
 
-/* La animación de impacto ahora no usa 'forwards' para permitir que el estilo de JS se reaplique */
+/* La animación de impacto no usa 'forwards' para permitir que el estilo inline de JS se reaplique */
 .shield-bar.hit {
-    animation: shieldHitFlash 0.4s;
+    animation: shieldHitFlash .4s;
 }
 
 @keyframes shieldHitFlash {
-    0% {
-        background: #fff;
-    }
-
-    50% {
-        background: #add8e6;
-    }
-
-    /* Al final de la animación, el estilo inline de JS tomará el control de nuevo */
-    100% {}
+    0% { background: #fff; }
+    50% { background: #add8e6; }
 }

@@ -1,4 +1,4 @@
-/* ========= ESTILOS PARA OVERLAYS Y MENÚS (AÑADIDO) ========= */
+/* ========= ESTILOS PARA OVERLAYS Y MENÚS ========= */
 #overlay,
 #infoOverlay,
 #controller-disconnect-overlay,
@@ -8,8 +8,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    /* Efecto glassmorphism - fondo semi-transparente para ver el ambiente marino */
-    background: rgba(6, 19, 31, 0.35);
+    background: rgba(var(--bg-dark-rgb), .35);
     backdrop-filter: blur(6px) saturate(1.3);
     -webkit-backdrop-filter: blur(6px) saturate(1.3);
     z-index: 10;
@@ -17,16 +16,20 @@
     place-items: center;
     color: var(--text-light);
     text-align: center;
-    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    font-size: clamp(.9rem, 2.5vw, 1.1rem);
     line-height: 1.6;
-    animation: fadeInHud 0.5s ease-out forwards;
-    transition: background-color 0.5s ease, backdrop-filter 0.5s ease;
+    animation: fadeInHud .5s ease-out forwards;
+    transition: background-color .5s ease, backdrop-filter .5s ease;
+}
+
+@keyframes fadeInHud {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .info-card,
 #controller-disconnect-overlay .menu-card {
     z-index: 11;
-    /* Asegura que estén por encima del overlay principal */
 }
 
 .menu-card {
@@ -38,52 +41,42 @@
     padding: clamp(1rem, 5vw, 2.5rem);
     max-width: 750px;
     width: 90%;
-    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, .5);
 }
 
-/* Estilo especial para el menú inicial, sin desenfoque */
-#overlay.initial-menu {
-    /* Este estilo ya no es necesario, .menu-card se encarga de todo */
-}
-
-/* Estilos para el nuevo mensaje de bienvenida */
+/* Estilos para el mensaje de bienvenida */
 #welcomeMessage {
     margin: 2rem 0;
     padding: 1.5rem;
-    background-color: rgba(0, 10, 20, 0.3);
-    /* Más sutil para dejar ver el blur */
-    border: 1px solid rgba(126, 203, 255, 0.25);
+    background-color: rgba(0, 10, 20, .3);
+    border: 1px solid rgba(var(--accent-blue-rgb), .25);
     border-radius: 8px;
     line-height: 1.6;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, .2);
 }
 
 #welcomeTitle {
     color: var(--accent-yellow);
     font-size: clamp(1.5rem, 4vw, 2rem);
-    margin: 0 0 0.75rem;
-    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+    margin: 0 0 .75rem;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, .6);
 }
 
 #welcomeSubtitle {
-    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-    opacity: 0.9;
+    font-size: clamp(.9rem, 2.5vw, 1.1rem);
+    opacity: .9;
     margin: 0;
-    font-family: monospace;
+    font-family: var(--font-mono);
     color: var(--accent-blue-light);
 }
 
-/* Estilos para el logo del menú principal para centrarlo */
 #mainMenuHeader {
     text-align: center;
-    /* Asegura centrado para elementos inline */
 }
 
 #brandLogo {
     display: block;
-    /* Se comporta como un bloque para poder usar márgenes automáticos */
-    margin: 0 auto 12px auto;
-    /* Centra horizontalmente y añade margen inferior */
+    margin: 0 auto 12px;
     width: min(350px, 80vw);
     image-rendering: pixelated;
 }
@@ -95,7 +88,6 @@
     text-transform: uppercase;
 }
 
-/* Imagen para las pantallas de menú */
 #captainImage {
     display: block;
     margin: 1.5rem auto;
@@ -103,14 +95,14 @@
     height: 180px;
     border-radius: 50%;
     border: 4px solid var(--accent-blue);
-    box-shadow: 0 0 20px rgba(126, 203, 255, 0.6);
+    box-shadow: 0 0 20px rgba(var(--accent-blue-rgb), .6);
     object-fit: contain;
-    background-color: rgba(0, 10, 20, 0.4);
-    animation: fadeInPanel 0.6s 0.2s ease-out backwards;
+    background-color: rgba(0, 10, 20, .4);
+    animation: fadeInPanel .6s .2s ease-out backwards;
 }
 
 .menu-card p {
-    margin: 0.8rem 0;
+    margin: .8rem 0;
 }
 
 .menu-card ul {
@@ -121,7 +113,7 @@
 }
 
 .menu-card ul li {
-    margin-bottom: 0.5rem;
+    margin-bottom: .5rem;
 }
 
 #finalStats {
@@ -139,13 +131,11 @@
 }
 
 @keyframes blink-animation {
-    to {
-        visibility: hidden;
-    }
+    to { visibility: hidden; }
 }
 
 .menubtn {
-    font-family: 'Press Start 2P', monospace;
+    font-family: var(--font-pixel);
     background-color: var(--accent-blue-dark);
     color: var(--text-light);
     border: 2px solid var(--accent-blue);
@@ -153,9 +143,9 @@
     font-size: 1rem;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all .2s ease;
     border-radius: 8px;
-    margin: 0.5rem;
+    margin: .5rem;
 }
 
 .menubtn:hover {
@@ -165,16 +155,14 @@
 }
 
 #bossHealthContainer {
-    /* CAMBIO: Ahora es 'absolute' para moverse con el live-hud-container */
     position: absolute;
     bottom: 3vh;
-    /* Ajustado para el nuevo visor */
     left: 50%;
     transform: translateX(-50%);
     width: 80%;
     max-width: 600px;
     height: 20px;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, .5);
     border: 2px solid var(--accent-red);
     border-radius: 10px;
     z-index: 6;
@@ -185,7 +173,7 @@
 #bossHealthBar {
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, #ff4d4d, #b22222);
+    background: linear-gradient(90deg, var(--accent-red-light), var(--accent-red));
     border-radius: 6px;
-    transition: width 0.3s ease-in-out;
+    transition: width .3s ease-in-out;
 }
