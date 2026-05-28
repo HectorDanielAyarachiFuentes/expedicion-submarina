@@ -1,0 +1,43 @@
+/* ========= Media Queries para Responsividad ========= */
+@media (max-width: 820px) {
+    kbd.key-spacebar {
+        width: 80px;
+    }
+}
+
+@media (max-width: 600px) {
+
+    /* En pantallas pequeñas, el panel de controles ocupa más ancho */
+    #gameplay-hints {
+        width: 90%;
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+
+    #fsBtn,
+    #shareBtn,
+    #githubBtn {
+        display: none;
+    }
+
+    #game-stats-overlay {
+        width: calc(100% - 20px);
+        /* Ocupa casi todo el ancho */
+        left: 10px;
+        bottom: 10px;
+        transform: translateY(120%);
+        /* Animación desde abajo */
+        animation: slideUpHud 0.6s 0.5s ease-out forwards;
+    }
+
+    @keyframes slideUpHud {
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+@media (pointer: coarse) {
+    /* En dispositivos táctiles, los hints se ocultan por defecto, pero se pueden mostrar con el botón '?' */
+}

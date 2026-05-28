@@ -1,0 +1,58 @@
+/* ========= ESTILOS PARA EL SELECTOR DE NIVELES (AÑADIDO) ========= */
+#level-selector-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.level-select-image {
+    display: block;
+    margin: 1.5rem auto;
+    /* Margen superior/inferior y centrado horizontal */
+    max-width: 250px;
+    width: 60%;
+    border-radius: 10px;
+    border: 3px solid var(--accent-blue);
+    box-shadow: 0 0 15px rgba(126, 203, 255, 0.5);
+    background-color: var(--bg-dark);
+    /* Fondo por si la imagen tiene transparencia */
+}
+
+.levelbtn {
+    font-family: 'Press Start 2P', monospace;
+    width: 60px;
+    height: 60px;
+    background-color: var(--accent-blue-dark);
+    color: var(--text-light);
+    border: 2px solid var(--accent-blue);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.levelbtn:hover:not(:disabled),
+.levelbtn.selected {
+    background-color: var(--accent-blue);
+    color: var(--bg-dark);
+    transform: scale(1.1);
+}
+
+.levelbtn:disabled {
+    background-color: #334155;
+    border-color: #64748b;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Estilo para el ícono de candado en botones deshabilitados */
+.levelbtn:disabled::before {
+    content: '🔒';
+    /* Puedes usar un SVG si prefieres */
+    font-size: 1.5rem;
+}

@@ -1,0 +1,35 @@
+/* ========= Variables y Estilos Globales ========= */
+:root {
+    --bg-dark: #06131f;
+    /* Azul muy oscuro, casi negro */
+    --bg-card: #001830;
+    --text-light: #e9f3ff;
+    --accent-blue: #7ecbff;
+    --accent-blue-dark: #003b8e;
+    --accent-blue-light: #cfe9ff;
+    --accent-yellow: #ffdd77;
+    --accent-red: #b22222;
+    --accent-red-light: #ff4d4d;
+
+    --hud-bg-color: rgba(6, 19, 31, 0.5);
+    /* Más transparente */
+    --hud-blur: 12px;
+    /* Más desenfoque */
+    --hud-border-color: rgba(126, 203, 255, 0.4);
+    --status-bar-height: 60px;
+    /* Reducido para un look más moderno */
+    --total-hud-height: var(--status-bar-height);
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    /* Ponemos la imagen de fondo de nuevo para evitar que el menú se vea de un color sólido azul antes de iniciar el juego */
+    background: var(--bg-dark);
+    background-image: url('../img/Fondos/bg_back.png');
+    background-size: cover;
+    background-position: center;
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
+}
