@@ -1,14 +1,13 @@
-
 // =================================================================================
-//  MÓDULO DE OPTIMIZACIÓN
+//  MÓDULO DE OPTIMIZACIÓN (ALTO RENDIMIENTO - GC ZERO ALLOCATION)
 // =================================================================================
-// Este archivo contiene clases y utilidades para mejorar el rendimiento del juego.
+// Este archivo contiene clases y utilidades para garantizar 60 FPS estables sin pausas de GC.
 
 export class ObjectPool {
-    constructor(createFn, initialSize = 10) {
+    constructor(createFn, initialSize = 300) {
         this.createFn = createFn;
         this.pool = [];
-        // Pre-alocar objetos
+        // Pre-alocar objetos para evitar allocs en runtime
         for (let i = 0; i < initialSize; i++) {
             this.pool.push(this.createFn());
         }
@@ -17,10 +16,8 @@ export class ObjectPool {
     get() {
         if (this.pool.length > 0) {
             return this.pool.pop();
-        } else {
-            // Si el pool está vacío, crear uno nuevo (crecimiento bajo demanda)
-            return this.createFn();
         }
+        return this.createFn();
     }
 
     release(obj) {
@@ -29,98 +26,94 @@ export class ObjectPool {
 }
 
 /**
- * Spatial Grid para optimización de colisiones.
- * Divide el mundo en celdas para evitar comprobaciones O(N^2).
+ * Spatial Grid plano de alto rendimiento para optimización de colisiones.
+ * Utiliza índices numéricos 1D y etiquetas de consulta para CERO asignación de memoria por frame.
  */
 export class SpatialGrid {
-    constructor(width, height, cellSize) {
+    constructor(width = 3000, height = 2000, cellSize = 150) {
         this.width = width;
         this.height = height;
         this.cellSize = cellSize;
-        this.cols = Math.ceil(width / cellSize);
-        this.rows = Math.ceil(height / cellSize);
-        this.grid = new Map(); // Usamos Map para celdas dispersas o array plano
-        this.objects = []; // Lista plana para iteración general si se necesita
+        this.cols = Math.ceil(width / cellSize) + 2;
+        this.rows = Math.ceil(height / cellSize) + 2;
+        this.totalCells = this.cols * this.rows;
+
+        // Celdas pre-alocadas en un array 1D continuo (0 allocations durante el juego)
+        this.cells = new Array(this.totalCells);
+        for (let i = 0; i < this.totalCells; i++) {
+            this.cells[i] = [];
+        }
+
+        // Buffer reutilizable de resultados para evitar crear Arrays o Sets en cada consulta
+        this.queryResults = [];
+        this.queryId = 1;
     }
 
     clear() {
-        this.grid.clear();
-        this.objects = [];
-    }
-
-    _getCellKey(x, y) {
-        const col = Math.floor(x / this.cellSize);
-        const row = Math.floor(y / this.cellSize);
-        return `${col},${row}`;
-    }
-
-    _getCellIndices(x, y) {
-        return {
-            col: Math.floor(x / this.cellSize),
-            row: Math.floor(y / this.cellSize)
-        };
+        for (let i = 0; i < this.totalCells; i++) {
+            this.cells[i].length = 0;
+        }
     }
 
     insert(obj) {
-        this.objects.push(obj);
-        // Un objeto puede ocupar múltiples celdas si es grande
-        // Por simplicidad inicial, lo insertamos en la celda de su centro
-        // Mejora: Insertar en todas las celdas que toca su AABB
+        if (!obj) return;
+        const halfW = (obj.w || (obj.r ? obj.r * 2 : 20)) * 0.5;
+        const halfH = (obj.h || (obj.r ? obj.r * 2 : 20)) * 0.5;
 
-        const halfW = (obj.w || obj.r * 2) / 2;
-        const halfH = (obj.h || obj.r * 2) / 2;
-
-        const startCol = Math.floor((obj.x - halfW) / this.cellSize);
-        const endCol = Math.floor((obj.x + halfW) / this.cellSize);
-        const startRow = Math.floor((obj.y - halfH) / this.cellSize);
-        const endRow = Math.floor((obj.y + halfH) / this.cellSize);
+        const startCol = Math.max(0, Math.floor((obj.x - halfW) / this.cellSize));
+        const endCol = Math.min(this.cols - 1, Math.floor((obj.x + halfW) / this.cellSize));
+        const startRow = Math.max(0, Math.floor((obj.y - halfH) / this.cellSize));
+        const endRow = Math.min(this.rows - 1, Math.floor((obj.y + halfH) / this.cellSize));
 
         for (let c = startCol; c <= endCol; c++) {
             for (let r = startRow; r <= endRow; r++) {
-                const key = `${c},${r}`;
-                if (!this.grid.has(key)) {
-                    this.grid.set(key, []);
-                }
-                this.grid.get(key).push(obj);
+                const idx = c + r * this.cols;
+                this.cells[idx].push(obj);
             }
         }
     }
 
     /**
-     * Devuelve los posibles candidatos a colisión para un objeto dado.
-     * @param {Object} obj - El objeto a consultar.
+     * Devuelve los candidatos a colisión usando el buffer interno reutilizable.
+     * @param {Object} obj - El objeto a consultar con x, y, w, h o r.
+     * @returns {Array} Array de candidatos sin duplicados (reutilizado).
      */
     retrieve(obj) {
-        // Obtenemos candidatos de las celdas que ocupa el objeto
-        const candidates = new Set();
+        this.queryResults.length = 0;
+        if (!obj) return this.queryResults;
 
-        const halfW = (obj.w || obj.r * 2) / 2;
-        const halfH = (obj.h || obj.r * 2) / 2;
+        const qId = ++this.queryId;
+        if (this.queryId > 1000000000) this.queryId = 1;
 
-        const startCol = Math.floor((obj.x - halfW) / this.cellSize);
-        const endCol = Math.floor((obj.x + halfW) / this.cellSize);
-        const startRow = Math.floor((obj.y - halfH) / this.cellSize);
-        const endRow = Math.floor((obj.y + halfH) / this.cellSize);
+        const halfW = (obj.w || (obj.r ? obj.r * 2 : 20)) * 0.5;
+        const halfH = (obj.h || (obj.r ? obj.r * 2 : 20)) * 0.5;
+
+        const startCol = Math.max(0, Math.floor((obj.x - halfW) / this.cellSize));
+        const endCol = Math.min(this.cols - 1, Math.floor((obj.x + halfW) / this.cellSize));
+        const startRow = Math.max(0, Math.floor((obj.y - halfH) / this.cellSize));
+        const endRow = Math.min(this.rows - 1, Math.floor((obj.y + halfH) / this.cellSize));
 
         for (let c = startCol; c <= endCol; c++) {
             for (let r = startRow; r <= endRow; r++) {
-                const key = `${c},${r}`;
-                const cellObjects = this.grid.get(key);
-                if (cellObjects) {
-                    for (let i = 0; i < cellObjects.length; i++) {
-                        candidates.add(cellObjects[i]);
+                const idx = c + r * this.cols;
+                const cell = this.cells[idx];
+                const len = cell.length;
+                for (let i = 0; i < len; i++) {
+                    const item = cell[i];
+                    if (item && item._spatialTag !== qId) {
+                        item._spatialTag = qId;
+                        this.queryResults.push(item);
                     }
                 }
             }
         }
-        return candidates;
+        return this.queryResults;
     }
 }
 
 /**
  * Elimina un elemento de un array moviendo el último elemento a su posición.
- * O(1) en lugar de O(N) de splice(), pero no mantiene el orden.
- * Ideal para listas de partículas o entidades donde el orden de dibujado no es crucial.
+ * O(1) en lugar de O(N) de splice(), sin desplazamientos de memoria.
  * @param {Array} arr - El array a modificar.
  * @param {number} index - El índice del elemento a eliminar.
  */

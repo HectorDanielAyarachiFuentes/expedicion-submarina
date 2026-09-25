@@ -467,13 +467,15 @@ function calcularCarriles() {
 setContextGetters(() => jugador, () => estadoJuego, () => ({ W, H }));
 setOnHudShake((intensity) => { if (typeof triggerHudShake === 'function') triggerHudShake(intensity); });
 
+const LISTA_GRUPOS_PARTICULAS = [particulas, particulasExplosion, particulasTinta];
 function actualizarParticulas(dt) {
-    for (let arr of [particulas, particulasExplosion, particulasTinta]) {
+    for (let g = 0; g < 3; g++) {
+        const arr = LISTA_GRUPOS_PARTICULAS[g];
         for (let i = arr.length - 1; i >= 0; i--) {
             const p = arr[i];
             p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; p.tw += dt * 2.0;
 
-            if (arr === particulas) {
+            if (g === 0) {
                 // Las partículas de ambiente se reciclan al salir de pantalla
                 if (p.x < -8 || p.y < -8) { p.x = W + 10 + Math.random() * 20; p.y = H * Math.random(); }
             } else {
