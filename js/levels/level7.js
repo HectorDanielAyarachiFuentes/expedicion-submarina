@@ -1,8 +1,7 @@
 // js/level7.js
 'use strict';
 
-import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo, generarTrozoBallena, cargarImagen } from '../game/game.js';
-import { getLevelSpeed } from './levels.js';
+import { animales, W, H, estadoJuego, activarSlowMotion, agregarPuntos, ctx, jugador, perderJuego, S, clamp, generarExplosion, MIERDEI_SPRITE_DATA, generarAnimal, mierdeiImg, mierdeiListo, generarTrozoBallena, cargarImagen, dificultadBase } from '../game/game.js';
 import { proyectiles, torpedos } from '../game/armas/weapons.js';
 
 // --- ESTADO DEL NIVEL 7 ---
@@ -27,8 +26,10 @@ function spawnMierdei() {
  * Genera una criatura 'mierdei' agresiva (más rápida y grande).
  */
 function spawnMierdeiAgresivo() {
-    // Usa la función centralizada con overrides para hacerlo más fuerte
-    const overrides = { velocidad: getLevelSpeed() + 120, ancho: 150 };
+    // Usa la función centralizada con overrides para hacerlo más fuerte sin depender circularmente de levels.js
+    const dif = typeof dificultadBase === 'function' ? dificultadBase() : 0;
+    const velocidadBaseNivel7 = (260 + (520 - 260) * dif) * 1.2;
+    const overrides = { velocidad: velocidadBaseNivel7 + 120, ancho: 150 };
     generarAnimal(false, 'mierdei', overrides);
 }
 

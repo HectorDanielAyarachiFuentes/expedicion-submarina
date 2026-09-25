@@ -1,8 +1,12 @@
 // js/main.js
 'use strict';
 
-// Importamos las dos funciones principales que necesitamos del motor del juego
-import { init, gameLoop } from './game/game.js';
+// Importamos el motor del juego y el gestor de niveles
+import { init, gameLoop, setLevelManager } from './game/game.js';
+import * as Levels from './levels/levels.js';
+
+// Conectamos el gestor de niveles al motor mediante inyección de dependencias (elimina dependencias circulares)
+setLevelManager(Levels);
 
 // Inicializa toda la lógica del juego, los eventos, el estado y la UI.
 init();

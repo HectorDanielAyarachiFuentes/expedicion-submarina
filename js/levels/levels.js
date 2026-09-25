@@ -12,23 +12,9 @@ import * as Level8 from './level8.js';
 import * as Level9 from './level9.js';
 import * as Level10 from './level10.js';
 
-// Importamos dependencias de game.js
-import { estadoJuego, dificultadBase, animales, S, generarGotasSangre } from '../game/game.js';
-
-// 2. CONFIGURACIÓN CENTRALIZADA DE NIVELES
-// He movido el multiplicador de velocidad aquí para que toda la configuración esté en un solo lugar.
-export const CONFIG_NIVELES = [
-  { nombre: 'NIVEL 1: CAÑÓN DE MAR DEL PLATA', objetivo: 'Captura 10 especímenes', meta: 25, tipo: 'capture', speedMultiplier: 1.0, theme: 'default' },
-  { nombre: 'NIVEL 2: FOSA ABISAL', objetivo: 'Sobrevive 60 segundos', meta: 60, tipo: 'survive', speedMultiplier: 1.4, theme: 'abyssal' },
-  { nombre: 'NIVEL 3: LA GUARIDA DEL KRAKEN', objetivo: 'Derrota al jefe', meta: 1, tipo: 'boss', speedMultiplier: 1.0, theme: 'volcanic' },
-  { nombre: 'NIVEL 4: CAMPO DE ESCOMBROS', objetivo: 'Sobrevive 90 segundos', meta: 90, tipo: 'survive', speedMultiplier: 1.0, theme: 'default' },
-  { nombre: 'NIVEL 5: COLAPSO DE LA FOSA', objetivo: 'Escapa durante 60 segundos', meta: 60, tipo: 'survive', speedMultiplier: 0, theme: 'abyssal' }, 
-  { nombre: 'NIVEL 6: EL VORTEX DE LAS PROFUNDIDADES', objetivo: 'Sobrevive 120 segundos', meta: 120, tipo: 'survive', speedMultiplier: 0, theme: 'kelp' }, 
-  { nombre: "NIVEL 7: LA FOSA DE MIERDEI", objetivo: "¡Nivel de bonus! Supera el desafío.", meta: 1, tipo: 'boss', speedMultiplier: 1.2, theme: 'kelp' },
-  { nombre: "NIVEL 8: ABISMO PROFUNDO", objetivo: "Supera los desafíos del abismo", meta: 25, tipo: 'boss', speedMultiplier: 1.5, theme: 'abyssal' },
-  { nombre: "NIVEL 9: EL ASESINO DE BALLENAS", objetivo: "Completa la cacería", meta: 1, tipo: 'boss', speedMultiplier: 1.1, theme: 'default' },
-  { nombre: "NIVEL 10: CARRERA NUCLEAR", objetivo: "Recorre 5km en menos de 5 minutos", meta: 5000, tipo: 'distancia', speedMultiplier: 1.0, theme: 'volcanic' }
-];
+// 2. CONFIGURACIÓN CENTRALIZADA DE NIVELES (Importada desde config.js)
+import { CONFIG_NIVELES } from './config.js';
+export { CONFIG_NIVELES };
 
 // 3. MAPA DE MÓDULOS DE NIVEL
 // Este objeto asocia el número de nivel con su módulo importado.
@@ -151,21 +137,6 @@ export function onFallo() {
  * @param {string} tipoAnimal
  */
 export function onKill(tipoAnimal) {
-    // --- LÓGICA GLOBAL AL MATAR UNA CRIATURA ---
-    // Si se mata una cría de ballena, todas las ballenas adultas en pantalla se enfurecen.
-    if (tipoAnimal === 'baby_whale') {
-        S.reproducir('boss_hit'); // Sonido de furia
-        for (const animal of animales) {
-            if (animal.tipo === 'whale' && !animal.isEnraged) {
-                animal.isEnraged = true;
-                animal.vx *= 2.5; // Aumenta su velocidad drásticamente
-                // Efecto visual de furia
-                generarGotasSangre(animal.x, animal.y);
-            }
-        }
-    }
-    // --- FIN DE LA LÓGICA GLOBAL ---
-
     if (activeLevelModule && typeof activeLevelModule.onKill === 'function') {
         try {
             activeLevelModule.onKill(tipoAnimal);
@@ -180,14 +151,13 @@ export function onKill(tipoAnimal) {
 
 /**
  * Calcula la velocidad de movimiento de los enemigos para el nivel actual.
- * Ahora usa el multiplicador definido en CONFIG_NIVELES para mayor claridad.
+ * @param {number} nivel - Número del nivel
+ * @param {number} dificultad - Factor de dificultad base (0 a 1)
  */
-export function getLevelSpeed() {
-    if (!estadoJuego) return 260;
-    
-    const config = CONFIG_NIVELES[estadoJuego.nivel - 1];
+export function getLevelSpeed(nivel = 1, dificultad = 0) {
+    const config = CONFIG_NIVELES[(nivel || 1) - 1];
     const multiNivel = config ? config.speedMultiplier : 1.0;
 
-    let spd = 260 + (520 - 260) * dificultadBase();
+    let spd = 260 + (520 - 260) * dificultad;
     return spd * multiNivel;
 }

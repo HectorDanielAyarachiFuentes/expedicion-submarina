@@ -20,8 +20,54 @@ window.onerror = function (message, source, lineno, colno, error) {
 // =================================================================================
 
 // --- Módulos ---
-import * as Levels from '../levels/levels.js';
+import { CONFIG_NIVELES } from '../levels/config.js';
 import * as Weapons from './armas/weapons.js';
+
+// Gestor de niveles desacoplado (inyección de dependencias para eliminar ciclos)
+let Levels = {
+    initLevel: () => {},
+    updateLevel: () => {},
+    drawLevel: () => {},
+    getEstadoMision: () => null,
+    onAnimalCazado: () => {},
+    onFallo: () => {},
+    onKill: () => {},
+    getLevelSpeed: (n = 1, d = 0) => {
+        const config = CONFIG_NIVELES[(n || 1) - 1];
+        const multi = config ? config.speedMultiplier : 1.0;
+        return (260 + (520 - 260) * (d || 0)) * multi;
+    },
+    CONFIG_NIVELES
+};
+
+export function setLevelManager(manager) {
+    if (manager) {
+        Levels = manager;
+        if (!Levels.CONFIG_NIVELES) Levels.CONFIG_NIVELES = CONFIG_NIVELES;
+        const originalOnKill = manager.onKill;
+        Levels.onKill = (tipo) => {
+            verificarFuriaBallenas(tipo);
+            if (typeof originalOnKill === 'function') originalOnKill(tipo);
+        };
+    }
+}
+
+export function verificarFuriaBallenas(tipoAnimal) {
+    if (tipoAnimal === 'baby_whale') {
+        if (S && typeof S.reproducir === 'function') S.reproducir('boss_hit');
+        if (Array.isArray(animales)) {
+            for (const animal of animales) {
+                if (animal.tipo === 'whale' && !animal.isEnraged) {
+                    animal.isEnraged = true;
+                    animal.vx *= 2.5;
+                    if (typeof generarGotasSangre === 'function') {
+                        generarGotasSangre(animal.x, animal.y);
+                    }
+                }
+            }
+        }
+    }
+}
 
 // --- Variables para la Galería de Créditos ---
 // Puedes agregar más imágenes aquí si tienes más archivos (ej: 'img/imgcreditos/dulce2.jpg')
@@ -38,11 +84,110 @@ let a_creditos_imagen_actual = 0;
 let offscreenCtx = null;
 let offscreenCanvas = null;
 
-// --- OPTIMIZACIÓN ---
-import { ObjectPool, SpatialGrid, fastRemove } from './optimization.js';
+// --- OPTIMIZACIÓN Y SISTEMA DE PARTÍCULAS ---
+import { SpatialGrid, fastRemove } from './optimization.js';
+import {
+    particlePool,
+    particulas,
+    particulasExplosion,
+    particulasTinta,
+    particulasBurbujas,
+    particulasCasquillos,
+    whaleDebris,
+    particulasPolvoMarino,
+    pilotos,
+    proyectilesEnemigos,
+    trozosHumanos,
+    escombrosSubmarino,
+    SUBMARINE_DEBRIS_PATHS,
+    PILOT_DEBRIS_PATHS,
+    WHALE_DEBRIS_PATHS,
+    generarParticula,
+    actualizarCasquillos,
+    generarBurbujaPropulsion,
+    generarRafagaBurbujasDisparo,
+    generarChorroDeAgua,
+    generarExplosion,
+    generarNubeDeTinta,
+    generarTrozoBallena,
+    generarTrozosHumanos,
+    generarEscombrosSubmarino,
+    generarGotasSangre,
+    generarBurbujasDeSangre,
+    generarBurbujasEmbestidaTiburom,
+    generarHumoDaño,
+    setOnHudShake,
+    setContextGetters
+} from './particles.js';
+import { generarAnimal as spawnerGenerarAnimal, setSpawnerContextGetter } from './spawner.js';
+import {
+    teclas,
+    gamepadConectado,
+    prevGamepadButtons,
+    actualizarGamepad,
+    actualizarGamepadMenu,
+    actualizarGamepadJuego,
+    abrirMenuPausaDesdeMando,
+    inicializarEventosInput,
+    setInputContextGetter,
+    estaSobreUI
+} from './input.js';
+import {
+    triggerHudShake as _triggerHudShake,
+    actualizarLiveHUD as _actualizarLiveHUD,
+    actualizarHTMLHUD as _actualizarHTMLHUD,
+    poblarSelectorDeNiveles as _poblarSelectorDeNiveles,
+    actualizarSeleccionNivelVisual as _actualizarSeleccionNivelVisual,
+    mostrarVistaMenuPrincipal as _mostrarVistaMenuPrincipal,
+    mostrarPantallaGameOver as _mostrarPantallaGameOver,
+    ganarJuego as _ganarJuego,
+    RANGOS_ASESINO
+} from './hud.js';
+import {
+    dibujarPiloto,
+    iniciarPolvoMarino as _iniciarPolvoMarino,
+    actualizarPolvoMarino as _actualizarPolvoMarino,
+    dibujarPolvoMarino as _dibujarPolvoMarino,
+    dibujarCasquillos as _dibujarCasquillos,
+    dibujarFondoParallax as _dibujarFondoParallax,
+    dibujarMascaraLuz as _dibujarMascaraLuz,
+    dibujarAnimales,
+    dibujarJugadorSubmarino,
+    dibujarEscombrosMundo
+} from './renderer.js';
 
-// Pools globales
-export const particlePool = new ObjectPool(() => ({ x: 0, y: 0, vx: 0, vy: 0, r: 0, vida: 0, color: '', active: false }), 200);
+export {
+    particlePool,
+    particulas,
+    particulasExplosion,
+    particulasTinta,
+    particulasBurbujas,
+    particulasCasquillos,
+    whaleDebris,
+    particulasPolvoMarino,
+    pilotos,
+    proyectilesEnemigos,
+    trozosHumanos,
+    escombrosSubmarino,
+    SUBMARINE_DEBRIS_PATHS,
+    PILOT_DEBRIS_PATHS,
+    WHALE_DEBRIS_PATHS,
+    generarParticula,
+    actualizarCasquillos,
+    generarBurbujaPropulsion,
+    generarRafagaBurbujasDisparo,
+    generarChorroDeAgua,
+    generarExplosion,
+    generarNubeDeTinta,
+    generarTrozoBallena,
+    generarTrozosHumanos,
+    generarEscombrosSubmarino,
+    generarGotasSangre,
+    generarBurbujasDeSangre,
+    generarBurbujasEmbestidaTiburom,
+    generarHumoDaño
+};
+
 export const spatialGrid = new SpatialGrid(3000, 2000, 150); // Ajustar tamaño según mundo
 
 /**
@@ -75,38 +220,13 @@ function dibujarSpriteConTinte(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHe
     offscreenCtx.globalCompositeOperation = 'source-over';
     ctx.drawImage(offscreenCanvas, 0, 0, sWidth, sHeight, dx, dy, dWidth, dHeight);
 }
-// --- Funciones Matemáticas y de Utilidad ---
-export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-export function lerp(a, b, t) { return a + (b - a) * t; }
+// --- Funciones Matemáticas y de Utilidad (Módulo utils.js) ---
+import { clamp, lerp, cargarImagen, cargarJson } from './utils.js';
+export { clamp, lerp, cargarImagen, cargarJson };
+
 export function dificultadBase() {
     if (!estadoJuego || !estadoJuego.enEjecucion) return 0;
     return estadoJuego.tiempoTranscurrido / 150;
-}
-
-// --- Cargadores de Recursos Asíncronos ---
-export function cargarImagen(url, cb) {
-    const im = new Image();
-    im.crossOrigin = 'anonymous';
-    im.onload = () => cb(im);
-    im.onerror = () => {
-        console.error(`Error al cargar la imagen: ${url}. Asegúrate de que el archivo existe en la ruta correcta y el nombre no tiene errores de tipeo.`);
-        cb(null);
-    };
-    im.src = url;
-}
-function cargarJson(url, cb) {
-    fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => cb(data))
-        .catch(e => {
-            console.error(`Error al cargar el JSON: ${url}.`, e);
-            cb(null);
-        });
 }
 
 // =================================================================================
@@ -210,313 +330,113 @@ function actualizarIconos() {
 }
 
 // =================================================================================
-//  3. GESTOR DE AUDIO (SINGLETON)
+//  3. GESTOR DE AUDIO (Módulo audio.js)
 // =================================================================================
-// El objeto 'S' (de Sonido) es un singleton que maneja toda la lógica de audio.
-// Carga todos los sonidos al inicio y proporciona métodos para reproducir, detener, etc.
-const THEME_SONG = 'canciones/dulcehermosa.mp3';
-const GAME_PLAYLIST = [
-    'canciones/Abismo_de_Acero.mp3',
-    'canciones/Batalla_de_las_Profundidades.mp3',
-    'canciones/Beneath_the_Waves.mp3',
-    'canciones/Oceans_Code.mp3',
-    'canciones/Pixel_Pandemonium.mp3'
-];
-export const S = (function () {
-
-    let creado = false;
-    const a = {}; // Almacenará { element: AudioElement, source: MediaElementAudioSourceNode | null }
-    let _silenciado = false;
-    let musicaActual = null;
-    let audioCtx = null;
-    let analyser = null; // prettier-ignore
-    let dataArray = null;
-
-    const mapaFuentes = {
-        theme_main: THEME_SONG,
-        arpon: 'sonidos/submarino/arpon.wav',
-        choque: 'sonidos/choque.wav',
-        gameover: 'sonidos/gameover.wav',
-        torpedo: 'sonidos/submarino/torpedo.wav',
-        boss_hit: 'sonidos/boss_hit.mp3',
-        victory: 'sonidos/victoria.mp3',
-        ink: 'sonidos/ink.wav',
-        shotgun: 'sonidos/submarino/shotgun.wav',
-        machinegun: 'sonidos/submarino/machinegun.wav',
-        gatling_spinup: 'sonidos/submarino/boost.wav', // REUTILIZADO
-        gatling_fire: 'sonidos/submarino/machinegun.wav', // REUTILIZADO
-        reload: 'sonidos/submarino/reload.wav',
-        laser_beam: 'sonidos/submarino/laser.wav',
-        // Sonidos que faltaban (usados en los niveles pero no definidos aquí)
-        choque_ligero: 'sonidos/choque_ligero.mp3',
-        disparo_enemigo: 'sonidos/disparo_enemigo.mp3',
-        explosion_grande: 'sonidos/explosion_grande.mp3',
-        explosion_simple: 'sonidos/explosion_simple.mp3',
-        powerup: 'sonidos/powerup.mp3',
-        // Sonidos de ballena
-        whale_song1: 'sonidos/ballena/ballenacanta1.mp3',
-        whale_song2: 'sonidos/ballena/ballenacanta2.mp3',
-        whale_song3: 'sonidos/ballena/ballenacanta3.mp3',
-        whale_spout: 'sonidos/ballena/ballenachorro.mp3',
-        boost: 'sonidos/submarino/boost.wav',
-        sonar_ping: 'sonidos/sonar_ping.wav'
-    };
-
-    GAME_PLAYLIST.forEach((cancion, i) => { mapaFuentes[`music_${i}`] = cancion; });
-
-    function initAudioContext() { // prettier-ignore
-        if (audioCtx) return;
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 128; // Potencia de 2, 32-32768. 128 es suficiente y eficiente.
-            const bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
-            analyser.connect(audioCtx.destination);
-        } catch (e) {
-            console.error("Web Audio API no es soportada en este navegador.", e);
-            audioCtx = null; // Asegurarse de que es null si falla
-        }
-    }
-
-    function init() {
-        if (creado) return;
-        creado = true;
-        initAudioContext();
-        for (const k in mapaFuentes) {
-            try {
-                const el = new Audio(mapaFuentes[k]);
-                el.crossOrigin = "anonymous";
-                // --- OPTIMIZACIÓN: Carga diferida (lazy load) para la música de fondo ---
-                if (k.startsWith('music_')) {
-                    el.preload = 'none';
-                } else {
-                    el.preload = 'auto';
-                }
-                if (k.startsWith('music_')) { el.loop = false; el.volume = 0.35; el.addEventListener('ended', playRandomMusic); }
-                else if (k === 'theme_main') { el.loop = true; el.volume = 0.35; }
-                // --- NUEVO: Sonidos de efectos que hacen loop --- // prettier-ignore
-                else if (k === 'laser_beam' || k === 'boost' || k === 'gatling_spinup' || k === 'gatling_fire') {
-                    el.loop = true; el.volume = 0.45; // Un volumen adecuado para efectos continuos
-                }
-                else if (k === 'shotgun') { el.volume = 0.2; } // Reducir volumen del escopetazo
-                else { el.volume = 0.5; }
-                el.addEventListener('error', function (e) { console.error(`Error al cargar el audio: ${el.src}. Asegúrate de que el archivo existe y la ruta es correcta.`); }); a[k] = { element: el, source: null };
-            } catch (e) { console.warn(`No se pudo crear el objeto de audio para: ${mapaFuentes[k]}`); }
-        }
-    }
-    function reproducir(k) {
-        const audioObj = a[k];
-        if (!audioObj) {
-            console.warn(`Se intentó reproducir un sonido no cargado: '${k}'`);
-            return;
-        }
-        const el = audioObj.element;
-
-        // Conectar al analizador si es una pista de música y el contexto de audio existe
-        if (k.startsWith('music_') || k === 'theme_main') {
-            if (audioCtx && !audioObj.source) {
-                try {
-                    audioObj.source = audioCtx.createMediaElementSource(el);
-                    audioObj.source.connect(analyser);
-                } catch (e) {
-                    console.error(`No se pudo conectar el audio '${k}' al analizador:`, e);
-                }
-            }
-        }
-
-        // Resumir el contexto de audio si está suspendido (política de autoplay de los navegadores)
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume().catch(e => console.error("Error al resumir el AudioContext:", e));
-        }
-
-        try {
-            el.currentTime = 0;
-            const promise = el.play();
-            if (promise !== undefined) {
-                promise.catch(error => {
-                    if (error.name !== 'AbortError') {
-                        // No mostrar error si es por interacción del usuario, es normal.
-                        if (error.name !== 'NotAllowedError') {
-                            console.error(`Error al reproducir el sonido '${k}':`, error);
-                        }
-                    }
-                });
-            }
-        } catch (e) { console.error(`Error inesperado al intentar reproducir el sonido '${k}':`, e); }
-    }
-    function detener(k) {
-        if (k === 'music' && musicaActual) k = musicaActual;
-        const audioObj = a[k];
-        if (!audioObj) return;
-        try {
-            if (k.startsWith('music_')) { audioObj.element.removeEventListener('ended', playRandomMusic); }
-            audioObj.element.pause();
-            audioObj.element.currentTime = 0;
-            if (k.startsWith('music_')) { audioObj.element.addEventListener('ended', playRandomMusic); }
-        } catch (e) { }
-    }
-    function startPlaylist() {
-        if (musicaActual) detener(musicaActual);
-        playRandomMusic();
-    }
-    function playRandomMusic() {
-        let nuevaCancionKey; const posiblesCanciones = Object.keys(a).filter(k => k.startsWith('music_')); if (posiblesCanciones.length === 0) return; do { const indiceAleatorio = Math.floor(Math.random() * posiblesCanciones.length); nuevaCancionKey = posiblesCanciones[indiceAleatorio]; } while (posiblesCanciones.length > 1 && nuevaCancionKey === musicaActual);
-        musicaActual = nuevaCancionKey;
-        reproducir(musicaActual); // Usar la función `reproducir` que ya maneja el error
-    }
-    function playRandomWhaleSong() {
-        const whaleSongs = Object.keys(a).filter(k => k.startsWith('whale_song'));
-        if (whaleSongs.length === 0) return;
-        const songToPlay = whaleSongs[Math.floor(Math.random() * whaleSongs.length)];
-        reproducir(songToPlay);
-    }
-    function pausar(k) { if (k === 'music' && musicaActual) k = musicaActual; const audioObj = a[k]; if (!audioObj) return; try { audioObj.element.pause(); } catch (e) { } }
-    function bucle(k) {
-        if (k === 'music' && musicaActual) k = musicaActual;
-        const audioObj = a[k];
-        if (!audioObj || !audioObj.element.paused) return; const el = audioObj.element;
-        try {
-            const promise = el.play();
-            if (promise !== undefined) {
-                promise.catch(error => { });
-            }
-        } catch (e) { }
-    }
-    function getAudioData() {
-        if (!analyser || !dataArray) return 0;
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        // Promedio de las frecuencias bajas (graves) para detectar el "pulso"
-        const bassBins = Math.floor(dataArray.length * 0.1); // Usar el 10% de las frecuencias más bajas
-        for (let i = 0; i < bassBins; i++) {
-            sum += dataArray[i];
-        }
-        return bassBins > 0 ? sum / bassBins : 0;
-    }
-    function setSilenciado(m) { for (const k in a) { try { a[k].element.muted = !!m; } catch (e) { } } _silenciado = !!m; }
-
-    /**
-     * Activa la vibración en el mando de juego conectado, si existe.
-     * @param {number} duration Duración de la vibración en milisegundos.
-     * @param {number} [weak=1.0] Intensidad del motor de vibración débil (0.0 a 1.0).
-     * @param {number} [strong=1.0] Intensidad del motor de vibración fuerte (0.0 a 1.0).
-     */
-    function triggerVibration(duration, weak = 1.0, strong = 1.0) {
-        if (!gamepadConectado || !estadoJuego || !estadoJuego.enEjecucion) return;
-
-        const gamepads = navigator.getGamepads();
-        if (!gamepads[0] || !gamepads[0].vibrationActuator) return;
-
-        gamepads[0].vibrationActuator.playEffect('dual-rumble', {
-            startDelay: 0,
-            duration: duration,
-            weakMagnitude: weak,
-            strongMagnitude: strong
-        }).catch(e => { /* No hacer nada si falla, es una característica no esencial. */ });
-    }
-    function estaSilenciado() { return _silenciado; }
-    function alternarSilenciado() { setSilenciado(!estaSilenciado()); }
-    return { init, reproducir, detener, pausar, bucle, setSilenciado, estaSilenciado, alternarSilenciado, startPlaylist, playRandomWhaleSong, getAudioData, triggerVibration };
-})();
+import { S, THEME_SONG, GAME_PLAYLIST } from './audio.js';
+export { S, THEME_SONG, GAME_PLAYLIST };
 
 // =================================================================================
-//  4. GESTIÓN DE DATOS DEL JUGADOR (LOCALSTORAGE)
+//  4. GESTIÓN DE DATOS DEL JUGADOR (Módulo storage.js)
 // =================================================================================
-// Se encarga de guardar y recuperar la puntuación máxima y el nivel más alto
-// alcanzado por el jugador, para persistir entre sesiones de juego.
-const CLAVE_PUNTUACION = 'expedicion_hiscore_v2';
-const CLAVE_NIVEL_MAX = 'expedicion_maxlevel_v2';
-let puntuacionMaxima = 0; try { puntuacionMaxima = parseInt(localStorage.getItem(CLAVE_PUNTUACION) || '0', 10) || 0; } catch (e) { }
-let nivelMaximoAlcanzado = 1; try { nivelMaximoAlcanzado = parseInt(localStorage.getItem(CLAVE_NIVEL_MAX) || '1', 10) || 1; } catch (e) { }
-function guardarPuntuacionMaxima() { try { localStorage.setItem(CLAVE_PUNTUACION, String(puntuacionMaxima)); } catch (e) { } }
-function guardarNivelMaximo() { try { const proximoNivelDesbloqueado = Math.min(estadoJuego.nivel + 1, Levels.CONFIG_NIVELES.length); if (proximoNivelDesbloqueado > nivelMaximoAlcanzado) { nivelMaximoAlcanzado = proximoNivelDesbloqueado; localStorage.setItem(CLAVE_NIVEL_MAX, String(nivelMaximoAlcanzado)); } } catch (e) { } }
+import {
+    CLAVE_PUNTUACION,
+    CLAVE_NIVEL_MAX,
+    getPuntuacionMaxima,
+    setPuntuacionMaxima,
+    getNivelMaximoAlcanzado,
+    setNivelMaximoAlcanzado,
+    guardarPuntuacionMaxima as _guardarPuntuacionMaxima,
+    guardarNivelMaximo as _guardarNivelMaximo
+} from './storage.js';
 
-// =================================================================================
-//  5. CARGA DE RECURSOS DEL JUEGO (ASSETS)
-// =================================================================================
+let puntuacionMaxima = getPuntuacionMaxima();
+let nivelMaximoAlcanzado = getNivelMaximoAlcanzado();
 
-// --- Sprites Principales ---
-let robotImg = null, robotListo = false, spriteAncho = 506, spriteAlto = 527, robotEscala = 0.35; 
-export let HECTOR_SPRITE_DATA = null;
-let robotImgCargada = false;
-let robotJsonCargado = false;
-export let HECTOR_FRAME_KEYS = [];
-function comprobarRobotListo() {
-    if (robotImgCargada && robotJsonCargado) {
-        // Extraer las claves de los frames disponibles en el JSON
-        HECTOR_FRAME_KEYS = Object.keys(HECTOR_SPRITE_DATA.frames).sort((a, b) => {
-            // Intentar ordenar numéricamente si las claves son 'sprite_N'
-            const numA = parseInt(a.replace('sprite_', ''));
-            const numB = parseInt(b.replace('sprite_', ''));
-            return numA - numB;
-        });
-        robotListo = true;
-    }
+function guardarPuntuacionMaxima() {
+    setPuntuacionMaxima(puntuacionMaxima);
+    _guardarPuntuacionMaxima();
 }
 
-cargarImagen('img/sprites/Hector.png', function (img) {
-    if (img) {
-        robotImg = img;
-        robotImgCargada = true;
-        comprobarRobotListo();
-    } else {
-        console.error("No se pudo cargar la imagen 'img/sprites/Hector.png'.");
-    }
-});
-
-cargarJson('js/json_sprites/Hector.json', function (data) {
-    if (data) {
-        HECTOR_SPRITE_DATA = data;
-        robotJsonCargado = true;
-        comprobarRobotListo();
-    }
-});
-
-/**
- * Función auxiliar para dibujar el submarino Hector con su animación.
- * @param {CanvasRenderingContext2D} targetCtx - El contexto de destino (ctx, infoAnimCtx, etc.)
- * @param {number} x - Posición X
- * @param {number} y - Posición Y
- * @param {number} escala - Escala del dibujo
- * @param {number} frame - Frame actual (0-65)
- * @param {boolean} smoothing - Si se debe activar el suavizado de imagen
- */
-function dibujarHector(targetCtx, x, y, escala, frame, smoothing = true) {
-    if (!robotListo || !HECTOR_SPRITE_DATA || HECTOR_FRAME_KEYS.length === 0) {
-        // Fallback si no está cargado
-        targetCtx.fillStyle = '#7ef';
-        targetCtx.beginPath();
-        targetCtx.arc(x, y, 26 * escala, 0, Math.PI * 2);
-        targetCtx.fill();
-        return;
-    }
-
-    targetCtx.imageSmoothingEnabled = smoothing;
-    // Usamos el índice de frame sobre el array de claves disponibles
-    const frameKey = HECTOR_FRAME_KEYS[frame % HECTOR_FRAME_KEYS.length];
-    const frameData = HECTOR_SPRITE_DATA.frames[frameKey];
-    
-    if (frameData) {
-        const f = frameData.frame;
-        const dw = f.w * escala, dh = f.h * escala;
-        targetCtx.drawImage(robotImg, f.x, f.y, f.w, f.h, Math.round(x - dw / 2), Math.round(y - dh / 2), dw, dh);
-    }
+function guardarNivelMaximo() {
+    const maxNivel = Levels && Levels.CONFIG_NIVELES ? Levels.CONFIG_NIVELES.length : 10;
+    _guardarNivelMaximo(estadoJuego ? estadoJuego.nivel : 1, maxNivel);
+    nivelMaximoAlcanzado = getNivelMaximoAlcanzado();
 }
 
-let criaturasImg = null, criaturasListas = false, cFrameAncho = 0, cFrameAlto = 0, cFilas = 0;
-cargarImagen('img/sprites/criaturas.png', function (img) { if (img) { criaturasImg = img; cFrameAncho = Math.floor(img.width / 2); cFilas = Math.max(1, Math.floor(img.height / cFrameAncho)); cFrameAlto = Math.floor(img.height / cFilas); criaturasListas = true; } });
-// --- Fondos Temáticos ---
-export const FONDOS_TEMAS = {
-    'default': { back: null, front: null },
-    'abyssal': { back: null, front: null },
-    'kelp': { back: null, front: null },
-    'volcanic': { back: null, front: null }
+// =================================================================================
+//  5. CARGA DE RECURSOS DEL JUEGO (Módulo assets.js)
+// =================================================================================
+import {
+    robotImg,
+    robotListo,
+    spriteAncho,
+    spriteAlto,
+    robotEscala,
+    HECTOR_SPRITE_DATA,
+    HECTOR_FRAME_KEYS,
+    dibujarHector,
+    criaturasImg,
+    criaturasListas,
+    cFrameAncho,
+    cFrameAlto,
+    cFilas,
+    FONDOS_TEMAS,
+    cargarTema,
+    setOnDefaultFondoCargado,
+    MIERDEI_SPRITE_DATA,
+    mierdeiImg,
+    mierdeiListo,
+    SHARK_SPRITE_DATA,
+    sharkImg,
+    sharkListo,
+    WHALE_SPRITE_DATA,
+    whaleImg,
+    whaleListo,
+    BABYWHALE_SPRITE_DATA,
+    babyWhaleImg,
+    babyWhaleListo,
+    ORCA_SPRITE_DATA,
+    orcaImg,
+    orcaListo
+} from './assets.js';
+
+export {
+    robotImg,
+    robotListo,
+    spriteAncho,
+    spriteAlto,
+    robotEscala,
+    HECTOR_SPRITE_DATA,
+    HECTOR_FRAME_KEYS,
+    dibujarHector,
+    criaturasImg,
+    criaturasListas,
+    cFrameAncho,
+    cFrameAlto,
+    cFilas,
+    FONDOS_TEMAS,
+    cargarTema,
+    MIERDEI_SPRITE_DATA,
+    mierdeiImg,
+    mierdeiListo,
+    SHARK_SPRITE_DATA,
+    sharkImg,
+    sharkListo,
+    WHALE_SPRITE_DATA,
+    whaleImg,
+    whaleListo,
+    BABYWHALE_SPRITE_DATA,
+    babyWhaleImg,
+    babyWhaleListo,
+    ORCA_SPRITE_DATA,
+    orcaImg,
+    orcaListo
 };
 
+// --- Estado de Renderizado Parallax y Fondos ---
 let bgImg = null, bgListo = false, bgAncho = 0, bgAlto = 0, bgOffset = 0;
 let fgImg = null, fgListo = false, fgAncho = 0, fgAlto = 0, fgOffset = 0;
-// Desplazamiento vertical del fondo (usado en nivel 5 para parallax de ascenso)
+
 export let bgOffsetY = 0;
 export let fgOffsetY = 0;
 export function setBgOffsetY(v) { bgOffsetY = v; }
@@ -525,156 +445,19 @@ export function setFgOffsetY(v) { fgOffsetY = v; }
 const BG_DRIFT_SPEED = 8;
 const FG_DRIFT_SPEED = 25;
 
-function cargarTema(tema, bPath, fPath) {
-    cargarImagen(bPath, function (img) {
-        if (img) {
-            FONDOS_TEMAS[tema].back = img;
-            // Configurar 'default' como inicial
-            if (tema === 'default') {
-                bgImg = img; bgListo = true; bgAncho = img.width; bgAlto = img.height;
-                if (estadoJuego) dibujarFondoParallax();
-            }
-        }
-    });
-    cargarImagen(fPath, function (img) {
-        if (img) {
-            FONDOS_TEMAS[tema].front = img;
-            if (tema === 'default') {
-                fgImg = img; fgListo = true; fgAncho = img.width; fgAlto = img.height;
-            }
-        }
-    });
-}
-
-// Cargar todos los temas de fondo
-cargarTema('default', 'img/Fondos/bg_back.png', 'img/Fondos/bg_front.png');
-cargarTema('abyssal', 'img/Fondos/bg_abyssal_back.png', 'img/Fondos/bg_abyssal_front.png');
-cargarTema('kelp', 'img/Fondos/bg_kelp_back.png', 'img/Fondos/bg_kelp_front.png');
-cargarTema('volcanic', 'img/Fondos/bg_volcanic_back.png', 'img/Fondos/bg_volcanic_front.png');
-
-
-// --- Spritesheets Animados (con JSON) ---
-// Cada uno de estos sprites tiene una imagen y un archivo JSON que define los frames.
-// Se cargan de forma asíncrona y se usan banderas para saber cuándo están listos.
-export let MIERDEI_SPRITE_DATA = null;
-export let mierdeiImg = null, mierdeiListo = false;
-let mierdeiImgCargada = false;
-let mierdeiJsonCargado = false;
-function comprobarMierdeiListo() {
-    if (mierdeiImgCargada && mierdeiJsonCargado) {
-        mierdeiListo = true;
+setOnDefaultFondoCargado(() => {
+    if (FONDOS_TEMAS['default'] && FONDOS_TEMAS['default'].back) {
+        bgImg = FONDOS_TEMAS['default'].back;
+        bgListo = true;
+        bgAncho = bgImg.width;
+        bgAlto = bgImg.height;
+        if (estadoJuego) dibujarFondoParallax();
     }
-}
-cargarImagen('img/sprites/mierdei.png', function (img) {
-    if (img) {
-        mierdeiImg = img;
-        mierdeiImgCargada = true;
-        comprobarMierdeiListo();
-    } else {
-        console.error("No se pudo cargar la imagen 'img/mierdei.png'. Asegúrate de que la ruta es correcta.");
-    }
-});
-cargarJson('js/json_sprites/mierdei.json', function (data) {
-    if (data) {
-        MIERDEI_SPRITE_DATA = data;
-        mierdeiJsonCargado = true;
-        comprobarMierdeiListo();
-    }
-});
-
-let SHARK_SPRITE_DATA = null;
-let sharkImg = null, sharkListo = false;
-let sharkImgCargada = false;
-let sharkJsonCargado = false;
-function comprobarSharkListo() {
-    if (sharkImgCargada && sharkJsonCargado) {
-        sharkListo = true;
-    }
-}
-cargarImagen('img/sprites/tiburon.png', function (img) {
-    if (img) {
-        sharkImg = img;
-        sharkImgCargada = true;
-        comprobarSharkListo();
-    }
-});
-cargarJson('js/json_sprites/shark.json', function (data) {
-    if (data) {
-        SHARK_SPRITE_DATA = data;
-        sharkJsonCargado = true;
-        comprobarSharkListo();
-    }
-});
-
-export let WHALE_SPRITE_DATA = null;
-export let whaleImg = null, whaleListo = false;
-let whaleImgCargada = false;
-let whaleJsonCargado = false;
-function comprobarWhaleListo() {
-    if (whaleImgCargada && whaleJsonCargado) {
-        whaleListo = true;
-    }
-}
-cargarImagen('img/sprites/ballena.png', function (img) {
-    if (img) {
-        whaleImg = img;
-        whaleImgCargada = true;
-        comprobarWhaleListo();
-    }
-});
-cargarJson('js/json_sprites/whale.json', function (data) {
-    if (data) {
-        WHALE_SPRITE_DATA = data;
-        whaleJsonCargado = true;
-        comprobarWhaleListo();
-    }
-});
-
-export let BABYWHALE_SPRITE_DATA = null;
-export let babyWhaleImg = null, babyWhaleListo = false;
-let babyWhaleImgCargada = false;
-let babyWhaleJsonCargado = false;
-function comprobarBabyWhaleListo() {
-    if (babyWhaleImgCargada && babyWhaleJsonCargado) {
-        babyWhaleListo = true;
-    }
-}
-cargarImagen('img/sprites/ballenabebe.png', function (img) {
-    if (img) {
-        babyWhaleImg = img;
-        babyWhaleImgCargada = true;
-        comprobarBabyWhaleListo();
-    }
-});
-cargarJson('js/json_sprites/ballenabebe.json', function (data) {
-    if (data) {
-        BABYWHALE_SPRITE_DATA = data;
-        babyWhaleJsonCargado = true;
-        comprobarBabyWhaleListo();
-    }
-});
-
-export let ORCA_SPRITE_DATA = null;
-export let orcaImg = null, orcaListo = false;
-let orcaImgCargada = false;
-let orcaJsonCargado = false;
-function comprobarOrcaLista() {
-    if (orcaImgCargada && orcaJsonCargado) {
-        orcaListo = true;
-    }
-}
-cargarImagen('img/sprites/orca.png', function (img) {
-    if (img) {
-        orcaImg = img;
-        orcaImgCargada = true;
-        comprobarOrcaLista();
-    }
-});
-cargarJson('js/json_sprites/orca.json', function (data) {
-    if (data) {
-        ORCA_SPRITE_DATA = data;
-        orcaJsonCargado = true;
-        comprobarOrcaLista();
+    if (FONDOS_TEMAS['default'] && FONDOS_TEMAS['default'].front) {
+        fgImg = FONDOS_TEMAS['default'].front;
+        fgListo = true;
+        fgAncho = fgImg.width;
+        fgAlto = fgImg.height;
     }
 });
 
@@ -695,95 +478,18 @@ let propellerCurrentSpeed = 0;
 export let W = innerWidth, H = innerHeight;
 export const NUM_CARRILES = 5;
 export let carriles = [];
-function calcularCarriles() { carriles.length = 0; const minY = H * 0.18, maxY = H * 0.82; for (let i = 0; i < NUM_CARRILES; i++) { const t = i / (NUM_CARRILES - 1); carriles.push(minY + t * (maxY - minY)); } }
-
-// --- Sistema de Partículas ---
-// Gestiona todos los efectos visuales como burbujas, explosiones, tinta, etc.
-export let particulas = [], particulasExplosion = [], particulasTinta = [], particulasBurbujas = [], particulasCasquillos = [], whaleDebris = [], particulasPolvoMarino = [], pilotos = [], proyectilesEnemigos = [];
-let trozosHumanos = [];
-let escombrosSubmarino = [];
-const SUBMARINE_DEBRIS_PATHS = [
-    // Placas de casco exterior gruesas y abolladas
-    { 
-        path: new Path2D('M-22,-18 L22,-20 L27,15 L15,8 L5,22 L-10,14 -22,12 Z'), 
-        detail: new Path2D('M-12,-8 A 2 2 0 1 1 -8,-8 M8,-10 A 2 2 0 1 1 12,-10'), // Remaches
-        isGlass: false 
-    },
-    { 
-        path: new Path2D('M-18,-12 L15,-15 L20,0 L18,12 L-5,18 L-18,6 Z'), 
-        detail: new Path2D('M-8,-2 L8,-2 M-8,2 L8,2'), // Rejilla rota
-        isGlass: false 
-    },
-    // Engranaje pesado o bloque de motor interior
-    { 
-        path: new Path2D('M-12,-12 L-5,-16 L5,-16 L12,-12 L16,-5 L16,5 L12,12 L5,16 L-5,16 L-12,12 L-16,5 L-16,-5 Z'), 
-        detail: new Path2D('M0,-6 A 6 6 0 1 0 0,6 A 6 6 0 1 0 0,-6 M0,-2 A 2 2 0 1 1 0,2 A 2 2 0 1 1 0,-2'), // Eje central
-        isGlass: false, 
-        isEngine: true 
-    },
-    // Tuberías de alta presión contorsionadas
-    { 
-        path: new Path2D('M-25,-5 L25,-5 L22,5 L-20,5 Z'), 
-        cables: true, 
-        isGlass: false 
-    },
-    { 
-        path: new Path2D('M-15,-6 L12,-6 L12,15 L0,15 L0,6 L-15,6 Z'), 
-        detail: new Path2D('M-8,-6 L-8,6 M5,-6 L5,6'), // Válvulas o abrazaderas rotas
-        isGlass: false 
-    },
-    // Fragmentos masivos del domo de cristal blindado (ventana del piloto)
-    { 
-        path: new Path2D('M-20,-15 L0,-20 L15,-5 L10,15 L-15,10 Z'), 
-        isGlass: true 
-    },
-    { 
-        path: new Path2D('M-8,-12 L10,-15 L15,0 L5,10 L-8,0 Z'), 
-        isGlass: true 
-    },
-    // Tornillería y fragmentos cortantes pequeños
-    { path: new Path2D('M-6,-3 L6,-3 L6,3 L-6,3 Z'), isGlass: false },
-    { path: new Path2D('M-8,-8 L6,4 M6,-8 L-6,4'), isGlass: false, cables: true },
-    { path: new Path2D('M-5,-4 L5,0 L-5,6 Z'), isGlass: false }
-];
-const PILOT_DEBRIS_PATHS = [
-    // Torsos (más gráficos)
-    new Path2D('M-10,-15 C-5,-22 5,-22 10,-15 L12,8 L-12,8 Z'), // Torso con hombros
-    new Path2D('M-8,-12 L8,-14 L10,10 C 5,15 -5,15 -10,10 Z'), // Torso desgarrado
-    // Extremidades
-    new Path2D('M-4,-20 L4,-18 L2,5 C -2,8 -5,2 -4,-20 Z'), // Brazo/Pierna con forma
-    new Path2D('M-15,-4 L15,-3 L12,4 L-12,5 Z'), // Trozo de extremidad
-    // Cabeza (semi-reconocible)
-    new Path2D('M-10,-10 a 10 10 0 1 1 20 0 C 15,15 -15,15 -10,-10 Z'), // Cabeza rota
-    // Trozos irreconocibles y sangrientos
-    new Path2D('M-15,-10 L5, -12 L18, 5 C 10,15 -10,12 -15,-10 Z'), // Fragmento 1
-    new Path2D('M0,0 C-20,-10 -15,10 0,15 C15,10 20,-10 0,0 Z'), // Fragmento 2 (curvo)
-    new Path2D('M-10,-8 L10,-12 L15,10 L-12,15 Z'), // Fragmento 3 (afilado)
-];
-
-
-
-// --- Funciones de Partículas ---
-// Funciones para crear, actualizar y dibujar las partículas.
-// --- Funciones de Partículas ---
-// Funciones para crear, actualizar y dibujar las partículas.
-export function generarParticula(arr, opts) {
-    const p = particlePool.get();
-    // Reiniciar propiedades básicas para asegurar estado limpio
-    p.x = opts.x; p.y = opts.y; p.vx = opts.vx; p.vy = opts.vy;
-    p.r = opts.r; p.vida = opts.vida; p.vidaMax = opts.vida;
-    p.color = opts.color; p.tw = Math.random() * Math.PI * 2;
-    p.baseA = opts.baseA || 1;
-    p.active = true;
-
-    // Asignar propiedades extra (como esChorroDañino)
-    if (opts.esChorroDañino) p.esChorroDañino = true;
-    else p.esChorroDañino = undefined; // Limpiar si no lo es
-
-    arr.push(p);
+function calcularCarriles() {
+    carriles.length = 0;
+    const minY = H * 0.18, maxY = H * 0.82;
+    for (let i = 0; i < NUM_CARRILES; i++) {
+        const t = i / (NUM_CARRILES - 1);
+        carriles.push(minY + t * (maxY - minY));
+    }
 }
 
-// ... (generarCasquillo, etc. siguen igual) ...
+// --- Sistema de Partículas (Módulo particles.js) ---
+setContextGetters(() => jugador, () => estadoJuego, () => ({ W, H }));
+setOnHudShake((intensity) => { if (typeof triggerHudShake === 'function') triggerHudShake(intensity); });
 
 function actualizarParticulas(dt) {
     for (let arr of [particulas, particulasExplosion, particulasTinta]) {
@@ -822,251 +528,7 @@ function actualizarParticulas(dt) {
     }
 }
 
-function actualizarCasquillos(dt) {
-    for (let i = particulasCasquillos.length - 1; i >= 0; i--) {
-        const c = particulasCasquillos[i];
-        c.vida -= dt;
-        if (c.vida <= 0) {
-            particulasCasquillos.splice(i, 1);
-            continue;
-        }
 
-        // Física del casquillo
-        c.vy += c.gravedad * dt; // Gravedad
-        c.vx *= 0.98; // Fricción del agua
-        c.vy *= 0.98;
-        c.x += c.vx * dt;
-        c.y += c.vy * dt;
-        c.rotacion += c.vRot * dt;
-
-        // Efecto de humo
-        c.smokeTimer -= dt;
-        if (c.smokeTimer <= 0) {
-            c.smokeTimer = 0.05 + Math.random() * 0.05;
-            const alpha = (c.vida / c.vidaMax) * 0.4;
-            if (alpha > 0) {
-                generarParticula(particulasTinta, { // Reutilizamos el array de tinta para el humo
-                    x: c.x, y: c.y,
-                    vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10 - 15,
-                    r: 2 + Math.random() * 4, vida: 0.8 + Math.random() * 0.5,
-                    color: `rgba(200, 200, 200, ${alpha})` // Humo grisáceo
-                });
-            }
-        }
-
-        // Efecto de gotas oscuras
-        c.dropletTimer -= dt;
-        if (c.dropletTimer <= 0) {
-            c.dropletTimer = 0.1 + Math.random() * 0.1;
-            const alpha = (c.vida / c.vidaMax) * 0.7;
-            if (alpha > 0) {
-                generarParticula(particulasExplosion, { // Reutilizamos explosiones para las gotas
-                    x: c.x, y: c.y, vx: c.vx * 0.1, vy: c.vy * 0.1 + 30,
-                    r: 1 + Math.random() * 1.5, vida: 0.5 + Math.random() * 0.3,
-                    color: `rgba(20, 15, 10, ${alpha})` // Color oscuro, como aceite
-                });
-            }
-        }
-    }
-}
-
-function generarBurbujaPropulsion(x, y, isLevel5 = false) { if (Math.random() > 0.6) { const velocidadBaseX = isLevel5 ? 0 : 60; const velocidadBaseY = isLevel5 ? 60 : 0; const dispersion = 25; generarParticula(particulasBurbujas, { x: x, y: y, vx: velocidadBaseX + (Math.random() - 0.5) * dispersion, vy: velocidadBaseY + (Math.random() - 0.5) * dispersion - 20, r: Math.random() * 2 + 1, vida: 1 + Math.random() * 1.5, color: '' }); } }
-function generarRafagaBurbujasDisparo(x, y, isLevel5 = false) { for (let i = 0; i < 8; i++) { const anguloBase = isLevel5 ? -Math.PI / 2 : 0; const dispersion = Math.PI / 4; const angulo = anguloBase + (Math.random() - 0.5) * dispersion; const velocidad = 30 + Math.random() * 40; generarParticula(particulasBurbujas, { x: x, y: y, vx: Math.cos(angulo) * velocidad, vy: Math.sin(angulo) * velocidad - 20, r: Math.random() * 2.5 + 1.5, vida: 0.8 + Math.random() * 0.5, color: '' }); } }
-
-// --- Generadores de Efectos Especiales ---
-export function generarChorroDeAgua(x, y, dirY) {
-    const numParticulas = 40;
-    for (let i = 0; i < numParticulas; i++) {
-        generarParticula(particulasBurbujas, {
-            x: x + (Math.random() - 0.5) * 20,
-            y: y,
-            vx: (Math.random() - 0.5) * 80,
-            vy: dirY * (150 + Math.random() * 250),
-            r: Math.random() * 3 + 1,
-            vida: 0.8 + Math.random() * 1.2,
-            color: '#aaddff'
-        });
-    }
-}
-
-export function generarExplosion(x, y, color = '#ff8833', size = 80) {
-    const numParticulas = clamp(Math.floor(size / 4), 15, 60);
-    for (let i = 0; i < numParticulas; i++) { const ang = Math.random() * Math.PI * 2, spd = 30 + Math.random() * (size * 1.5); generarParticula(particulasExplosion, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: Math.random() * (size / 30) + 1, vida: 0.4 + Math.random() * 0.4, color }); }
-
-    // --- NUEVO: Sacudida del HUD por explosiones ---
-    if (jugador && estadoJuego && estadoJuego.enEjecucion) {
-        const dist = Math.hypot(x - jugador.x, y - jugador.y);
-        const maxDist = W * 0.8; // Explosiones más lejanas no afectan
-        if (dist < maxDist) {
-            // La intensidad depende del tamaño de la explosión y la proximidad al jugador
-            const proximityFactor = 1 - (dist / maxDist);
-            const sizeFactor = Math.min(size / 200, 1.0); // Normalizar tamaño
-            const intensity = (10 + 50 * sizeFactor) * proximityFactor;
-            triggerHudShake(intensity);
-        }
-    }
-}
-
-export function generarNubeDeTinta(x, y, size) { S.reproducir('ink'); for (let i = 0; i < 50; i++) { const ang = Math.random() * Math.PI * 2, spd = 20 + Math.random() * size; generarParticula(particulasTinta, { x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 15 + Math.random() * size * 0.8, vida: 2.5 + Math.random() * 2, color: '#101010' }); } }
-
-const WHALE_DEBRIS_PATHS = [
-    new Path2D('M0,0 C10,-15 30,-15 40,0 C35,18 15,20 0,0 Z'),
-    new Path2D('M0,0 L25,-10 L45,5 L20,25 Z'),
-    new Path2D('M0,0 Q20,-20 35,-5 Q45,10 25,25 Q5,30 0,15 Z'),
-    new Path2D('M0,-5 L15,-15 L30,-10 L40,5 L25,15 L10,20 Z')
-];
-export function generarTrozoBallena(x, y, numTrozos = 1, fuerza = 150, size = 0) {
-    // --- OPTIMIZACIÓN: Limitar la frecuencia de generación de trozos ---
-    if (estadoJuego && estadoJuego.chunkGenerationCooldown > 0) return;
-    if (estadoJuego) estadoJuego.chunkGenerationCooldown = 0.1; // Máximo ~10 veces por segundo
-
-    for (let i = 0; i < numTrozos; i++) {
-        const ang = Math.random() * Math.PI * 2; // Salen en todas direcciones
-        const spd = 50 + Math.random() * fuerza;
-        const vida = 1.5 + Math.random() * 1.5;
-        const coloresCarne = ['#ab4e52', '#8e3a46', '#6d2e37']; // Tonos de carne/sangre
-        whaleDebris.push({
-            x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, vRot: (Math.random() - 0.5) * 5, rotacion: Math.random() * Math.PI * 2, vida: vida, vidaMax: vida,
-            color: coloresCarne[Math.floor(Math.random() * coloresCarne.length)], path: WHALE_DEBRIS_PATHS[Math.floor(Math.random() * WHALE_DEBRIS_PATHS.length)],
-            trailCooldown: Math.random() * 0.1 // Stagger initial blood trail
-        });
-    }
-}
-
-function generarTrozosHumanos(x, y) {
-    S.reproducir('choque'); // Sonido húmedo y crujiente
-    // Aumentar la cantidad de trozos para un efecto más gore
-    for (let i = 0; i < 18; i++) {
-        const ang = Math.random() * Math.PI * 2;
-        const spd = 120 + Math.random() * 280; // Más variación en la velocidad de explosión
-        const vida = 1.8 + Math.random() * 2.5;
-        const escala = 0.5 + Math.random() * 0.6; // Escala más variada (0.5 a 1.1)
-        const coloresSangre = ['#b22222', '#8b0000', '#6d2e37', '#5c1f27'];
-        trozosHumanos.push({
-            x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
-            vRot: (Math.random() - 0.5) * 12, // Rotación más rápida
-            rotacion: Math.random() * Math.PI * 2,
-            vida: vida, vidaMax: vida, color: coloresSangre[Math.floor(Math.random() * coloresSangre.length)],
-            path: PILOT_DEBRIS_PATHS[Math.floor(Math.random() * PILOT_DEBRIS_PATHS.length)],
-            escala: escala // Guardar la escala individual
-        });
-    }
-    // Generar una nube de sangre más densa
-    generarGotasSangre(x, y, 40);
-    generarBurbujasDeSangre(x, y);
-}
-
-function generarEscombrosSubmarino(x, y) {
-    const numTrozos = 45; // Aumentamos para una explosión más densa, catastrófica
-    for (let i = 0; i < numTrozos; i++) {
-        const ang = Math.random() * Math.PI * 2;
-        const spd = 100 + Math.random() * 450;
-        const vida = 3.5 + Math.random() * 3.0; // Tardan más en desaparecer para lucirse en cámara lenta
-        const escala = 0.4 + Math.random() * 0.9; // Fragmentos muy variables, algunos enormes
-        const coloresAcero = ['#6a737d', '#444c56', '#2f363d', '#ffc733', '#d69d00']; // Acero naval, titanio oscuro y restos de armadura principal amarilla
-        const objPath = SUBMARINE_DEBRIS_PATHS[Math.floor(Math.random() * SUBMARINE_DEBRIS_PATHS.length)];
-
-        escombrosSubmarino.push({
-            x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
-            vRot: (Math.random() - 0.5) * 15, // Giran más salvajemente
-            rotacion: Math.random() * Math.PI * 2,
-            vida: vida, vidaMax: vida, 
-            color: objPath.isGlass ? 'rgba(150, 220, 255, 0.4)' : coloresAcero[Math.floor(Math.random() * coloresAcero.length)],
-            pathInfo: objPath, // Pasamos el objeto completo para tener el `detail`
-            escala: escala,
-            tieneSangre: Math.random() < 0.35 // 35% de que la máquina quede horrorosamente rociada con sangre de los tripulantes
-        });
-    }
-    // Violentísimas chispas y partes calcinadas (humo espeso)
-    for (let i = 0; i < 80; i++) { // Muchísimas más partículas para el shock impact
-        const ang = Math.random() * Math.PI * 2;
-        const spd = 50 + Math.random() * 300;
-        generarParticula(particulasExplosion, { 
-            x, y, 
-            vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, 
-            r: 2 + Math.random() * 4.5, vida: 1.0 + Math.random() * 1.5, 
-            color: ['#ffc733', '#ff4500', '#fff', '#222'][Math.floor(Math.random() * 4)] 
-        });
-    }
-}
-
-
-export function generarGotasSangre(x, y, cantidad = 0) {
-    // --- OPTIMIZACIÓN: Limitar la frecuencia de generación de sangre ---
-    if (estadoJuego && estadoJuego.bloodGenerationCooldown > 0) return;
-    if (estadoJuego) estadoJuego.bloodGenerationCooldown = 0.05; // Máximo ~20 veces por segundo
-
-    const numGotas = cantidad > 0 ? cantidad : 10 + Math.random() * 10;
-    for (let i = 0; i < numGotas; i++) {
-        const ang = Math.random() * Math.PI * 2;
-        const spd = 20 + Math.random() * 100;
-        const r = 1.5 + Math.random() * 2.5;
-        generarParticula(particulasExplosion, {
-            x, y,
-            vx: Math.cos(ang) * spd,
-            vy: Math.sin(ang) * spd,
-            r: r,
-            vida: 0.8 + Math.random() * 0.6,
-            color: '#b22222' // Color sangre
-        });
-    }
-}
-
-export function generarBurbujasDeSangre(x, y) {
-    for (let i = 0; i < 15 + Math.random() * 10; i++) {
-        const ang = Math.random() * Math.PI * 2;
-        const spd = 10 + Math.random() * 50;
-        const r = 2 + Math.random() * 4;
-        generarParticula(particulasBurbujas, {
-            x: x, y: y,
-            vx: Math.cos(ang) * spd,
-            vy: Math.sin(ang) * spd - 30, // Tend to float up
-            r: r,
-            vida: 1.0 + Math.random() * 1.0,
-            color: '#b22222' // Store blood color
-        });
-    }
-}
-
-function generarBurbujasEmbestidaTiburom(x, y) {
-    // Generar una estela de burbujas más intensa durante la embestida
-    for (let i = 0; i < 2; i++) {
-        if (Math.random() > 0.4) {
-            const offsetX = (Math.random() - 0.5) * 50; // Alrededor del cuerpo
-            const offsetY = (Math.random() - 0.5) * 50;
-            generarParticula(particulasBurbujas, {
-                x: x + offsetX,
-                y: y + offsetY,
-                vx: (Math.random() - 0.5) * 40 - 60, // Hacia atrás principalmente
-                vy: (Math.random() - 0.5) * 40,
-                r: Math.random() * 3.5 + 2,
-                vida: 0.7 + Math.random() * 0.7,
-                color: '' // El color no se usa para las burbujas, solo el stroke
-            });
-        }
-    }
-}
-
-// --- NUEVO: Función para generar humo/aceite cuando el submarino está dañado ---
-function generarHumoDaño(x, y, isLevel5 = false) {
-    // No generar en cada frame para un efecto más esporádico
-    if (Math.random() > 0.6) return;
-
-    const anguloBase = isLevel5 ? Math.PI / 2 : Math.PI; // Hacia abajo en nivel 5, hacia atrás en horizontal
-    const angulo = anguloBase + (Math.random() - 0.5) * 0.9; // Un poco de dispersión
-    const velocidad = 25 + Math.random() * 30;
-
-    // Reutilizamos el array de partículas de tinta para el humo, ya que tienen un comportamiento similar (oscuro, se disipa)
-    generarParticula(particulasTinta, {
-        x: x,
-        y: y,
-        vx: Math.cos(angulo) * velocidad,
-        vy: Math.sin(angulo) * velocidad - 25, // Tiende a flotar un poco hacia arriba
-        r: 4 + Math.random() * 6, // Partículas de tamaño variable
-        vida: 2.0 + Math.random() * 2.0, // Duran un poco más que las burbujas
-        color: `rgba(25, 25, 25, ${0.4 + Math.random() * 0.3})` // Humo/aceite oscuro y semitransparente
-    });
-}
 
 // =================================================================================
 //  7. FUNCIONES DE ACCIÓN Y ESTADO DEL JUEGO
@@ -1088,14 +550,8 @@ export function activarSlowMotion(duracion) {
     }
 }
 
-/**
- * Activa una sacudida en el HUD. La intensidad se acumula si ocurren varios eventos.
- * @param {number} intensity - La fuerza de la sacudida.
- */
-function triggerHudShake(intensity) {
-    if (!estadoJuego) return;
-    // Acumula la intensidad para apilar sacudidas, con un límite para evitar excesos.
-    estadoJuego.hudShakeIntensity = Math.min(60, estadoJuego.hudShakeIntensity + intensity);
+export function triggerHudShake(intensity) {
+    _triggerHudShake(intensity, estadoJuego, liveHudContainer);
 }
 /**
  * Centraliza la lógica de aplicar daño al jugador, teniendo en cuenta el escudo.
@@ -1138,202 +594,76 @@ export function infligirDanoJugador(cantidad = 1, tipoSonido = 'choque') {
 
 // --- Estado Principal y Entidades ---
 export let estadoJuego = null, jugador, animales, escombros;
-let teclas = {}, gamepadConectado = false, prevGamepadButtons = [];
+setSpawnerContextGetter(() => ({ W, H, estadoJuego, animales, velocidadActual }));
+export { teclas, gamepadConectado, prevGamepadButtons, estaSobreUI };
 let modoSuperposicion = 'menu'; let estabaCorriendoAntesCreditos = false;
 let __iniciando = false;
 let menuFlyBy = null; // Para la animación del submarino en el menú
 const INCLINACION_MAX = Math.PI / 24;
 const JUGADOR_VELOCIDAD = 350;
-const ENFRIAMIENTO_TORPEDO = 1.5;
-const RANGOS_ASESINO = [{ bajas: 0, titulo: "NOVATO" }, { bajas: 10, titulo: "APRENDIZ" }, { bajas: 25, titulo: "MERCENARIO" }, { bajas: 50, titulo: "CAZADOR" }, { bajas: 75, titulo: "VETERANO" }, { bajas: 100, titulo: "DEPREDADOR" }, { bajas: 150, titulo: "LEYENDA ABISAL" }];
+export { RANGOS_ASESINO };
 
 const SHARK_ANIMATION_SPEED = 0.05; // Segundos por frame. 0.05 = 20 FPS
 const WHALE_ANIMATION_SPEED = 0.08; // Un poco más lento para la ballena
 const MIERDEi_ANIMATION_SPEED = 0.06;
 const BABYWHALE_ANIMATION_SPEED = 0.07;
 const ORCA_ANIMATION_SPEED = 0.06;
-const SONAR_SWEEP_SPEED = 2.0; // Radianes por segundo para el barrido del sonar
+import {
+    SONAR_SWEEP_SPEED,
+    actualizarSonarPings as _actualizarSonarPings,
+    dibujarSonar as _dibujarSonar
+} from './sonar.js';
+export { SONAR_SWEEP_SPEED };
 
 // =================================================================================
-//  SISTEMA DE IA AVANZADA PARA HABITANTES MARINOS
 // =================================================================================
+//  SISTEMA DE IA AVANZADA PARA HABITANTES MARINOS (Módulo ai.js)
+// =================================================================================
+import {
+    CARDUMEN_RADIO_COHESION,
+    CARDUMEN_RADIO_SEPARACION,
+    CARDUMEN_RADIO_ALINEACION,
+    CARDUMEN_RADIO_HUIDA,
+    CARDUMEN_FUERZA_COHESION,
+    CARDUMEN_FUERZA_SEPARACION,
+    CARDUMEN_FUERZA_ALINEACION,
+    CARDUMEN_FUERZA_HUIDA,
+    CARDUMEN_VELOCIDAD_MAX,
+    SHARK_ANGULO_FLANQUEO,
+    SHARK_RADIO_ACECHO,
+    ORCA_RADIO_CERCO,
+    calcularFuerzasCardumen as _calcularFuerzasCardumen,
+    calcularFuerzaHuida as _calcularFuerzaHuida,
+    alertarPecesCercanos as _alertarPecesCercanos,
+    calcularAnguloFlanqueoTiburon,
+    calcularPosicionCercoOrca
+} from './ai.js';
 
-// --- Constantes de Cardumen ---
-const CARDUMEN_RADIO_COHESION = 200;   // Radio para calcular centro del grupo
-const CARDUMEN_RADIO_SEPARACION = 50;  // Radio mínimo entre peces
-const CARDUMEN_RADIO_ALINEACION = 150; // Radio para alinear velocidades
-const CARDUMEN_RADIO_HUIDA = 300;      // Radio de detección de amenazas
-const CARDUMEN_FUERZA_COHESION = 0.8;  // Fuerza de atracción al centro
-const CARDUMEN_FUERZA_SEPARACION = 1.5; // Fuerza de repulsión (mayor para evitar solapamiento)
-const CARDUMEN_FUERZA_ALINEACION = 0.6; // Fuerza de alineación
-const CARDUMEN_FUERZA_HUIDA = 3.0;     // Fuerza de huida de amenazas
-const CARDUMEN_VELOCIDAD_MAX = 180;    // Velocidad máxima de un pez en cardumen
-
-// --- Constantes de Tiburón ---
-const SHARK_ANGULO_FLANQUEO = Math.PI / 4; // 45 grados de flanqueo
-const SHARK_RADIO_ACECHO = 400; // Radio para entrar en estado de acecho
-
-// --- Constantes de Orca ---
-const ORCA_RADIO_CERCO = 300; // Radio del cerco
-
-/**
- * Calcula las fuerzas de cardumen para un pez (cohesión, separación, alineación).
- * @param {object} pez - El pez actual.
- * @returns {{fx: number, fy: number}} - Las fuerzas a aplicar.
- */
-function calcularFuerzasCardumen(pez) {
-    let cohesionX = 0, cohesionY = 0, cohesionCount = 0;
-    let separacionX = 0, separacionY = 0;
-    let alineacionVx = 0, alineacionVy = 0, alineacionCount = 0;
-
-    for (const otro of animales) {
-        if (otro === pez) continue;
-        // Solo considerar peces normales del cardumen
-        if (!['normal', 'rojo', 'aggressive'].includes(otro.tipo)) continue;
-
-        const dx = otro.x - pez.x;
-        const dy = otro.y - pez.y;
-        const dist = Math.hypot(dx, dy);
-
-        if (dist < 1) continue; // Evitar división por cero
-
-        // Cohesión: atraer hacia el centro del grupo
-        if (dist < CARDUMEN_RADIO_COHESION) {
-            cohesionX += otro.x;
-            cohesionY += otro.y;
-            cohesionCount++;
-        }
-
-        // Separación: repeler si está muy cerca
-        if (dist < CARDUMEN_RADIO_SEPARACION) {
-            const fuerza = (CARDUMEN_RADIO_SEPARACION - dist) / CARDUMEN_RADIO_SEPARACION;
-            separacionX -= (dx / dist) * fuerza;
-            separacionY -= (dy / dist) * fuerza;
-        }
-
-        // Alineación: igualar velocidad con vecinos
-        if (dist < CARDUMEN_RADIO_ALINEACION) {
-            alineacionVx += otro.vx || 0;
-            alineacionVy += otro.vy || 0;
-            alineacionCount++;
-        }
-    }
-
-    let fx = 0, fy = 0;
-
-    // Aplicar cohesión
-    if (cohesionCount > 0) {
-        const centroX = cohesionX / cohesionCount;
-        const centroY = cohesionY / cohesionCount;
-        fx += (centroX - pez.x) * CARDUMEN_FUERZA_COHESION * 0.01;
-        fy += (centroY - pez.y) * CARDUMEN_FUERZA_COHESION * 0.01;
-    }
-
-    // Aplicar separación
-    fx += separacionX * CARDUMEN_FUERZA_SEPARACION * 50;
-    fy += separacionY * CARDUMEN_FUERZA_SEPARACION * 50;
-
-    // Aplicar alineación
-    if (alineacionCount > 0) {
-        const avgVx = alineacionVx / alineacionCount;
-        const avgVy = alineacionVy / alineacionCount;
-        fx += (avgVx - (pez.vx || 0)) * CARDUMEN_FUERZA_ALINEACION * 0.1;
-        fy += (avgVy - (pez.vy || 0)) * CARDUMEN_FUERZA_ALINEACION * 0.1;
-    }
-
-    return { fx, fy };
+export function calcularFuerzasCardumen(pez) {
+    return _calcularFuerzasCardumen(pez, animales);
 }
-
-/**
- * Calcula la fuerza de huida de amenazas (jugador, tiburones, orcas).
- * @param {object} pez - El pez actual.
- * @returns {{fx: number, fy: number}} - La fuerza de huida.
- */
-function calcularFuerzaHuida(pez) {
-    let fx = 0, fy = 0;
-
-    // Huir del jugador
-    if (jugador && estadoJuego && estadoJuego.enEjecucion) {
-        const dx = pez.x - jugador.x;
-        const dy = pez.y - jugador.y;
-        const dist = Math.hypot(dx, dy);
-
-        if (dist < CARDUMEN_RADIO_HUIDA && dist > 1) {
-            const fuerza = (CARDUMEN_RADIO_HUIDA - dist) / CARDUMEN_RADIO_HUIDA;
-            fx += (dx / dist) * fuerza * CARDUMEN_FUERZA_HUIDA * 100;
-            fy += (dy / dist) * fuerza * CARDUMEN_FUERZA_HUIDA * 100;
-        }
-    }
-
-    // Huir de depredadores (tiburones, orcas)
-    for (const depredador of animales) {
-        if (!['shark', 'orca'].includes(depredador.tipo)) continue;
-
-        const dx = pez.x - depredador.x;
-        const dy = pez.y - depredador.y;
-        const dist = Math.hypot(dx, dy);
-
-        // Los depredadores tienen un radio de amenaza mayor
-        const radioAmenaza = depredador.tipo === 'orca' ? CARDUMEN_RADIO_HUIDA * 1.5 : CARDUMEN_RADIO_HUIDA;
-
-        if (dist < radioAmenaza && dist > 1) {
-            const fuerza = (radioAmenaza - dist) / radioAmenaza;
-            fx += (dx / dist) * fuerza * CARDUMEN_FUERZA_HUIDA * 120;
-            fy += (dy / dist) * fuerza * CARDUMEN_FUERZA_HUIDA * 120;
-        }
-    }
-
-    return { fx, fy };
+export function calcularFuerzaHuida(pez) {
+    return _calcularFuerzaHuida(pez, jugador, animales, estadoJuego);
 }
-
-/**
- * Alerta a peces cercanos cuando uno detecta peligro.
- * @param {object} pezAsustado - El pez que detectó el peligro.
- */
-function alertarPecesCercanos(pezAsustado) {
-    const RADIO_ALERTA = 250;
-
-    for (const otro of animales) {
-        if (otro === pezAsustado) continue;
-        if (!['normal', 'rojo', 'aggressive'].includes(otro.tipo)) continue;
-
-        const dist = Math.hypot(otro.x - pezAsustado.x, otro.y - pezAsustado.y);
-        if (dist < RADIO_ALERTA) {
-            // Marcar como alertado temporalmente
-            otro.alertado = true;
-            otro.alertaTimer = 2.0; // Alerta activa por 2 segundos
-        }
-    }
+export function alertarPecesCercanos(pezAsustado) {
+    return _alertarPecesCercanos(pezAsustado, animales);
 }
-
-/**
- * Calcula el ángulo de flanqueo para tiburones seguidores.
- * @param {number} index - Índice del tiburón en la manada.
- * @param {number} baseAngle - Ángulo base hacia el objetivo.
- * @returns {number} - Ángulo ajustado para flanqueo.
- */
-function calcularAnguloFlanqueoTiburon(index, baseAngle) {
-    // Los tiburones pares flanquean por arriba, los impares por abajo
-    const offset = (index % 2 === 0 ? 1 : -1) * SHARK_ANGULO_FLANQUEO * (Math.floor(index / 2) + 1) * 0.5;
-    return baseAngle + offset;
-}
-
-/**
- * Calcula la posición de cerco para una orca en la manada.
- * @param {object} orca - La orca.
- * @param {object} objetivo - El objetivo del cerco.
- * @param {number} indexEnManada - Posición de la orca en la manada.
- * @param {number} tamanoManada - Tamaño total de la manada.
- * @returns {{x: number, y: number}} - Posición objetivo del cerco.
- */
-function calcularPosicionCercoOrca(orca, objetivo, indexEnManada, tamanoManada) {
-    // Distribuir las orcas en un círculo alrededor del objetivo
-    const angulo = (Math.PI * 2 / tamanoManada) * indexEnManada;
-    return {
-        x: objetivo.x + Math.cos(angulo) * ORCA_RADIO_CERCO,
-        y: objetivo.y + Math.sin(angulo) * ORCA_RADIO_CERCO
-    };
-}
+export {
+    CARDUMEN_RADIO_COHESION,
+    CARDUMEN_RADIO_SEPARACION,
+    CARDUMEN_RADIO_ALINEACION,
+    CARDUMEN_RADIO_HUIDA,
+    CARDUMEN_FUERZA_COHESION,
+    CARDUMEN_FUERZA_SEPARACION,
+    CARDUMEN_FUERZA_ALINEACION,
+    CARDUMEN_FUERZA_HUIDA,
+    CARDUMEN_VELOCIDAD_MAX,
+    SHARK_ANGULO_FLANQUEO,
+    SHARK_RADIO_ACECHO,
+    ORCA_RADIO_CERCO,
+    calcularAnguloFlanqueoTiburon,
+    calcularPosicionCercoOrca
+};
 
 // --- Funciones de Control del Juego ---
 function reiniciar(nivelDeInicio = 1) {
@@ -1447,200 +777,14 @@ function reiniciar(nivelDeInicio = 1) {
 
 function velocidadActual() {
     if (!estadoJuego || !estadoJuego.enEjecucion) return 120;
-    return Levels.getLevelSpeed();
+    return Levels.getLevelSpeed(estadoJuego.nivel, dificultadBase());
 }
 function puntosPorRescate() { const p0 = clamp(estadoJuego.tiempoTranscurrido / 180, 0, 1); return Math.floor(lerp(100, 250, p0)); }
 
-// --- Generación de Enemigos ---
-export function generarAnimal(esEsbirroJefe = false, tipoForzado = null, overrides = {}, direccion = -1) {
-    const minY = H * 0.15;
-    // Con el sistema de cámara, el jugador puede estar en cualquier 'y', así que generamos en toda la altura.
-    const usaCamera = estadoJuego.levelFlags.scrollBackground !== false;
-
-    const maxY = H * 0.85;
-    const y = overrides.y !== undefined ? overrides.y : (minY + Math.random() * (maxY - minY));
-    let velocidad = overrides.velocidad || (velocidadActual() + 60);
-
-    let tipo = tipoForzado || 'normal';
-
-    // --- LÓGICA DE APARICIÓN MEJORADA ---
-    // Si no se fuerza un tipo muy específico (como 'dorado' o 'mierdei'),
-    // hay una probabilidad de que aparezca un enemigo especial en su lugar.
-    const puedeSerEspecial = !tipoForzado || tipoForzado === 'normal' || tipoForzado === 'aggressive' || tipoForzado === 'rojo';
-
-    if (puedeSerEspecial) {
-        const r = Math.random();
-        // La ballena y el tiburón ahora tienen probabilidades independientes y no se bloquean entre sí.
-        if (whaleListo && r < 0.10) { // 10% de probabilidad de que aparezca una familia de ballenas
-            tipo = 'whale';
-        } else if (orcaListo && r > 0.80 && r < 0.90) { // 10% de probabilidad de que sea una orca
-            tipo = 'orca';
-        } else if (r > 0.70 && r < 0.80) { // 10% de probabilidad para el nuevo enemigo
-            tipo = 'disparador';
-        } else if (sharkListo && r > 0.90) { // 10% de probabilidad de que sea un tiburón.
-            tipo = 'shark';
-        }
-    }
-
-    const spawnX = direccion > 0 ? (usaCamera ? estadoJuego.cameraX - (overrides.ancho || 100) : -(overrides.ancho || 100)) : (usaCamera ? estadoJuego.cameraX + W + (overrides.ancho || 100) : W + (overrides.ancho || 100));
-
-    if (tipo === 'disparador') {
-        if (!criaturasListas) return; // Necesita la hoja de sprites de criaturas
-        const tamano = 96;
-        velocidad *= 0.4; // Se mueve más lento que los enemigos normales
-        animales.push({
-            x: spawnX, y, vx: velocidad * direccion, r: 44, w: tamano, h: tamano,
-            capturado: false,
-            fila: 3, // Usaremos la fila 4 (índice 3) de la hoja de sprites, asumiendo que existe y es adecuada.
-            frame: 0, timerFrame: 0,
-            semillaFase: Math.random() * Math.PI * 2,
-            tipo: 'disparador',
-            hp: 15, maxHp: 15, // Más resistente que un pez normal
-            shootCooldown: 1.5 + Math.random() * 2, // Cooldown de disparo inicial
-        });
-    }
-    // prettier-ignore
-    else if (tipo === 'mierdei') {
-        if (!mierdeiListo) return; // Evitar error si la imagen no ha cargado
-        const anchoDeseado = overrides.ancho || 100;
-        let altoDeseado = anchoDeseado; // Asumir cuadrado por defecto
-        if (mierdeiImg.width > 0) {
-            altoDeseado = anchoDeseado * (mierdeiImg.height / mierdeiImg.width);
-        }
-        animales.push({
-            x: spawnX, y, vx: velocidad * 0.7 * direccion, r: anchoDeseado / 2,
-            w: anchoDeseado, h: altoDeseado, capturado: false, tipo: 'mierdei',
-            semillaFase: Math.random() * Math.PI * 2, // Kept for floating, might remove later if not needed
-            frame: 0,
-            timerFrame: 0,
-        });
-    } else if (tipo === 'shark') {
-        const tamano = overrides.ancho || 128;
-        velocidad *= 0.9; // Un poco más lentos al patrullar
-        animales.push({
-            x: spawnX, y, vx: velocidad * direccion, vy: 0, r: 50, w: tamano, h: tamano,
-            capturado: false, frame: 0, timerFrame: 0, hp: 60, maxHp: 60,
-            semillaFase: Math.random() * Math.PI * 2,
-            tipo: 'shark',
-            huntCooldown: 2.0 + Math.random(), // Cooldown inicial antes de la primera caza
-            isHunting: false,
-            isPackLeader: false,
-        });
-    } else if (tipo === 'orca') {
-        if (!orcaListo) return;
-
-        const packSize = 2 + Math.floor(Math.random() * 2); // Manada de 2 a 3 orcas
-        const packId = `orca_pack_${Date.now()}_${Math.random()}`;
-
-        for (let i = 0; i < packSize; i++) {
-            const isLeader = (i === 0);
-            const tamano = isLeader ? 190 : 170; // El líder es un poco más grande
-            const orcaY = y + (i * 80) - ((packSize - 1) * 40); // Espaciarlas verticalmente
-            const orcaX = spawnX + i * 100 * -direccion; // Y un poco horizontalmente
-            const velocidadOrca = (velocidadActual() + 80) * (isLeader ? 1.1 : 1.0);
-
-            animales.push({
-                x: orcaX, y: orcaY, vx: velocidadOrca * direccion, vy: 0, r: 60, w: tamano, h: tamano,
-                capturado: false, frame: 0, timerFrame: 0,
-                semillaFase: Math.random() * Math.PI * 2,
-                tipo: 'orca',
-                hp: isLeader ? 120 : 80, maxHp: isLeader ? 120 : 80,
-                huntCooldown: 2.0 + Math.random() * 2,
-                isHunting: false, // True when hunting player
-                isHuntingAnimal: false, // True when hunting other animals
-                targetAnimal: null, // The animal it's hunting
-                packId: packId,
-                isPackLeader: isLeader,
-                attackTimer: 0,
-            });
-        }
-    } else if (tipo === 'whale') {
-        const tamano = overrides.ancho || 250;
-        velocidad *= 0.5; // Muy lentas        
-        const patrolWidth = W * (0.8 + Math.random() * 0.4); // Patrullan un área de 80-120% del ancho de la pantalla
-        const patrolMaxX = spawnX;
-        const patrolMinX = spawnX - patrolWidth;
-
-        const adultWhale = {
-            x: spawnX, y, vx: velocidad * direccion, vy: 0, r: 100, w: tamano, h: tamano,
-            capturado: false, frame: 0, timerFrame: 0,
-            semillaFase: Math.random() * Math.PI * 2,
-            tipo: 'whale',
-            hp: 130, maxHp: 130, // Vida aumentada a 130
-            isEnraged: false,
-            // --- SUGERENCIA DE IA: NUEVOS ATAQUES PARA LA BALLENA ---
-            spoutCooldown: 3.0 + Math.random() * 3, // Temporizador para el chorro de agua
-            tailSwipeCooldown: 5.0 + Math.random() * 4, // Temporizador para el coletazo
-            isTailSwiping: false,
-            tailSwipeProgress: 0,
-            songCooldown: 2.0 + Math.random() * 2, // Cooldown para el canto ambiental (REDUCIDO PARA PRUEBAS)
-            // --- NUEVO: Estado de protección ---
-            isProtecting: false,
-            protectedBaby: null,
-            isPatrolling: true,
-            patrolMinX: patrolMinX,
-            patrolMaxX: patrolMaxX,
-            revengeTarget: null,
-            collisionCooldown: 0,
-        };
-        animales.push(adultWhale);
-
-        // --- NUEVO: Generar crías de ballena junto a la adulta ---
-        if (babyWhaleListo) {
-            const numBabies = 1 + Math.floor(Math.random() * 2); // 1 o 2 crías
-            for (let i = 0; i < numBabies; i++) {
-                const babyTamano = 140; // Un poco más grande que antes
-                const babyVelocidad = velocidad * 1.4; // Ligeramente más rápidas que la madre
-                const babyY = y + (i === 0 ? -80 : 80) + (Math.random() - 0.5) * 40;
-                const babyX = spawnX + (120 + Math.random() * 80) * -direccion;
-
-                animales.push({
-                    x: babyX, y: babyY, vx: babyVelocidad * direccion, vy: 0, r: 55, w: babyTamano, h: babyTamano,
-                    capturado: false, frame: 0, timerFrame: 0,
-                    semillaFase: Math.random() * Math.PI * 2,
-                    tipo: 'baby_whale',
-                    hp: 40, // Ahora tiene vida y puede ser eliminada
-                    maxHp: 40,
-                    mother: adultWhale, // Referencia a su madre
-                    // --- NUEVO: Estado de huida ---
-                    isFleeing: false,
-                    fleeTimer: 0,
-                });
-            }
-        }
-    } else {
-        if (esEsbirroJefe) {
-            tipo = 'aggressive';
-        }
-
-        if (tipo === 'aggressive') {
-            velocidad *= 1.3;
-        }
-
-        const tamano = overrides.ancho || 96;
-        const fila = (criaturasListas && cFilas > 0) ? ((Math.random() * cFilas) | 0) : 0;
-
-        // --- SUGERENCIA DE IA: PATRONES DE MOVIMIENTO ---
-        // En lugar de que todos se muevan en línea recta, asignamos un patrón de movimiento.
-        let patronMovimiento = 'lineal';
-        const randMov = Math.random();
-        if (tipo !== 'aggressive' && randMov < 0.3) {
-            patronMovimiento = 'sinusoidal';
-        } else if (tipo !== 'aggressive' && randMov < 0.5) {
-            patronMovimiento = 'pausa_acelera';
-        }
-        // --- FIN SUGERENCIA ---
-
-        animales.push({
-            x: spawnX, y, vx: velocidad * direccion, r: 44, w: tamano, h: tamano,
-            capturado: false, fila, frame: 0, timerFrame: 0,
-            semillaFase: Math.random() * Math.PI * 2, tipo: tipo, hp: 1, maxHp: 1,
-            patronMovimiento: patronMovimiento, // Propiedad para el nuevo tipo de movimiento
-            estadoMovimiento: 'moviendo',      // Estado para la IA de 'pausa_acelera'
-            timerMovimiento: 0                 // Temporizador para la IA de 'pausa_acelera'
-        });
-    }
-}
+// --- Generación de Enemigos (Módulo spawner.js) ---
+export const generarAnimal = (esEsbirroJefe = false, tipoForzado = null, overrides = {}, direccion = -1) => {
+    return spawnerGenerarAnimal(esEsbirroJefe, tipoForzado, overrides, direccion);
+};
 
 // --- Acciones del Jugador (Disparos) ---
 function disparar() {
@@ -3026,137 +2170,21 @@ function actualizar(dt) {
     comprobarCompletadoNivel();
 }
 
-/**
- * Actualiza la posición del HUD para crear el efecto de sacudida.
- */
-function actualizarLiveHUD() {
-    if (!estadoJuego || !liveHudContainer) return;
-
-    const s = estadoJuego;
-
-    if (s.hudShakeIntensity > 0.1) {
-        // Genera valores aleatorios para la sacudida basados en la intensidad
-        s.hudShakeX = (Math.random() - 0.5) * s.hudShakeIntensity;
-        s.hudShakeY = (Math.random() - 0.5) * s.hudShakeIntensity;
-
-        liveHudContainer.style.transform = `translate(${s.hudShakeX.toFixed(2)}px, ${s.hudShakeY.toFixed(2)}px)`;
-
-        // Reduce la intensidad para que la sacudida se desvanezca
-        s.hudShakeIntensity *= 0.88; // Decaimiento rápido
-    } else if (s.hudShakeIntensity !== 0) {
-        s.hudShakeIntensity = 0;
-        liveHudContainer.style.transform = 'translate(0, 0)';
-    }
+export function actualizarLiveHUD() {
+    _actualizarLiveHUD(estadoJuego, liveHudContainer);
 }
 
 /**
- * OPTIMIZACIÓN: Calcula las posiciones de los pings del sonar y las guarda en caché.
- * Esta función es costosa y se llama a una frecuencia reducida (throttled) desde `actualizar`.
+ * OPTIMIZACIÓN: Calcula las posiciones de los pings del sonar delegando en sonar.js.
  */
 function actualizarSonarPings() {
-    if (!estadoJuego) return;
-
-    estadoJuego.sonarPings = []; // Limpiar pings anteriores
-    const SONAR_WORLD_RADIUS = 2800;
-
-    // Jugador (siempre en el centro)
-    estadoJuego.sonarPings.push({ tipo: 'jugador' });
-
-    // Animales
-    for (const a of animales) {
-        const dx = a.x - jugador.x; const dy = a.y - jugador.y;
-        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-            const isHostile = a.hp !== undefined || a.tipo === 'shark' || a.tipo === 'mega_whale' || a.tipo === 'mierdei' || a.tipo === 'orca';
-            const isBoss = a.tipo === 'mega_whale' || (estadoJuego.jefe && a === estadoJuego.jefe);
-            estadoJuego.sonarPings.push({ tipo: 'animal', dx, dy, isHostile, isBoss });
-        }
-    }
-
-    // Jefe (si existe y no está en la lista de animales)
-    if (estadoJuego.jefe && !animales.includes(estadoJuego.jefe)) {
-        const dx = estadoJuego.jefe.x - jugador.x; const dy = estadoJuego.jefe.y - jugador.y;
-        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-            estadoJuego.sonarPings.push({ tipo: 'animal', dx, dy, isHostile: true, isBoss: true });
-        }
-    }
-
-    // Proyectiles y Minas
-    const proyectilGrupos = [
-        { lista: Weapons.proyectiles, tipo: 'proyectil_jugador' },
-        { lista: Weapons.torpedos, tipo: 'torpedo_jugador' },
-        { lista: proyectilesEnemigos, tipo: 'proyectil_enemigo' },
-        { lista: Weapons.minas, tipo: 'mina' }
-    ];
-    for (const grupo of proyectilGrupos) {
-        for (const p of grupo.lista) {
-            const dx = p.x - jugador.x; const dy = p.y - jugador.y;
-            if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-                const pingData = { tipo: grupo.tipo, dx, dy };
-                if (p.vx !== undefined) { pingData.vx = p.vx; pingData.vy = p.vy; }
-                if (p.angle !== undefined) pingData.angle = p.angle;
-                estadoJuego.sonarPings.push(pingData);
-            }
-        }
-    }
-
-    // Escombros
-    for (const e of escombros) {
-        const dx = e.x - jugador.x; const dy = e.y - jugador.y;
-        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-            estadoJuego.sonarPings.push({ tipo: 'escombro', dx, dy, tamano: (e.tamano || e.size) });
-        }
-    }
-
-    // Ataques especiales (Láser, Kraken)
-    if (estadoJuego.laserActivo) {
-        const isLevel5 = estadoJuego.nivel === 5;
-        const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
-        const laserAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
-        estadoJuego.sonarPings.push({ tipo: 'laser_jugador', angle: laserAngle });
-    }
-    if (estadoJuego.jefe && estadoJuego.jefe.lasers) {
-        for (const laser of estadoJuego.jefe.lasers) {
-            const dx1 = laser.x - jugador.x; const dy1 = laser.y - jugador.y;
-            if (Math.hypot(dx1, dy1) < SONAR_WORLD_RADIUS) {
-                let endWorldX, endWorldY;
-                if (laser.tipo === 'sweep') {
-                    endWorldX = laser.x + Math.cos(laser.currentAngle) * laser.length;
-                    endWorldY = laser.y + Math.sin(laser.currentAngle) * laser.length;
-                } else { // snipe
-                    endWorldX = laser.targetX; endWorldY = laser.targetY;
-                }
-                const dx2 = endWorldX - jugador.x; const dy2 = endWorldY - jugador.y;
-                estadoJuego.sonarPings.push({ tipo: 'laser_enemigo', dx1, dy1, dx2, dy2 });
-            }
-        }
-    }
-    if (estadoJuego.nivel === 3 && estadoJuego.jefe) {
-        for (const ink of estadoJuego.proyectilesTinta) {
-            const dx = ink.x - jugador.x; const dy = ink.y - jugador.y;
-            if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-                estadoJuego.sonarPings.push({ tipo: 'tinta_kraken', dx, dy });
-            }
-        }
-        if (estadoJuego.jefe.estado === 'attacking_smash' && estadoJuego.jefe.datosAtaque) {
-            const ataque = estadoJuego.jefe.datosAtaque;
-            const dy = ataque.y - jugador.y;
-            if (ataque.carga > 0) {
-                estadoJuego.sonarPings.push({ tipo: 'rayo_kraken', dy });
-            } else {
-                const tentacleWorldX = W - ataque.progreso * (W + 200);
-                const dx = tentacleWorldX - jugador.x;
-                estadoJuego.sonarPings.push({ tipo: 'barrido_kraken', dx, dy });
-            }
-        }
-    }
+    _actualizarSonarPings({ estadoJuego, jugador, animales, escombros, Weapons, proyectilesEnemigos, W });
 }
 // =================================================================================
 //  9. BUCLE PRINCIPAL DE RENDERIZADO (DRAW)
 // =================================================================================
 // Se encarga de dibujar todo en la pantalla en el orden correcto (de atrás hacia adelante).
 function renderizar(dt) {
-    // La actualización de los offsets del fondo ahora se hace en `actualizar`.
-    // La función de dibujado ya no necesita `dt`.
     if (estadoJuego) dibujarFondoParallax();
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
@@ -3164,1247 +2192,120 @@ function renderizar(dt) {
     if (estadoJuego) {
         ctx.save();
 
-        // --- NUEVO: Aplicar Zoom y Shake a la cámara ---
-        // 1. Mover al centro de la pantalla para que el zoom sea centrado
+        // 1. Zoom centrado
         ctx.translate(W / 2, H / 2);
-        // 2. Aplicar el zoom (si es diferente de 1.0)
         if (estadoJuego.cameraZoom !== 1.0) {
             ctx.scale(estadoJuego.cameraZoom, estadoJuego.cameraZoom);
         }
-        // 3. Mover de vuelta desde el centro
         ctx.translate(-W / 2, -H / 2);
-        // 4. Aplicar el temblor de pantalla (shake)
+
+        // 2. Shake de pantalla
         if (estadoJuego.screenShake > 0.1) {
             const shakeX = (Math.random() - 0.5) * estadoJuego.screenShake;
             const shakeY = (Math.random() - 0.5) * estadoJuego.screenShake;
             ctx.translate(shakeX, shakeY);
         }
 
-        // Redondeamos la posición de la cámara para evitar temblores por subpíxeles.
+        // 3. Traslación de cámara centrada
         const camX = Math.round(estadoJuego.cameraX);
         const camY = Math.round(estadoJuego.cameraY);
-        // Movemos todo el "mundo" en la dirección opuesta a la cámara.
         ctx.translate(-camX, -camY);
 
-        // La llamada a drawLevel() es la que permitirá que level3.js dibuje al jefe.
         Levels.drawLevel();
 
-        for (let i = 0; i < animales.length; i++) {
-            const a = animales[i];
+        // 4. Dibujar Criaturas Marinas
+        dibujarAnimales(ctx, { animales, estadoJuego, W, H });
 
-            // --- OPTIMIZACIÓN: Frustum Culling (Omitir dibujado si está fuera de pantalla) ---
-            // Margen de seguridad para entidades grandes (ej. ballenas) y rotaciones
-            const margin = 300;
-            if (
-                a.x + margin < estadoJuego.cameraX ||
-                a.x - margin > estadoJuego.cameraX + W ||
-                a.y + margin < estadoJuego.cameraY ||
-                a.y - margin > estadoJuego.cameraY + H
-            ) {
-                continue;
-            }
-
-            const offsetFlotante = Math.sin(Math.PI * estadoJuego.tiempoTranscurrido * 0.8 + a.semillaFase) * 8;
-            ctx.save();
-
-            if (a.tipo === 'baby_whale') {
-                // --- Dibuja la Ballena Bebé ---
-                ctx.translate(a.x, a.y + offsetFlotante);
-                if (babyWhaleListo && BABYWHALE_SPRITE_DATA) {
-                    // Si está herida, mostrar un tinte rojo
-                    if (a.hp < a.maxHp) {
-                        const damageRatio = a.hp / a.maxHp;
-                        if (damageRatio < 0.5) {
-                            ctx.filter = 'hue-rotate(-15deg) brightness(1.2) saturate(2)';
-                        }
-                    }
-
-                    // Barra de vida para la cría (solo si está dañada)
-                    if (a.hp < a.maxHp) {
-                        const barW = 60;
-                        const barH = 5;
-                        const barY = -a.h / 2.5 - 15;
-                        ctx.fillStyle = '#555';
-                        ctx.fillRect(-barW / 2, barY, barW, barH);
-                        ctx.fillStyle = '#ff5c5c';
-                        ctx.fillRect(-barW / 2, barY, barW * (a.hp / a.maxHp), barH);
-                    }
-
-                    const frameData = BABYWHALE_SPRITE_DATA.frames[a.frame];
-                    if (frameData) {
-                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
-                        const aspectRatio = sWidth / sHeight;
-                        const dHeight = a.w / aspectRatio;
-                        ctx.imageSmoothingEnabled = false;
-                        if (a.vx > 0) { ctx.scale(-1, 1); }
-                        ctx.drawImage(babyWhaleImg, sx, sy, sWidth, sHeight,
-                            Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
-                    }
-                }
-            }
-            else if (a.tipo === 'orca') {
-                // --- Dibuja la Orca ---
-                ctx.translate(a.x, a.y + offsetFlotante);
-                if (orcaListo && ORCA_SPRITE_DATA) {
-                    // Tinte rojo si está herida o cazando
-                    if (a.isHunting || (a.hp < a.maxHp)) {
-                        ctx.filter = 'hue-rotate(-10deg) brightness(1.2) saturate(1.5)';
-                    }
-
-                    // Barra de vida
-                    if (a.hp < a.maxHp) {
-                        const barW = 80;
-                        const barH = 6;
-                        const barY = -a.h / 2.5 - 15;
-                        ctx.fillStyle = '#555';
-                        ctx.fillRect(-barW / 2, barY, barW, barH);
-                        ctx.fillStyle = '#ff5c5c';
-                        ctx.fillRect(-barW / 2, barY, barW * (a.hp / a.maxHp), barH);
-                    }
-
-                    const frameData = ORCA_SPRITE_DATA.frames[a.frame];
-                    if (frameData) {
-                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
-                        const aspectRatio = sWidth / sHeight;
-                        const dHeight = a.w / aspectRatio;
-                        ctx.imageSmoothingEnabled = false;
-                        // La orca puede moverse en cualquier dirección, así que la volteamos según su vx
-                        if (a.vx > 0) { ctx.scale(-1, 1); }
-                        ctx.drawImage(orcaImg, sx, sy, sWidth, sHeight,
-                            Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
-                    }
-                }
-            }
-            else if (a.tipo === 'mierdei') {
-                if (mierdeiListo && MIERDEI_SPRITE_DATA) {
-                    // --- Dibuja el Mierdei ---
-                    ctx.translate(a.x, a.y + offsetFlotante);
-                    const frameData = MIERDEI_SPRITE_DATA.frames[a.frame];
-                    if (frameData) {
-                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
-                        const aspectRatio = sWidth / sHeight;
-                        const dHeight = a.w / aspectRatio;
-                        ctx.imageSmoothingEnabled = false;
-                        const dir = a.vx > 0 ? -1 : 1;
-                        ctx.scale(dir, 1);
-                        ctx.drawImage(mierdeiImg, sx, sy, sWidth, sHeight, Math.round(-a.w / 2), Math.round(-dHeight / 2), a.w, dHeight);
-                    }
-                }
-            } else if (a.tipo === 'shark') {
-                // --- Dibuja el Tiburón ---
-                ctx.translate(a.x, a.y);
-
-                // Efecto visual para la caza en manada
-                let tint = null;
-                if (a.isHunting) {
-                    tint = 'rgba(255, 0, 0, 0.3)';
-                } else {
-                    // Para que se vean mejor en el fondo oscuro, aumentamos su brillo.
-                    // No tint
-                }
-                if (sharkListo && SHARK_SPRITE_DATA) {
-                    const frameData = SHARK_SPRITE_DATA.frames[a.frame];
-                    if (frameData) {
-                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
-
-                        const aspectRatio = sWidth / sHeight;
-                        const dHeight = a.w / aspectRatio;
-
-                        ctx.imageSmoothingEnabled = false;
-                        if (a.vx > 0) {
-                            ctx.scale(-1, 1);
-                        }
-                        const dx = Math.round(-a.w / 2);
-                        const dy = Math.round(-dHeight / 2);
-
-                        if (tint) {
-                            dibujarSpriteConTinte(sharkImg, sx, sy, sWidth, sHeight, dx, dy, a.w, dHeight, tint);
-                        } else {
-                            ctx.drawImage(sharkImg, sx, sy, sWidth, sHeight, dx, dy, a.w, dHeight);
-                        }
-                    }
-                }
-            } else if (a.tipo === 'whale') {
-                // --- Dibuja la Ballena ---
-                ctx.translate(a.x, a.y + offsetFlotante);
-
-                // --- SUGERENCIA DE IA: Efecto visual del coletazo ---
-                if (a.isTailSwiping) {
-                    const progress = a.tailSwipeProgress; // 0 a 1
-                    const alpha = Math.sin(progress * Math.PI); // Fade in and out
-
-                    // Dibuja un arco para representar el área de barrido
-                    ctx.beginPath();
-                    const tailX = a.w / 2.5; // Origen del coletazo
-                    ctx.arc(tailX, 0, 60, -Math.PI / 2, Math.PI / 2);
-                    ctx.strokeStyle = `rgba(200, 230, 255, ${alpha * 0.8})`;
-                    ctx.lineWidth = 8;
-                    ctx.stroke();
-                }
-                // --- FIN SUGERENCIA ---
-
-                let tint = null;
-                if (a.isEnraged) {
-                    tint = 'rgba(255, 0, 0, 0.35)';
-                }
-                if (whaleListo && WHALE_SPRITE_DATA) {
-                    const frameData = WHALE_SPRITE_DATA.frames[a.frame];
-                    if (frameData) {
-                        const { x: sx, y: sy, w: sWidth, h: sHeight } = frameData.rect;
-                        const aspectRatio = sWidth / sHeight;
-                        const dHeight = a.w / aspectRatio;
-                        ctx.imageSmoothingEnabled = false;
-                        if (a.vx > 0) { ctx.scale(-1, 1); }
-                        const dx = Math.round(-a.w / 2);
-                        const dy = Math.round(-dHeight / 2);
-                        if (tint) {
-                            dibujarSpriteConTinte(whaleImg, sx, sy, sWidth, sHeight, dx, dy, a.w, dHeight, tint);
-                        } else {
-                            ctx.drawImage(whaleImg, sx, sy, sWidth, sHeight, dx, dy, a.w, dHeight);
-                        }
-                    }
-                }
-                // Barra de vida para la ballena
-                if (a.hp > 0 && a.maxHp) {
-                    const barW = 100;
-                    const barH = 8;
-                    const barX = -barW / 2;
-                    const barY = -a.h / 2 - 20;
-                    const hpRatio = a.hp / a.maxHp;
-                    ctx.fillStyle = '#555';
-                    ctx.fillRect(barX, barY, barW, barH);
-                    ctx.fillStyle = hpRatio > 0.5 ? '#5cff5c' : (hpRatio > 0.2 ? '#ffc95c' : '#ff5c5c');
-                    ctx.fillRect(barX, barY, barW * hpRatio, barH);
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(barX, barY, barW, barH);
-                }
-
-            } else {
-                // --- Dibuja las Criaturas Genéricas ---
-                let tint = null;
-                if (a.tipo === 'aggressive') tint = 'rgba(0, 100, 255, 0.4)';
-                if (a.tipo === 'rojo') tint = 'rgba(255, 50, 50, 0.5)';
-                if (a.tipo === 'disparador') tint = 'rgba(0, 255, 200, 0.4)';
-                if (a.tipo === 'dorado') tint = 'rgba(255, 220, 100, 0.5)';
-
-                if (criaturasListas && cFilas > 0) {
-                    const sx = (a.frame % 2) * cFrameAncho, sy = (a.fila % cFilas) * cFrameAlto;
-                    ctx.imageSmoothingEnabled = false;
-                    const dx = Math.round(a.x - a.w / 2);
-                    const dy = Math.round(a.y + offsetFlotante - a.h / 2);
-                    if (tint) {
-                        dibujarSpriteConTinte(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, dx, dy, a.w, a.h, tint);
-                    } else {
-                        ctx.drawImage(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, dx, dy, a.w, a.h);
-                    }
-                } else {
-                    // Fallback si la spritesheet no está lista
-                    ctx.fillStyle = a.tipo === 'aggressive' ? '#ff5e5e' : '#ffd95e';
-                    ctx.beginPath();
-                    ctx.arc(a.x, a.y + offsetFlotante, a.r, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                // Barra de vida para el disparador (dibujada después del sprite)
-                if (a.tipo === 'disparador' && a.hp < a.maxHp) {
-                    const barW = 60;
-                    const barH = 5;
-                    const barX = a.x - barW / 2;
-                    const barY = a.y + offsetFlotante - a.h / 2 - 15;
-                    const hpRatio = a.hp / a.maxHp;
-                    ctx.fillStyle = '#555';
-                    ctx.fillRect(barX, barY, barW, barH);
-                    ctx.fillStyle = hpRatio > 0.5 ? '#5cff5c' : (hpRatio > 0.2 ? '#ffc95c' : '#ff5c5c');
-                    ctx.fillRect(barX, barY, barW * hpRatio, barH);
-                }
-            }
-            ctx.restore();
-        }
-
-        // Dibuja el submarino de la animación del menú si no se está jugando
-        if (estadoJuego && !estadoJuego.enEjecucion) {
+        // 5. Animación del Menú
+        if (!estadoJuego.enEjecucion) {
             dibujarAnimacionMenu();
         }
 
-        // --- Dibuja al Jugador y sus Efectos ---
-        if (jugador && estadoJuego.enEjecucion) {
-            const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
-            // Animación de flotación sutil
-            const bobbingY = Math.sin(estadoJuego.tiempoTranscurrido * 2.5) * 3;
-            const px = jugador.x;
-            const py = jugador.y + bobbingY; // Aplicar flotación
+        // 6. Submarino del Jugador, Hélice, Armas y Escudo
+        dibujarJugadorSubmarino(ctx, {
+            jugador,
+            estadoJuego,
+            W,
+            H,
+            propellerReady,
+            propellerImg,
+            propellerCurrentSpeed,
+            propellerRotation,
+            spriteAncho,
+            spriteAlto,
+            robotEscala
+        });
 
-            // --- FIX: Definir el ángulo final aquí para que esté disponible en todo el bloque ---
-            const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
-            const anguloFinal = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
-
-            ctx.save();
-            ctx.translate(px, py);
-            if (isLevel5) {
-                // En el nivel 5, solo rotamos. El ángulo ya está calculado.
-                ctx.rotate(anguloFinal);
-            } else {
-                // En niveles horizontales, volteamos el sprite y aplicamos una rotación corregida.
-                ctx.scale(jugador.direccion, 1);
-                ctx.rotate(jugador.inclinacion * jugador.direccion);
-            }
-
-            // --- Dibuja la Hélice ---
-            if (propellerReady && propellerImg) {
-                ctx.save();
-                // El offset se aplica en el eje X local del submarino, que ya está escalado.
-                const propOffsetX = -spriteAncho * robotEscala / 2 - 10;
-                ctx.translate(propOffsetX, 0);
-                const propSize = 40;
-
-                // --- Eje de conexión (rod) ---
-                // Se dibuja antes de la hélice para que quede por detrás del centro de esta
-                ctx.save();
-                ctx.fillStyle = '#4a555c'; // Color acero oscuro
-                ctx.fillRect(0, -3, 20, 6); 
-                // Sombra inferior del eje para darle volumen
-                ctx.fillStyle = '#2d333b';
-                ctx.fillRect(0, 1, 20, 2); 
-                // Base/Acople más grueso en la unión con el submarino
-                ctx.fillStyle = '#6a737d';
-                ctx.fillRect(14, -5, 8, 10);
-                ctx.restore();
-
-                // Efecto de desenfoque de movimiento (motion blur) a alta velocidad
-                if (propellerCurrentSpeed > 35) {
-                    ctx.globalAlpha = 0.35;
-                    // Dibuja 2 estelas en ángulos ligeramente desfasados
-                    ctx.save(); ctx.rotate(propellerRotation - 0.2); ctx.drawImage(propellerImg, -propSize / 2, -propSize / 2, propSize, propSize); ctx.restore();
-                    ctx.save(); ctx.rotate(propellerRotation + 0.2); ctx.drawImage(propellerImg, -propSize / 2, -propSize / 2, propSize, propSize); ctx.restore();
-                }
-
-                // Hélice principal (siempre visible y nítida)
-                ctx.globalAlpha = 1.0;
-                ctx.rotate(propellerRotation);
-                ctx.drawImage(propellerImg, -propSize / 2, -propSize / 2, propSize, propSize);
-                ctx.restore();
-            }
-
-            // --- Dibuja el Submarino (Hector) ---
-            if (!estadoJuego.juegoPausadoPorDesconexion && !estadoJuego.juegoPausadoPorConexionMando) {
-                const dt = 1/60; 
-                jugador.timerFrame += dt;
-                if (jugador.timerFrame > 0.05) {
-                    jugador.frame = (jugador.frame + 1);
-                    // No hacemos % 66 aquí, lo manejamos dentro de dibujarHector con HECTOR_FRAME_KEYS.length
-                    jugador.timerFrame = 0;
-                }
-            }
-            dibujarHector(ctx, 0, 0, 0.35, jugador.frame);
-
-            // --- Carcasa de la Luz Frontal ---
-            ctx.save();
-            const lightDist = spriteAlto * robotEscala * 0.5 - 11; // Distancia exacta del origen del rayo
-            ctx.translate(lightDist - 5, 0); // Ajustado para encajar en el cristal frontal
-            
-            // Base/Anclaje del foco
-            ctx.fillStyle = '#4a555c'; 
-            ctx.fillRect(-4, -6, 6, 12);
-            ctx.fillStyle = '#2d333b'; // Sombra del anclaje
-            ctx.fillRect(-4, 0, 6, 6);
-            
-            // Carcasa amarilla principal
-            ctx.fillStyle = '#ffb300'; // Amarillo a juego con Hector
-            ctx.beginPath();
-            ctx.moveTo(2, -8);
-            ctx.lineTo(8, -5);
-            ctx.lineTo(8, 5);
-            ctx.lineTo(2, 8);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Sombra en la carcasa amarilla
-            ctx.fillStyle = '#cc8c00';
-            ctx.beginPath();
-            ctx.moveTo(2, 2);
-            ctx.lineTo(8, 2);
-            ctx.lineTo(8, 5);
-            ctx.lineTo(2, 8);
-            ctx.closePath();
-            ctx.fill();
-
-            // Lente de cristal
-            ctx.fillStyle = estadoJuego.luzVisible ? '#e0f7fa' : '#334455'; 
-            ctx.beginPath();
-            ctx.ellipse(8, 0, 2.5, 4.5, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Brillo intenso si está prendido
-            if (estadoJuego.luzVisible) {
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.ellipse(9, -1, 1.5, 2.5, 0, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-
-            ctx.restore();
-
-            // --- Dibuja el Propulsor ---
-            if (Weapons.thrusterPatternReady && Weapons.thrusterPattern && propellerCurrentSpeed > 6) { // Se dibuja si se mueve, no solo en ralentí
-                const isBoosting = estadoJuego.boostActivo;
-                const moveIntensity = clamp((propellerCurrentSpeed - 5) / 20, 0, 1); // 0 en ralentí, 1 a velocidad normal
-
-                let baseLength = 60 * moveIntensity;
-                let baseWidth = 40 * moveIntensity;
-
-                ctx.save();
-                ctx.translate(px, py);
-                if (isLevel5) {
-                    ctx.rotate(anguloFinal);
-                } else {
-                    ctx.scale(jugador.direccion, 1);
-                    ctx.rotate(jugador.inclinacion * jugador.direccion);
-                }
-                ctx.translate(-35, 32); // Posicionar en la tobera de escape
-
-                if (isBoosting) {
-                    // --- NUEVO EFECTO DE BOOST ESPECTACULAR ---
-                    const boostIntensity = estadoJuego.boostEnergia / estadoJuego.boostMaxEnergia;
-                    const flicker = 1 + (Math.random() - 0.5) * 0.4; // Parpadeo
-                    const length = (180 + 120 * boostIntensity) * flicker;
-                    const width = (50 + 25 * boostIntensity) * flicker;
-
-                    // 1. Lens Flare en la base
-                    ctx.save();
-                    ctx.globalCompositeOperation = 'lighter';
-                    const flareRadius = width * 1.2;
-                    const flareGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, flareRadius);
-                    flareGrad.addColorStop(0, `rgba(220, 255, 255, ${0.9 * boostIntensity})`);
-                    flareGrad.addColorStop(0.4, `rgba(100, 220, 255, ${0.5 * boostIntensity})`);
-                    flareGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
-                    ctx.fillStyle = flareGrad;
-                    ctx.beginPath();
-                    ctx.arc(10, 0, flareRadius, 0, Math.PI * 2); // Un poco hacia adelante para que se vea bien
-                    ctx.fill();
-                    ctx.restore(); // Fin Lens Flare
-
-                    // 2. Resplandor exterior (más ancho y cian)
-                    const glowWidth = width * 2.0;
-                    const glowGrad = ctx.createLinearGradient(0, 0, -length, 0);
-                    glowGrad.addColorStop(0, `rgba(0, 200, 255, ${0.5 * boostIntensity})`);
-                    glowGrad.addColorStop(1, 'rgba(0, 200, 255, 0)');
-                    ctx.fillStyle = glowGrad;
-                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-length * 1.1, -glowWidth / 2); ctx.lineTo(-length * 1.1, glowWidth / 2); ctx.closePath(); ctx.fill();
-
-                    // 3. Llama principal (usando el patrón, pero más brillante)
-                    ctx.save();
-                    ctx.translate(Weapons.thrusterPatternOffsetX, 0);
-                    ctx.globalCompositeOperation = 'lighter';
-                    ctx.fillStyle = Weapons.thrusterPattern;
-                    ctx.globalAlpha = (0.8 + 0.2 * boostIntensity) * moveIntensity;
-                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-length, -width / 2); ctx.lineTo(-length, width / 2); ctx.closePath(); ctx.fill();
-                    ctx.restore(); // Fin Llama principal
-
-                    // 4. Núcleo interior blanco y caliente
-                    const coreLength = length * 0.9;
-                    const coreWidth = width * 0.3;
-                    const coreGrad = ctx.createLinearGradient(0, 0, -coreLength, 0);
-                    coreGrad.addColorStop(0, `rgba(255, 255, 255, ${1.0 * boostIntensity})`);
-                    coreGrad.addColorStop(0.8, `rgba(200, 255, 255, ${0.8 * boostIntensity})`);
-                    coreGrad.addColorStop(1, 'rgba(150, 240, 255, 0)');
-                    ctx.fillStyle = coreGrad;
-                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-coreLength, -coreWidth / 2); ctx.lineTo(-coreLength, coreWidth / 2); ctx.closePath(); ctx.fill();
-
-                    // 5. Chispas Eléctricas
-                    ctx.save();
-                    ctx.globalCompositeOperation = 'lighter';
-                    const numSparks = 5 + Math.floor(Math.random() * 5);
-                    for (let i = 0; i < numSparks; i++) {
-                        const sparkStart = Math.random() * length * 0.8;
-                        const sparkLength = 15 + Math.random() * 25;
-                        const sparkY = (Math.random() - 0.5) * (width * (1 - sparkStart / length));
-
-                        ctx.strokeStyle = `rgba(220, 255, 255, ${0.4 + Math.random() * 0.5})`;
-                        ctx.lineWidth = 1 + Math.random() * 1.5;
-                        ctx.beginPath();
-                        ctx.moveTo(-sparkStart, sparkY);
-                        ctx.lineTo(-(sparkStart + sparkLength), sparkY + (Math.random() - 0.5) * 10);
-                        ctx.stroke();
-                    }
-                    ctx.restore(); // Fin Chispas
-
-                    // 6. Emisión de partículas (MEJORADA)
-                    if (Math.random() < 0.95) {
-                        let originX, originY, bX, bY;
-                        if (isLevel5) {
-                            originX = px - 35 * Math.cos(anguloFinal) - 32 * Math.sin(anguloFinal);
-                            originY = py - 35 * Math.sin(anguloFinal) + 32 * Math.cos(anguloFinal);
-                            bX = px - 40 * Math.cos(anguloFinal) - 32 * Math.sin(anguloFinal);
-                            bY = py - 40 * Math.sin(anguloFinal) + 32 * Math.cos(anguloFinal);
-                        } else {
-                            const inc = jugador.inclinacion;
-                            if (jugador.direccion === 1) {
-                                originX = px - 35 * Math.cos(inc) - 32 * Math.sin(inc);
-                                originY = py - 35 * Math.sin(inc) + 32 * Math.cos(inc);
-                                bX = px - 40 * Math.cos(inc) - 32 * Math.sin(inc);
-                                bY = py - 40 * Math.sin(inc) + 32 * Math.cos(inc);
-                            } else {
-                                originX = px + 35 * Math.cos(inc) + 32 * Math.sin(inc);
-                                originY = py - 35 * Math.sin(inc) + 32 * Math.cos(inc);
-                                bX = px + 40 * Math.cos(inc) + 32 * Math.sin(inc);
-                                bY = py - 40 * Math.sin(inc) + 32 * Math.cos(inc);
-                            }
-                        }
-
-                        const numParticles = 4 + Math.floor(Math.random() * 4);
-                        for (let i = 0; i < numParticles; i++) {
-                            const particleAngle = anguloFinal + Math.PI + (Math.random() - 0.5) * 0.4;
-                            const particleSpeed = 500 + Math.random() * 400;
-                            generarParticula(particulasExplosion, { x: originX, y: originY, vx: Math.cos(particleAngle) * particleSpeed, vy: Math.sin(particleAngle) * particleSpeed, r: 1.5 + Math.random() * 2.5, vida: 0.5 + Math.random() * 0.5, color: ['#ffffff', '#afeeee', '#87ceeb'][Math.floor(Math.random() * 3)] });
-                        }
-                        for (let i = 0; i < 8; i++) { generarBurbujaPropulsion(bX, bY + (Math.random() - 0.5) * 30, isLevel5); }
-                    }
-                } else {
-                    // --- EFECTO NORMAL (SIN BOOST) ---
-                    const glowWidth = baseWidth * 1.5;
-                    const glowGrad = ctx.createLinearGradient(0, 0, -baseLength, 0);
-                    glowGrad.addColorStop(0, 'rgba(0, 150, 255, 0.5)'); glowGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
-                    ctx.fillStyle = glowGrad;
-                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength * 1.1, -glowWidth / 2); ctx.lineTo(-baseLength * 1.1, glowWidth / 2); ctx.closePath(); ctx.fill();
-                    ctx.save();
-                    ctx.translate(Weapons.thrusterPatternOffsetX, 0);
-                    ctx.globalCompositeOperation = 'lighter';
-                    ctx.fillStyle = Weapons.thrusterPattern;
-                    ctx.globalAlpha = 0.7 * moveIntensity;
-                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-baseLength, -baseWidth / 2); ctx.lineTo(-baseLength, baseWidth / 2); ctx.closePath(); ctx.fill();
-                    ctx.restore();
-                    const coreLength = baseLength * 0.6;
-                    const coreWidth = baseWidth * 0.25;
-                    const coreGrad = ctx.createLinearGradient(0, 0, -coreLength, 0);
-                    coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)'); coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                    ctx.fillStyle = coreGrad;
-                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-coreLength, -coreWidth / 2); ctx.lineTo(-coreLength, coreWidth / 2); ctx.closePath(); ctx.fill();
-                }
-
-                ctx.restore();
-            }
-
-            const drawContext = { ctx, estadoJuego, jugador, px, py, W, H };
-            Weapons.drawWeapons(drawContext);
-
-            // --- Dibuja el Escudo de Energía ---
-            if (estadoJuego.shieldActivo || estadoJuego.shieldHitTimer > 0) {
-                ctx.save();
-                ctx.translate(px, py); // Usar las coordenadas de renderizado del jugador
-
-                // --- MODIFICACIÓN: Aumentar el tamaño del escudo ---
-                // El radio del escudo ahora se basa en el tamaño visual del submarino, no en su radio de colisión.
-                // Esto asegura que el escudo cubra todo el sprite, incluyendo la hélice.
-                const subVisualWidth = spriteAncho * robotEscala; // Ancho del sprite del submarino
-                const shieldRadius = subVisualWidth * 0.65; // Un 65% del ancho visual es un buen tamaño
-
-                const time = estadoJuego.tiempoTranscurrido;
-                let baseAlpha = 0;
-
-                if (estadoJuego.shieldActivo) {
-                    const energyRatio = estadoJuego.shieldEnergia / estadoJuego.shieldMaxEnergia;
-                    baseAlpha = 0.2 + energyRatio * 0.4; // El escudo es más visible con más energía
-                }
-
-                // Efecto de impacto
-                if (estadoJuego.shieldHitTimer > 0) {
-                    const hitProgress = estadoJuego.shieldHitTimer / 0.4;
-                    baseAlpha = Math.max(baseAlpha, hitProgress * 0.9); // Flash brillante al ser golpeado
-
-                    // Dibujar onda de choque en el punto de impacto
-                    const rippleRadius = (1 - hitProgress) * shieldRadius * 1.5;
-                    const rippleAlpha = hitProgress;
-                    ctx.strokeStyle = `rgba(173, 216, 230, ${rippleAlpha})`; // Light blue
-                    ctx.lineWidth = 3 * hitProgress;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, shieldRadius + rippleRadius * 0.2, 0, Math.PI * 2);
-                    ctx.stroke();
-                }
-
-                // Dibujar el escudo principal
-                ctx.globalAlpha = baseAlpha;
-                const grad = ctx.createRadialGradient(0, 0, shieldRadius * 0.7, 0, 0, shieldRadius);
-                grad.addColorStop(0, 'rgba(173, 216, 230, 0.1)');
-                grad.addColorStop(0.8, 'rgba(173, 216, 230, 0.8)');
-                grad.addColorStop(1, 'rgba(220, 240, 255, 0.5)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(0, 0, shieldRadius, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Dibujar patrón hexagonal que se mueve
-                ctx.strokeStyle = `rgba(200, 230, 255, ${baseAlpha * 0.7})`;
-                ctx.lineWidth = 1.5;
-                ctx.globalCompositeOperation = 'lighter';
-                ctx.beginPath();
-                for (let i = 0; i < 12; i++) {
-                    const angle = (i / 12) * Math.PI * 2 + time * 0.5;
-                    ctx.moveTo(Math.cos(angle) * shieldRadius, Math.sin(angle) * shieldRadius);
-                    ctx.lineTo(Math.cos(angle + Math.PI / 6) * shieldRadius * 0.9, Math.sin(angle + Math.PI / 6) * shieldRadius * 0.9);
-                }
-                ctx.stroke();
-                ctx.restore();
-            }
-        }
-
-        // --- Dibuja Proyectiles Enemigos ---
+        // 7. Proyectiles Enemigos
         ctx.save();
         for (const p of proyectilesEnemigos) {
             ctx.fillStyle = p.color;
-            // ctx.shadowColor = p.color; // OPTIMIZADO
-            // ctx.shadowBlur = 10; // OPTIMIZADO
             ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
         }
         ctx.restore();
 
-
-        // --- Dibuja los Proyectiles ---
+        // 8. Proyectiles de Tinta
         ctx.fillStyle = '#101010';
-        for (const ink of estadoJuego.proyectilesTinta) { ctx.beginPath(); ctx.arc(ink.x, ink.y, ink.r, 0, Math.PI * 2); ctx.fill(); }
+        for (const ink of estadoJuego.proyectilesTinta) {
+            ctx.beginPath();
+            ctx.arc(ink.x, ink.y, ink.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         ctx.imageSmoothingEnabled = true;
     }
 
-    // --- Dibuja Partículas y Efectos de Mundo (dentro de la cámara) ---
+    // Efectos de Mundo
     dibujarParticulas();
     dibujarCasquillos();
 
-    for (const d of whaleDebris) {
-        ctx.save();
-        ctx.translate(d.x, d.y);
-        ctx.rotate(d.rotacion);
-        ctx.scale(0.8, 0.8); // Hacerlos un poco más pequeños
-        ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
+    // Escombros, Ballenas, Pilotos y Restos
+    dibujarEscombrosMundo(ctx, { whaleDebris, pilotos, trozosHumanos, escombrosSubmarino });
 
-        // Gradiente para un aspecto más orgánico y sangriento
-        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40);
-        grad.addColorStop(0, '#fee'); // Centro más claro (hueso/grasa)
-        grad.addColorStop(0.4, '#ab4e52'); // Color principal de la carne
-        grad.addColorStop(1, '#6d2e37'); // Borde más oscuro
-
-        ctx.fillStyle = grad;
-        ctx.strokeStyle = '#5c1f27'; // Borde rojo sangre muy oscuro
-        ctx.lineWidth = 4;
-        ctx.fill(d.path);
-        ctx.stroke(d.path);
-        ctx.restore();
-    }
-
-    // Dibujar gore de la muerte del jugador
-    for (const p of pilotos) {
-        dibujarPiloto(ctx, p);
-    }
-    for (const d of trozosHumanos) {
-        ctx.save();
-        ctx.translate(d.x, d.y);
-        ctx.rotate(d.rotacion);
-        ctx.scale(d.escala, d.escala);
-        ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
-        ctx.fillStyle = d.color;
-        ctx.strokeStyle = '#3b0000';
-        ctx.lineWidth = 3;
-        ctx.fill(d.path);
-        ctx.stroke(d.path);
-        ctx.restore();
-    }
-
-    // Dibujar restos mejorados y retorcidos del submarino destruido
-    for (const d of escombrosSubmarino) {
-        ctx.save();
-        ctx.translate(d.x, d.y);
-        ctx.rotate(d.rotacion);
-        ctx.scale(d.escala, d.escala);
-        ctx.globalAlpha = clamp(d.vida / d.vidaMax, 0, 1);
-        
-        const info = d.pathInfo;
-        
-        if (info.isGlass) {
-            // Cristales blindados (con bordes brillantes y tintado acuático)
-            ctx.fillStyle = 'rgba(150, 220, 255, 0.3)';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.lineWidth = 1.5;
-            ctx.fill(info.path);
-            ctx.stroke(info.path);
-        } else {
-            // Renderizado "Falso 3D" metalico:
-            // 1. Capa de Grosor / Sombra tridimensional
-            ctx.fillStyle = '#050505';
-            ctx.translate(3, 4); // Despliegue de "profundidad"
-            ctx.fill(info.path);
-            ctx.translate(-3, -4);
-            
-            // 2. Chapa de Metal y Pintura Base
-            ctx.fillStyle = d.color;
-            ctx.strokeStyle = '#151515';
-            ctx.lineWidth = 2.5;
-            ctx.fill(info.path);
-            ctx.stroke(info.path);
-            
-            // 3. Destellos en los bordes y desgaste (Bisel)
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-            ctx.lineWidth = 1;
-            ctx.stroke(info.path);
-
-            // 4. Detalles internos y mecánicos
-            if (info.detail) {
-                ctx.strokeStyle = '#000';
-                ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                ctx.lineWidth = 1.5;
-                ctx.fill(info.detail);
-                ctx.stroke(info.detail);
-            }
-            if (info.cables) {
-                ctx.strokeStyle = '#c75b39'; // Cobre cortocircuitado
-                ctx.lineWidth = 2;
-                ctx.stroke(info.path);
-            }
-            if (info.isEngine) {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)'; // Oscureded por aceite
-                ctx.fill(info.path);
-            }
-        }
-        
-        // 5. Salpicaduras Gore de tripulación brutalmente desmembrada
-        if (d.tieneSangre && !info.isGlass) {
-            ctx.fillStyle = 'rgba(139, 0, 0, 0.85)'; // Rojo Oscuro intenso
-            // ctx.shadowColor = '#4a0000'; // OPTIMIZADO
-            // ctx.shadowBlur = 4; // OPTIMIZADO
-            ctx.beginPath();
-            ctx.arc(2, 2, 6, 0, Math.PI * 2);
-            ctx.arc(-4, 0, 4, 0, Math.PI * 2);
-            ctx.fill();
-            // ctx.shadowBlur = 0; // OPTIMIZADO
-        }
-
-        ctx.restore();
-    }
-
-    // Se restaura el contexto principal (que incluye la cámara, zoom y shake)
     ctx.restore();
 
-    // --- Dibuja Efectos de Pantalla y Actualiza HUD (fuera de la cámara) ---
+    // Efectos de Pantalla y HUD
     dibujarSonar();
     dibujarMascaraLuz();
-    dibujarPolvoMarino(); // Dibuja el polvo/plancton en el canvas de efectos
-    actualizarHTMLHUD(); // ANTES: dibujarHUD()
+    dibujarPolvoMarino();
+    actualizarHTMLHUD();
 }
 
-// --- Funciones de Renderizado Auxiliares ---
 function dibujarFondoParallax() {
-    if (!estadoJuego || !bgCtx) return;
-
-    // Colores para el ciclo día/noche
-    const factor = estadoJuego.dayNightFactor || 0;
-    const r = Math.round(26 + (6 - 26) * factor);
-    const g = Math.round(75 + (19 - 75) * factor);
-    const b = Math.round(110 + (31 - 110) * factor);
-
-    bgCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-    bgCtx.fillRect(0, 0, W, H);
-
-    const isLevel5 = estadoJuego.nivel === 5;
-
-    // Fondo (lejano)
-    if (bgListo && bgAncho > 0) {
-        bgCtx.imageSmoothingEnabled = false;
-        const bgZoomFactor = 1.0;
-        const ratio = bgAncho / bgAlto;
-        const alturaDibujoBg = Math.ceil(H * bgZoomFactor);
-        const anchoDibujoBg = Math.ceil(alturaDibujoBg * ratio);
-        
-        let subBgOffset = bgOffset % anchoDibujoBg;
-        if (subBgOffset < 0) subBgOffset += anchoDibujoBg;
-        const startX = -Math.floor(subBgOffset);
-
-        if (isLevel5) {
-            // Parallax Vertical Reflexivo Seamless para Nivel 5
-            const tileH = alturaDibujoBg;
-            const baseWorldIndex = Math.floor(bgOffsetY / tileH);
-            const subY = bgOffsetY % tileH;
-            
-            for (let x = startX; x < W; x += anchoDibujoBg) {
-                for (let i = -1; i <= 2; i++) {
-                    const tileWorldIndex = baseWorldIndex - i;
-                    const isNormal = Math.abs(tileWorldIndex % 2) === 0;
-                    const tileY = Math.floor(H - tileH) + subY - (i * tileH);
-                    
-                    if (isNormal) {
-                        bgCtx.drawImage(bgImg, x, tileY, anchoDibujoBg + 1, tileH);
-                    } else {
-                        bgCtx.save();
-                        bgCtx.translate(x, tileY + tileH);
-                        bgCtx.scale(1, -1);
-                        bgCtx.drawImage(bgImg, 0, 0, anchoDibujoBg + 1, tileH);
-                        bgCtx.restore();
-                    }
-                }
-            }
-        } else {
-            // Nivel Normal Horizontal
-            const yBaseBg = Math.floor(H - alturaDibujoBg);
-            for (let x = startX; x < W; x += anchoDibujoBg) {
-                bgCtx.drawImage(bgImg, x, yBaseBg, anchoDibujoBg + 1, alturaDibujoBg);
-            }
-        }
-    }
-
-    // Primer Plano (Cercano)
-    if (fgListo && fgAncho > 0 && fgAlto > 0) {
-        const fgZoomFactor = 0.55;
-        const ratioFg = fgAncho / fgAlto;
-        const alturaDibujoFg = Math.ceil(H * fgZoomFactor);
-        const anchoDibujoFg = Math.ceil(alturaDibujoFg * ratioFg);
-        
-        let subFgOffset = fgOffset % anchoDibujoFg;
-        if (subFgOffset < 0) subFgOffset += anchoDibujoFg;
-        const startX = -Math.floor(subFgOffset);
-
-        if (isLevel5) {
-            // Parallax Vertical Reflexivo Seamless para Nivel 5
-            const tileH = alturaDibujoFg;
-            // Aseguramos valores positivos para el módulo y división
-            const absFgOffsetY = Math.max(0, fgOffsetY);
-            const baseWorldIndex = Math.floor(absFgOffsetY / tileH);
-            const subY = absFgOffsetY % tileH;
-            
-            for (let x = startX; x < W; x += anchoDibujoFg) {
-                for (let i = -1; i <= 3; i++) {
-                    const tileWorldIndex = baseWorldIndex - i;
-                    const isNormal = Math.abs(tileWorldIndex % 2) === 0;
-                    const tileY = Math.floor(H - tileH) + subY - (i * tileH);
-                    
-                    if (isNormal) {
-                        bgCtx.drawImage(fgImg, x, tileY, anchoDibujoFg + 1, tileH);
-                    } else {
-                        bgCtx.save();
-                        bgCtx.translate(x, tileY + tileH);
-                        bgCtx.scale(1, -1);
-                        bgCtx.drawImage(fgImg, 0, 0, anchoDibujoFg + 1, tileH);
-                        bgCtx.restore();
-                    }
-                }
-            }
-        } else {
-            // Nivel Normal Horizontal
-            const yBase = Math.floor(H - alturaDibujoFg);
-            for (let x = startX; x < W; x += anchoDibujoFg) {
-                bgCtx.drawImage(fgImg, x, yBase, anchoDibujoFg + 1, alturaDibujoFg);
-            }
-        }
-    }
+    _dibujarFondoParallax({
+        estadoJuego,
+        bgCtx,
+        W,
+        H,
+        bgImg,
+        bgListo,
+        bgAncho,
+        bgAlto,
+        fgImg,
+        fgListo,
+        fgAncho,
+        fgAlto,
+        bgOffset,
+        fgOffset,
+        bgOffsetY,
+        fgOffsetY
+    });
 }
 
 function dibujarSonar() {
-    if (!sonarCtx || !estadoJuego || !estadoJuego.enEjecucion || !estadoJuego.sonarActivo) {
-        if (sonarCtx) sonarCtx.clearRect(0, 0, W, H);
-        return;
-    }
-
-    sonarCtx.clearRect(0, 0, W, H);
-    sonarCtx.save();
-
-    // --- 1. Definir el centro y radio del sonar ---
-    const SONAR_RADIUS = 65; // Radio en píxeles del minimapa
-    const SONAR_WORLD_RADIUS = 2800; // Radio en unidades del juego que cubre el sonar
-    const PADDING = 20;
-    const centerX = W - SONAR_RADIUS - PADDING;
-    const centerY = H - SONAR_RADIUS - PADDING;
-    const time = estadoJuego.tiempoTranscurrido;
-
-    // --- 2. Crear la forma base (Octágono) ---
-    const octagonPath = new Path2D();
-    const sides = 8;
-    for (let i = 0; i < sides; i++) {
-        const angle = (i / sides) * Math.PI * 2 - Math.PI / sides;
-        const x = centerX + SONAR_RADIUS * Math.cos(angle);
-        const y = centerY + SONAR_RADIUS * Math.sin(angle);
-        if (i === 0) {
-            octagonPath.moveTo(x, y);
-        } else {
-            octagonPath.lineTo(x, y);
-        }
-    }
-    octagonPath.closePath();
-
-    // --- 3. Dibujar el fondo y la retícula ---
-    sonarCtx.save();
-    sonarCtx.clip(octagonPath); // Todo lo que se dibuje a partir de ahora estará dentro del octágono
-
-    const bgGrad = sonarCtx.createLinearGradient(centerX - SONAR_RADIUS, centerY - SONAR_RADIUS, centerX + SONAR_RADIUS, centerY + SONAR_RADIUS);
-    bgGrad.addColorStop(0, 'rgba(0, 59, 142, 0.7)');
-    bgGrad.addColorStop(1, 'rgba(6, 19, 31, 0.5)');
-    sonarCtx.fillStyle = bgGrad;
-    sonarCtx.fill(octagonPath);
-
-    // Retícula (círculos y líneas)
-    sonarCtx.strokeStyle = 'rgba(126, 203, 255, 0.2)';
-    sonarCtx.lineWidth = 1;
-    sonarCtx.setLineDash([2, 4]); // Líneas discontinuas
-    for (let i = 1; i <= 3; i++) { // 3 octágonos concéntricos
-        const radius = SONAR_RADIUS * (i / 3);
-        sonarCtx.beginPath();
-        for (let j = 0; j < sides; j++) {
-            const angle = (j / sides) * Math.PI * 2 - Math.PI / sides;
-            const x = centerX + radius * Math.cos(angle);
-            const y = centerY + radius * Math.sin(angle);
-            if (j === 0) sonarCtx.moveTo(x, y);
-            else sonarCtx.lineTo(x, y);
-        }
-        sonarCtx.closePath();
-        sonarCtx.stroke();
-    }
-    sonarCtx.setLineDash([]); // Resetear
-
-    sonarCtx.lineWidth = 0.5;
-    for (let i = 0; i < sides; i++) {
-        const angle = (i / sides) * Math.PI * 2 - Math.PI / sides;
-        sonarCtx.beginPath();
-        sonarCtx.moveTo(centerX, centerY);
-        sonarCtx.lineTo(centerX + Math.cos(angle) * SONAR_RADIUS, centerY + Math.sin(angle) * SONAR_RADIUS);
-        sonarCtx.stroke();
-    }
-
-    // --- 4. Dibujar el barrido (sweep) ---
-    const sweepAngle = (time * SONAR_SWEEP_SPEED) % (Math.PI * 2);
-    const grad = sonarCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, SONAR_RADIUS);
-    grad.addColorStop(0, 'rgba(120, 255, 170, 0.3)');
-    grad.addColorStop(0.8, 'rgba(100, 255, 150, 0.05)');
-    grad.addColorStop(1, 'rgba(100, 255, 150, 0)');
-    sonarCtx.fillStyle = grad;
-    sonarCtx.beginPath();
-    sonarCtx.moveTo(centerX, centerY);
-    sonarCtx.arc(centerX, centerY, SONAR_RADIUS, sweepAngle - Math.PI / 2, sweepAngle);
-    sonarCtx.closePath();
-    sonarCtx.fill();
-
-    // Línea principal del barrido
-    sonarCtx.strokeStyle = 'rgba(170, 255, 200, 0.9)';
-    sonarCtx.lineWidth = 2;
-    sonarCtx.beginPath();
-    sonarCtx.moveTo(centerX, centerY);
-    sonarCtx.lineTo(centerX + Math.cos(sweepAngle) * SONAR_RADIUS, centerY + Math.sin(sweepAngle) * SONAR_RADIUS);
-    sonarCtx.stroke();
-
-    // --- 5. Dibujar los "pings" de los enemigos y el jugador ---
-    // El jugador está siempre en el centro del minimapa.
-    sonarCtx.fillStyle = '#87CEEB'; // Color del jugador
-    // sonarCtx.shadowColor = '#87CEEB'; // OPTIMIZADO
-    // sonarCtx.shadowBlur = 8; // OPTIMIZADO
-    sonarCtx.fillRect(centerX - 6, centerY - 1.5, 12, 3); // Cruz horizontal
-    sonarCtx.fillRect(centerX - 1.5, centerY - 6, 3, 12); // Cruz vertical
-    // sonarCtx.shadowBlur = 0; // OPTIMIZADO
-
-    for (const a of animales) {
-        const dx = a.x - jugador.x;
-        const dy = a.y - jugador.y;
-        const dist = Math.hypot(dx, dy);
-
-        if (dist < SONAR_WORLD_RADIUS) {
-            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-
-            const isHostile = a.hp !== undefined || a.tipo === 'shark' || a.tipo === 'mega_whale' || a.tipo === 'mierdei' || a.tipo === 'orca';
-            const isBoss = a.tipo === 'mega_whale' || (estadoJuego.jefe && a === estadoJuego.jefe);
-
-            const pulse = 1.0 + Math.sin(time * 5 + pingX) * 0.2;
-            const pingSize = (isBoss ? 6 : (isHostile ? 4 : 3)) * pulse;
-
-            sonarCtx.fillStyle = isHostile ? 'rgba(255, 80, 80, 0.9)' : 'rgba(100, 255, 150, 0.9)';
-            // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
-            // sonarCtx.shadowBlur = 10; // OPTIMIZADO
-
-            sonarCtx.save();
-            sonarCtx.translate(pingX, pingY);
-
-            if (isHostile) { // Dibujar como diamante
-                sonarCtx.rotate(Math.PI / 4);
-                sonarCtx.fillRect(-pingSize / 2, -pingSize / 2, pingSize, pingSize);
-            } else { // Dibujar como círculo
-                sonarCtx.beginPath();
-                sonarCtx.arc(0, 0, pingSize / 2, 0, Math.PI * 2);
-                sonarCtx.fill();
-            }
-            sonarCtx.restore();
-        }
-    }
-    // sonarCtx.shadowBlur = 0; // OPTIMIZADO
-
-    // Si hay un jefe, marcarlo de forma especial
-    if (estadoJuego.jefe) {
-        const dx = estadoJuego.jefe.x - jugador.x;
-        const dy = estadoJuego.jefe.y - jugador.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist < SONAR_WORLD_RADIUS) {
-            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-
-            sonarCtx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
-            sonarCtx.lineWidth = 2;
-            const pulse = 1.0 + Math.sin(time * 3) * 0.1;
-            const size = 16 * pulse;
-            sonarCtx.strokeRect(pingX - size / 2, pingY - size / 2, size, size);
-        }
-    }
-
-    // --- NUEVO: Dibujar pings de proyectiles ---
-    // sonarCtx.shadowBlur = 5; // OPTIMIZADO
-
-    // Proyectiles del jugador (balas)
-    sonarCtx.fillStyle = 'rgba(200, 220, 255, 0.9)';
-    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
-    for (const p of Weapons.proyectiles) {
-        const dx = p.x - jugador.x;
-        const dy = p.y - jugador.y;
-        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const angle = Math.atan2(p.vy, p.vx);
-            sonarCtx.save();
-            sonarCtx.translate(pingX, pingY);
-            sonarCtx.rotate(angle);
-            sonarCtx.fillRect(-2, -1, 4, 2);
-            sonarCtx.restore();
-        }
-    }
-
-    // Torpedos del jugador
-    sonarCtx.fillStyle = 'rgba(170, 230, 255, 1.0)';
-    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
-    for (const t of Weapons.torpedos) {
-        const dx = t.x - jugador.x;
-        const dy = t.y - jugador.y;
-        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            sonarCtx.save();
-            sonarCtx.translate(pingX, pingY);
-            sonarCtx.rotate(t.angle);
-            sonarCtx.fillRect(-3, -1.5, 6, 3);
-            sonarCtx.restore();
-        }
-    }
-
-    // Proyectiles enemigos
-    sonarCtx.fillStyle = 'rgba(255, 150, 150, 0.9)';
-    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
-    for (const p of proyectilesEnemigos) {
-        const dx = p.x - jugador.x;
-        const dy = p.y - jugador.y;
-        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            sonarCtx.beginPath();
-            sonarCtx.arc(pingX, pingY, 2, 0, Math.PI * 2);
-            sonarCtx.fill();
-        }
-    }
-
-    // Minas del jugador
-    sonarCtx.fillStyle = 'rgba(255, 180, 50, 0.9)';
-    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
-    for (const m of Weapons.minas) {
-        const dx = m.x - jugador.x;
-        const dy = m.y - jugador.y;
-        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-
-            // Efecto de pulso/parpadeo
-            const pulse = Math.floor(time * 3) % 2; // Parpadea
-            if (pulse === 0) continue;
-
-            const size = 4;
-            sonarCtx.fillRect(pingX - size / 2, pingY - size / 2, size, size);
-        }
-    }
-
-    // Láser del jugador
-    if (estadoJuego.laserActivo) {
-        const isLevel5 = estadoJuego.nivel === 5;
-        const baseAngle = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
-        const laserAngle = baseAngle + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
-
-        const pulse = 0.8 + Math.sin(time * 40) * 0.2; // Pulso de intensidad
-
-        sonarCtx.strokeStyle = `rgba(255, 100, 100, ${pulse})`;
-        // sonarCtx.shadowColor = 'rgba(255, 100, 100, 1)'; // OPTIMIZADO
-        sonarCtx.lineWidth = 3;
-
-        sonarCtx.beginPath();
-        sonarCtx.moveTo(centerX, centerY);
-        sonarCtx.lineTo(centerX + Math.cos(laserAngle) * SONAR_RADIUS, centerY + Math.sin(laserAngle) * SONAR_RADIUS);
-        sonarCtx.stroke();
-    }
-
-    // --- NUEVO: Dibujar escombros y rocas ---
-    sonarCtx.fillStyle = 'rgba(160, 140, 120, 0.7)'; // Color marrón/gris para rocas
-    // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
-    // sonarCtx.shadowBlur = 4; // OPTIMIZADO
-    for (const e of escombros) {
-        const dx = e.x - jugador.x;
-        const dy = e.y - jugador.y;
-        if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-            const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-            const size = clamp((e.tamano || e.size) / 20, 2, 5); // Tamaño del ping basado en el tamaño del escombro
-            sonarCtx.fillRect(pingX - size / 2, pingY - size / 2, size, size);
-        }
-    }
-
-    // --- NUEVO: Dibujar láseres enemigos (del jefe) ---
-    if (estadoJuego.jefe && estadoJuego.jefe.lasers) {
-        const pulse = 0.7 + Math.sin(time * 20) * 0.3;
-        sonarCtx.strokeStyle = `rgba(255, 120, 120, ${pulse})`;
-        // sonarCtx.shadowColor = 'rgba(255, 120, 120, 1)'; // OPTIMIZADO
-        // sonarCtx.shadowBlur = 8; // OPTIMIZADO
-        sonarCtx.lineWidth = 1.5;
-
-        for (const laser of estadoJuego.jefe.lasers) {
-            const dx1 = laser.x - jugador.x;
-            const dy1 = laser.y - jugador.y;
-
-            if (Math.hypot(dx1, dy1) < SONAR_WORLD_RADIUS) {
-                const startPingX = centerX + (dx1 / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                const startPingY = centerY + (dy1 / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                let endPingX, endPingY;
-
-                if (laser.tipo === 'sweep') {
-                    const endWorldX = laser.x + Math.cos(laser.currentAngle) * laser.length;
-                    const endWorldY = laser.y + Math.sin(laser.currentAngle) * laser.length;
-                    endPingX = centerX + ((endWorldX - jugador.x) / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                    endPingY = centerY + ((endWorldY - jugador.y) / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                } else { // snipe
-                    endPingX = centerX + ((laser.targetX - jugador.x) / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                    endPingY = centerY + ((laser.targetY - jugador.y) / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                }
-                sonarCtx.beginPath();
-                sonarCtx.moveTo(startPingX, startPingY);
-                sonarCtx.lineTo(endPingX, endPingY);
-                sonarCtx.stroke();
-            }
-        }
-    }
-
-    // --- NUEVO: Dibujar ataques del Kraken (Nivel 3) ---
-    if (estadoJuego.nivel === 3 && estadoJuego.jefe) {
-        const jefe = estadoJuego.jefe;
-
-        // 1. Proyectiles de Tinta
-        sonarCtx.fillStyle = 'rgba(50, 50, 50, 0.8)';
-        // sonarCtx.shadowColor = 'black'; // OPTIMIZADO
-        // sonarCtx.shadowBlur = 6; // OPTIMIZADO
-        for (const ink of estadoJuego.proyectilesTinta) {
-            const dx = ink.x - jugador.x;
-            const dy = ink.y - jugador.y;
-            if (Math.hypot(dx, dy) < SONAR_WORLD_RADIUS) {
-                const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-                sonarCtx.beginPath();
-                sonarCtx.arc(pingX, pingY, 4, 0, Math.PI * 2);
-                sonarCtx.fill();
-            }
-        }
-
-        // 2. Ataque de Barrido/Rayo
-        if (jefe.estado === 'attacking_smash' && jefe.datosAtaque) {
-            const ataque = jefe.datosAtaque;
-            const attackWorldY = ataque.y;
-            const dy = attackWorldY - jugador.y;
-            const pingY = centerY + (dy / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-
-            if (ataque.carga > 0) { // Fase de advertencia (rayo)
-                const pulse = 0.5 + Math.sin(time * 15) * 0.5;
-                sonarCtx.strokeStyle = `rgba(255, 80, 80, ${pulse})`;
-                sonarCtx.lineWidth = 3;
-                // sonarCtx.shadowColor = 'red'; // OPTIMIZADO
-                // sonarCtx.shadowBlur = 10; // OPTIMIZADO
-
-                sonarCtx.beginPath();
-                sonarCtx.moveTo(centerX - SONAR_RADIUS, pingY);
-                sonarCtx.lineTo(centerX + SONAR_RADIUS, pingY);
-                sonarCtx.stroke();
-
-            } else { // Fase de barrido (tentáculo)
-                const tentacleWorldX = W - ataque.progreso * (W + 200);
-                const dx = tentacleWorldX - jugador.x;
-                const pingX = centerX + (dx / SONAR_WORLD_RADIUS) * SONAR_RADIUS;
-
-                const pulse = 1.0 + Math.sin(time * 10) * 0.2;
-                const pingSize = 12 * pulse;
-
-                sonarCtx.fillStyle = 'rgba(255, 60, 60, 0.9)';
-                // sonarCtx.shadowColor = sonarCtx.fillStyle; // OPTIMIZADO
-                // sonarCtx.shadowBlur = 12; // OPTIMIZADO
-
-                sonarCtx.save();
-                sonarCtx.translate(pingX, pingY);
-                sonarCtx.rotate(Math.PI / 4); // Forma de diamante
-                sonarCtx.fillRect(-pingSize / 2, -pingSize / 2, pingSize, pingSize);
-                sonarCtx.restore();
-            }
-        }
-    }
-
-    // sonarCtx.shadowBlur = 0; // OPTIMIZADO
-
-    sonarCtx.restore(); // Quita el clipping
-
-    // --- 6. Borde exterior y acentos ---
-    sonarCtx.strokeStyle = 'rgba(126, 203, 255, 0.6)';
-    sonarCtx.lineWidth = 2;
-    sonarCtx.stroke(octagonPath);
-
-    // Acento amarillo, como en el HUD
-    sonarCtx.strokeStyle = 'rgba(255, 221, 119, 1)';
-    // sonarCtx.shadowColor = 'rgba(255, 221, 119, 0.7)'; // OPTIMIZADO
-    // sonarCtx.shadowBlur = 10; // OPTIMIZADO
-    sonarCtx.lineWidth = 4;
-    sonarCtx.beginPath();
-    // Dibujar el acento en el lado derecho
-    const angle1 = (0 / sides) * Math.PI * 2 - Math.PI / sides;
-    const angle2 = (1 / sides) * Math.PI * 2 - Math.PI / sides;
-    sonarCtx.moveTo(centerX + SONAR_RADIUS * Math.cos(angle1), centerY + SONAR_RADIUS * Math.sin(angle1));
-    sonarCtx.lineTo(centerX + SONAR_RADIUS * Math.cos(angle2), centerY + SONAR_RADIUS * Math.sin(angle2));
-    sonarCtx.stroke();
-    // sonarCtx.shadowBlur = 0; // OPTIMIZADO
-
-    sonarCtx.restore();
+    _dibujarSonar({ sonarCtx, estadoJuego, jugador, animales, escombros, Weapons, proyectilesEnemigos, W, H });
 }
 
 function iniciarPolvoMarino() {
-    particulasPolvoMarino = [];
-    for (let i = 0; i < 150; i++) {
-        particulasPolvoMarino.push({
-            x: Math.random() * W,
-            y: Math.random() * H,
-            vx: (Math.random() - 0.5) * 10,
-            vy: (Math.random() * 20) + 5, // Caen lentamente
-            r: Math.random() * 2 + 1,
-            alpha: Math.random() * 0.4 + 0.1
-        });
-    }
+    _iniciarPolvoMarino(particulasPolvoMarino, W, H);
 }
 
 function actualizarPolvoMarino(dt) {
-    for (const p of particulasPolvoMarino) {
-        p.x += (p.vx - estadoJuego.velocidad_actual * 0.5) * dt; // Se mueven con el submarino
-        p.y += p.vy * dt;
-
-        // Wrap around
-        if (p.x < 0) p.x = W;
-        if (p.x > W) p.x = 0;
-        if (p.y < 0) p.y = H;
-        if (p.y > H) p.y = 0;
-    }
+    _actualizarPolvoMarino(particulasPolvoMarino, W, H, dt, velocidadActual());
 }
 
-// --- NUEVO: Función para dibujar el polvo marino ---
 function dibujarPolvoMarino() {
-    // Esta función ahora está vacía porque su lógica se ha movido a `dibujarMascaraLuz`
-    // para que las partículas de polvo solo aparezcan dentro del cono de luz del submarino,
-    // creando un efecto volumétrico mucho más realista.
+    _dibujarPolvoMarino();
 }
 
 function dibujarAnimacionMenu() {
@@ -4453,310 +2354,47 @@ function generarCasquillo(x, y, direccion, tipo) {
 
 
 function dibujarCasquillos() {
-    if (!ctx) return;
-    ctx.save();
-    for (const c of particulasCasquillos) {
-        ctx.save();
-        ctx.translate(c.x, c.y);
-        ctx.rotate(c.rotacion);
-
-        const alpha = Math.min(1, c.vida / (c.vidaMax * 0.5)); // Se desvanecen
-        ctx.globalAlpha = alpha;
-
-        ctx.fillStyle = c.color;
-        ctx.strokeStyle = '#a17b3a'; // Contorno más oscuro
-        ctx.lineWidth = 1;
-        ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
-        ctx.strokeRect(-c.w / 2, -c.h / 2, c.w, c.h);
-
-        ctx.fillStyle = '#3b2e1e';
-        ctx.beginPath(); ctx.arc(c.w / 2 - 1, 0, c.h / 3, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
-    }
-    ctx.restore();
+    _dibujarCasquillos(ctx, particulasCasquillos);
 }
 
 function dibujarMascaraLuz() {
-    if (!estadoJuego || !fx) return;
-    fx.clearRect(0, 0, W, H);
-    const isLevel5 = estadoJuego.nivel === 5;
-
-    // --- NUEVO: Ciclo Día/Noche Dinámico ---
-    // Ciclo completo cada 180 segundos (3 minutos)
-    const CYCLE_DURATION = 180;
-    // Usamos seno para una transición suave: -1 a 1, lo mapeamos a 0 a 1
-    // offset de -Math.PI/2 para empezar en día (0) y subir a noche (1)
-    const cyclePhase = (estadoJuego.tiempoTranscurrido % CYCLE_DURATION) / CYCLE_DURATION * Math.PI * 2;
-    const cycleFactor = (Math.sin(cyclePhase - Math.PI / 2) + 1) / 2; // 0.0 (Día) a 1.0 (Noche)
-
-    // La oscuridad máxima será 0.65 (65%) en lugar de 0.9, para que no sea tan oscuro.
-    const MAX_DARKNESS = 0.65;
-
-    // Si hay un override (ej. eventos), lo usamos, sino usamos el ciclo natural
-    const oscuridadObjetivo = estadoJuego.darknessOverride !== undefined
-        ? estadoJuego.darknessOverride
-        : cycleFactor;
-
-    const alpha = lerp(0, MAX_DARKNESS, clamp(oscuridadObjetivo, 0, 1));
-
-    // Guardamos el factor de ciclo en el estado para que el fondo lo pueda usar
-    estadoJuego.dayNightFactor = cycleFactor;
-
-    if (alpha <= 0.001) return;
-
-    fx.globalCompositeOperation = 'source-over';
-    fx.fillStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
-    fx.fillRect(0, 0, W, H);
-    if (estadoJuego.luzVisible && jugador && estadoJuego.enEjecucion) {
-        const screenPx = jugador.x - Math.round(estadoJuego.cameraX);
-        const screenPy = jugador.y - Math.round(estadoJuego.cameraY);
-
-        const px = screenPx;
-        const py = screenPy;
-
-        const anguloBase = isLevel5 ? -Math.PI / 2 : (jugador.direccion === -1 ? Math.PI : 0);
-        const ang = anguloBase + (isLevel5 ? jugador.inclinacion : jugador.inclinacion * jugador.direccion);
-
-        const ux = Math.cos(ang), uy = Math.sin(ang);
-        const vx = -Math.sin(ang), vy = Math.cos(ang);
-        const ax = Math.round(px + ux * (spriteAlto * robotEscala * 0.5 - 11));
-        const ay = Math.round(py + uy * (spriteAlto * robotEscala * 0.5 - 11));
-
-        const time = estadoJuego.tiempoTranscurrido;
-        let flicker = 1.0 + Math.sin(time * 20) * 0.02; // Parpadeo sutil
-
-        let powerDrawAlpha = 1.0;
-        if (estadoJuego.laserActivo || estadoJuego.shieldActivo) {
-            powerDrawAlpha = 0.75 + Math.sin(time * 70) * 0.25; // Varía entre 0.5 y 1.0
-        }
-
-        const L = (isLevel5 ? Math.min(H * 0.65, 560) : Math.min(W * 0.65, 560)) * flicker;
-        const theta = (Math.PI / 9) * (1.0 + Math.sin(time * 2) * 0.05); // El cono "respira"
-        const endx = ax + ux * L, endy = ay + uy * L; const half = Math.tan(theta) * L; const pTopX = endx + vx * half, pTopY = endy + vy * half; const pBotX = endx - vx * half, pBotY = endy - vy * half;
-
-        const conePath = new Path2D(); conePath.moveTo(ax, ay); conePath.lineTo(pTopX, pTopY); conePath.lineTo(pBotX, pBotY); conePath.closePath();
-
-        fx.globalCompositeOperation = 'destination-out';
-        let g = fx.createLinearGradient(ax, ay, endx, endy);
-        g.addColorStop(0.00, `rgba(255,255,255,${1.0 * powerDrawAlpha})`);
-        g.addColorStop(0.45, `rgba(255,255,255,${0.5 * powerDrawAlpha})`);
-        g.addColorStop(1.00, 'rgba(255,255,255,0.0)');
-        fx.fillStyle = g;
-        fx.fill(conePath);
-
-        const rg = fx.createRadialGradient(ax, ay, 0, ax, ay, 54 * flicker);
-        rg.addColorStop(0, `rgba(255,255,255,${1.0 * powerDrawAlpha})`);
-        rg.addColorStop(1, 'rgba(255,255,255,0.0)');
-        fx.fillStyle = rg;
-        fx.beginPath();
-        fx.arc(ax, ay, 54 * flicker, 0, Math.PI * 2);
-        fx.fill();
-
-        fx.globalCompositeOperation = 'lighter';
-
-        const gGlow = fx.createLinearGradient(ax, ay, endx, endy);
-        gGlow.addColorStop(0.00, `rgba(200,220,255,${0.15 * powerDrawAlpha})`);
-        gGlow.addColorStop(0.60, `rgba(200,220,255,${0.06 * powerDrawAlpha})`);
-        gGlow.addColorStop(1.00, 'rgba(200,220,255,0.00)');
-        fx.fillStyle = gGlow;
-        fx.fill(conePath);
-
-        const flareRadius = 25 * flicker;
-        const flareGradient = fx.createRadialGradient(ax, ay, 0, ax, ay, flareRadius);
-        flareGradient.addColorStop(0, `rgba(255, 255, 230, ${0.4 * powerDrawAlpha})`);
-        flareGradient.addColorStop(0.3, `rgba(255, 255, 230, ${0.1 * powerDrawAlpha})`);
-        flareGradient.addColorStop(1, 'rgba(255, 255, 230, 0)');
-        fx.fillStyle = flareGradient;
-        fx.beginPath();
-        fx.arc(ax, ay, flareRadius, 0, Math.PI * 2);
-        fx.fill();
-
-        const numRays = 5;
-        for (let i = 0; i < numRays; i++) {
-            const rayAngleOffset = (Math.sin(time * 0.5 + i * 2) * 0.5 + 0.5) * (theta * 2) - theta;
-            const rayAngle = ang + rayAngleOffset;
-            const rayL = L * (1.0 + Math.random() * 0.2);
-            const rayW = 1 + Math.random() * 2;
-            const rayEndX = ax + Math.cos(rayAngle) * rayL;
-            const rayEndY = ay + Math.sin(rayAngle) * rayL;
-            const rayGrad = fx.createLinearGradient(ax, ay, rayEndX, rayEndY);
-            rayGrad.addColorStop(0, `rgba(200, 220, 255, ${(0.05 + Math.random() * 0.05) * powerDrawAlpha})`);
-            rayGrad.addColorStop(1, 'rgba(200, 220, 255, 0)');
-            fx.strokeStyle = rayGrad;
-            fx.lineWidth = rayW;
-            fx.beginPath();
-            fx.moveTo(ax, ay);
-            fx.lineTo(rayEndX, rayEndY);
-            fx.stroke();
-        }
-
-        fx.save();
-        fx.clip(conePath); // ¡Magia! Solo se dibujará dentro del cono.
-        for (const p of particulasPolvoMarino) {
-            const particleAlpha = p.opacidad * (0.5 + p.profundidad * 0.5);
-            fx.fillStyle = `rgba(207, 233, 255, ${particleAlpha})`;
-            fx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
-        }
-        fx.restore();
-
-        fx.globalCompositeOperation = 'source-over';
-    }
+    _dibujarMascaraLuz({
+        estadoJuego,
+        fx,
+        jugador,
+        W,
+        H,
+        spriteAlto,
+        robotEscala,
+        particulasPolvoMarino
+    });
 }
 
-/**
- * OPTIMIZACIÓN: Actualiza los elementos HTML del HUD solo cuando sus valores cambian.
- * Esto evita la manipulación constante del DOM, que es una operación costosa.
- */
-function actualizarHTMLHUD() {
-    if (!estadoJuego || !estadoJuego.enEjecucion) return;
-    const s = estadoJuego;
-
-    // --- Misión y Nivel ---
-    const mision = Levels.getEstadoMision();
-    let objetivoHTML;
-    if (mision) {
-        hudLevelText.innerHTML = `<span class="mission-title">${mision.texto}</span>`;
-        objetivoHTML = mision.progreso;
-    } else {
-        hudLevelText.textContent = `NIVEL ${s.nivel}`;
-        const configNivel = Levels.CONFIG_NIVELES[s.nivel - 1];
-        if (configNivel.tipo === 'capture') { objetivoHTML = `CAPTURAS: ${s.rescatados} / ${configNivel.meta}`; }
-        else if (configNivel.tipo === 'survive') { objetivoHTML = `SUPERVIVENCIA: ${Math.floor(configNivel.meta - s.valorObjetivoNivel)}s`; }
-        else if (configNivel.tipo === 'boss') { objetivoHTML = configNivel.objetivo.toUpperCase(); }
-        else { objetivoHTML = ''; }
-    }
-    if (objetivoHTML !== s._prevMisionProgreso) {
-        hudObjectiveText.innerHTML = objetivoHTML;
-        s._prevMisionProgreso = objetivoHTML;
-    }
-
-    // --- Puntuación ---
-    if (s.puntuacion !== s._prevPuntuacion) {
-        statScoreValue.textContent = String(s.puntuacion || 0);
-        s._prevPuntuacion = s.puntuacion;
-    }
-
-    // --- Profundidad ---
-    const profundidadActual = Math.floor(s.profundidad_m || 0);
-    if (profundidadActual !== s._prevProfundidad) {
-        statDepthValue.textContent = `${profundidadActual} m`;
-        s._prevProfundidad = profundidadActual;
-    }
-
-    // --- Distancia ---
-    const distActual = Math.floor(s.distanciaRecorrida || 0);
-    if (distActual !== s._prevDistancia) {
-        statDistanceValue.textContent = distActual < 1000 ? `${distActual} m` : `${(distActual / 1000).toFixed(2)} km`;
-        s._prevDistancia = distActual;
-    }
-
-    // --- Velocidad ---
-    const speed_px_s = s.velocidad_actual || 0;
-    const target_speed_km_h = (speed_px_s / 50) * 3.6;
-    s.velocidad_mostrada_kmh = lerp(s.velocidad_mostrada_kmh, target_speed_km_h, 0.12);
-    if (Math.abs(s.velocidad_mostrada_kmh - target_speed_km_h) < 0.1) s.velocidad_mostrada_kmh = target_speed_km_h;
-    const velActual = Math.floor(Math.max(0, s.velocidad_mostrada_kmh));
-    if (velActual !== s._prevVelocidad) {
-        statSpeedValue.textContent = `${velActual} km/h`;
-        s._prevVelocidad = velActual;
-    }
-    if (s.boostActivo) { statSpeedValue.classList.add('boosting'); triggerHudShake(2); }
-    else { statSpeedValue.classList.remove('boosting'); }
-
-    // --- Récord (solo se actualiza una vez al inicio) ---
-    if (s._prevPuntuacion === -1) {
-        statRecordValue.textContent = String(puntuacionMaxima);
-    }
-
-    // --- Vidas ---
-    if (s.vidas !== s._prevVidas) {
-        statLivesContainer.innerHTML = '';
-        const maxHearts = 5;
-        const currentLives = Math.min(s.vidas, maxHearts);
-        for (let i = 0; i < maxHearts; i++) {
-            const heart = document.createElement('span');
-            heart.classList.add('heart-icon');
-            if (i < currentLives) heart.classList.add('filled');
-            statLivesContainer.appendChild(heart);
-        }
-        if (s.vidas > maxHearts) {
-            const extraLives = document.createElement('span');
-            extraLives.classList.add('extra-lives');
-            extraLives.textContent = `+${s.vidas - maxHearts}`;
-            statLivesContainer.appendChild(extraLives);
-        }
-        s._prevVidas = s.vidas;
-    }
-
-    // --- Arma ---
-    const armaTexto = `${s.armaActual.toUpperCase()} ${s.enfriamientoArma > 0 ? '(RECARGA)' : '(LISTA)'}`;
-    if (armaTexto !== s._prevArma) {
-        statWeaponValue.textContent = armaTexto;
-        statWeaponValue.className = `stat-value weapon-status ${s.enfriamientoArma > 0 ? 'reloading' : 'ready'}`;
-        if (s.armaCambiandoTimer > 0) statWeaponValue.style.animation = 'weaponChangeAnim 0.3s forwards';
-        else statWeaponValue.style.animation = 'none';
-        s._prevArma = armaTexto;
-    }
-
-    // --- Torpedo ---
-    const torpedoTexto = s.enfriamientoTorpedo <= 0 ? 'LISTO' : 'RECARGANDO';
-    if (torpedoTexto !== s._prevTorpedo) {
-        statTorpedoValue.textContent = torpedoTexto;
-        statTorpedoValue.className = `stat-value weapon-status ${torpedoTexto === 'LISTO' ? 'ready' : 'reloading'}`;
-        s._prevTorpedo = torpedoTexto;
-    }
-
-    // --- Rango ---
-    if (s.asesinatos !== s._prevAsesinatos) {
-        const rango = RANGOS_ASESINO.slice().reverse().find(r => s.asesinatos >= r.bajas) || RANGOS_ASESINO[0];
-        statAssassinValue.textContent = rango.titulo;
-        s._prevAsesinatos = s.asesinatos;
-    }
-
-    // --- Barras de Progreso ---
-    const boostPercent = (s.boostEnergia / s.boostMaxEnergia) * 100;
-    if (boostPercent !== s._prevBoostPercent) {
-        boostProgressBar.style.width = `${boostPercent}%`;
-        s._prevBoostPercent = boostPercent;
-    }
-    boostProgressBar.classList.toggle('reloading', s.boostEnfriamiento > 0);
-    boostProgressBar.classList.toggle('low-energy', s.boostEnergia > 0 && s.boostEnergia < s.boostMaxEnergia * 0.25 && s.boostEnfriamiento <= 0);
-
-    const laserPercent = (s.laserEnergia / s.laserMaxEnergia) * 100;
-    if (laserPercent !== s._prevLaserPercent) {
-        laserProgressBar.style.width = `${laserPercent}%`;
-        s._prevLaserPercent = laserPercent;
-    }
-    laserProgressBar.classList.toggle('active', s.laserActivo);
-
-    const shieldPercent = (s.shieldEnergia / s.shieldMaxEnergia) * 100;
-    if (shieldPercent !== s._prevShieldPercent) {
-        shieldProgressBar.style.width = `${shieldPercent}%`;
-        const shieldRatio = s.shieldEnergia / s.shieldMaxEnergia;
-        if (s.shieldEnfriamiento <= 0) {
-            const hue = shieldRatio * 195;
-            shieldProgressBar.style.background = `linear-gradient(to right, hsl(${hue}, 100%, 65%), hsl(${hue}, 100%, 45%))`;
-        } else {
-            shieldProgressBar.style.background = '';
-        }
-        s._prevShieldPercent = shieldPercent;
-    }
-    shieldProgressBar.classList.toggle('reloading', s.shieldEnfriamiento > 0);
-    shieldProgressBar.classList.toggle('active', s.shieldActivo);
-    shieldProgressBar.classList.toggle('hit', s.shieldHitTimer > 0);
-
-    // --- Barra de vida del jefe ---
-    const jefeHp = s.jefe ? s.jefe.hp : -1;
-    if (jefeHp !== s._prevJefeHp) {
-        if (jefeHp > -1) {
-            bossHealthContainer.style.display = 'block';
-            const hpProgress = clamp(jefeHp / s.jefe.maxHp, 0, 1);
-            bossHealthBar.style.width = `${hpProgress * 100}%`;
-        } else {
-            bossHealthContainer.style.display = 'none';
-        }
-        s._prevJefeHp = jefeHp;
-    }
+export function actualizarHTMLHUD() {
+    _actualizarHTMLHUD({
+        estadoJuego,
+        Levels,
+        puntuacionMaxima,
+        uiElements: {
+            hudLevelText,
+            hudObjectiveText,
+            statScoreValue,
+            statDepthValue,
+            statDistanceValue,
+            statSpeedValue,
+            statRecordValue,
+            statLivesContainer,
+            statWeaponValue,
+            statTorpedoValue,
+            statAssassinValue,
+            boostProgressBar,
+            laserProgressBar,
+            shieldProgressBar,
+            bossHealthContainer,
+            bossHealthBar
+        },
+        onHudShake: triggerHudShake
+    });
 }
 // =================================================================================
 //  10. CONTROL DEL FLUJO DEL JUEGO
@@ -4933,69 +2571,46 @@ export function perderJuego() {
 }
 
 function mostrarPantallaGameOver() {
-    if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
-    if (mainMenu) mainMenu.style.display = 'block'; if (levelTransition) levelTransition.style.display = 'none'; if (brandLogo) brandLogo.style.display = 'none';
-    if (welcomeMessage) welcomeMessage.style.display = 'none'; if (promptEl) promptEl.style.display = 'none';
-    if (titleEl) {
-        titleEl.style.display = 'block';
-        titleEl.textContent = 'Fin de la expedición';
-        titleEl.style.color = '';
-    }
-    if (captainImage) captainImage.style.display = 'block';
-    if (statScore) statScore.textContent = 'PUNTUACIÓN: ' + estadoJuego.puntuacion;
-    if (statDepth) statDepth.textContent = 'PROFUNDIDAD MÁXIMA: ' + estadoJuego.profundidad_m + ' m';
-    if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES: ' + estadoJuego.rescatados;
-    const distanciaKm = (estadoJuego.distanciaRecorrida / 1000).toFixed(2);
-    if (statDistance) statDistance.textContent = 'DISTANCIA RECORRIDA: ' + distanciaKm + ' km';
-    if (finalStats) finalStats.style.display = 'block'; if (mainMenuContent) mainMenuContent.style.display = 'block'; if (levelSelectContent) levelSelectContent.style.display = 'none';
-    if (startBtn) startBtn.style.display = 'none'; if (restartBtn) restartBtn.style.display = 'inline-block';
-    modoSuperposicion = 'gameover';
-    // --- CAMBIO CLAVE: Añadir 'initial-menu' para un fondo claro y animado ---
-    if (overlay) { overlay.style.display = 'grid'; overlay.classList.add('initial-menu'); }
-    if (bossHealthContainer) bossHealthContainer.style.display = 'none'; if (gameplayHints) gameplayHints.classList.remove('visible'); estadoJuego.faseJuego = 'gameover'; S.reproducir('gameover'); setTimeout(() => S.reproducir('theme_main'), 1500);
-    if (gameplayHints) gameplayHints.classList.remove('visible');
-    // --- NUEVO: Activar las animaciones de fondo del menú ---
-    if (menuFlyBy) {
-        menuFlyBy.active = false;
-        menuFlyBy.cooldown = 4.0 + Math.random() * 4;
-    }
-    animales.length = 0; // Limpiar animales del juego
-    const tiposMenu = ['normal', 'normal', 'normal', sharkListo ? 'shark' : 'normal', whaleListo ? 'whale' : 'normal'];
-    for (let i = 0; i < 4; i++) { const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)]; setTimeout(() => generarAnimal(false, tipoAleatorio), i * 2500); }
+    _mostrarPantallaGameOver({
+        estadoJuego,
+        guardarPuntuacionMaxima,
+        getPuntuacionMaxima: () => puntuacionMaxima,
+        setPuntuacionMaxima: (v) => { puntuacionMaxima = v; },
+        uiElements: {
+            mainMenu, levelTransition, brandLogo, welcomeMessage, promptEl, titleEl,
+            captainImage, statScore, statDepth, statSpecimens, statDistance,
+            finalStats, mainMenuContent, levelSelectContent, startBtn, restartBtn,
+            bossHealthContainer, gameplayHints
+        },
+        S,
+        overlay,
+        menuFlyBy,
+        animales,
+        sharkListo,
+        whaleListo,
+        generarAnimal,
+        setModoSuperposicion: (m) => { modoSuperposicion = m; }
+    });
 }
+
 function ganarJuego() {
-    if (!estadoJuego || estadoJuego.faseJuego === 'gameover') return;
-    nivelMaximoAlcanzado = Levels.CONFIG_NIVELES.length;
-    try { localStorage.setItem(CLAVE_NIVEL_MAX, String(nivelMaximoAlcanzado)); } catch (e) { }
-    estadoJuego.faseJuego = 'gameover';
-    estadoJuego.enEjecucion = false;
-    S.detener('music');
-    S.detener('laser_beam');
-    S.detener('boost');
-    S.detener('gatling_fire');
-    S.reproducir('victory'); setTimeout(() => S.reproducir('theme_main'), 2000);
-    if (estadoJuego.puntuacion > puntuacionMaxima) { puntuacionMaxima = estadoJuego.puntuacion; guardarPuntuacionMaxima(); }
-    if (mainMenu) mainMenu.style.display = 'block';
-    if (levelTransition) levelTransition.style.display = 'none'; if (welcomeMessage) welcomeMessage.style.display = 'none';
-    if (promptEl) promptEl.style.display = 'none';
-    if (brandLogo) brandLogo.style.display = 'none';
-    if (captainImage) captainImage.style.display = 'none';
-    if (titleEl) { titleEl.style.display = 'block'; titleEl.textContent = '¡VICTORIA!'; titleEl.style.color = '#ffdd77'; }
-    // if (finalP) finalP.textContent = '¡Has conquistado las profundidades!'; // Elemento 'finalP' no existe
-    if (statScore) statScore.textContent = 'PUNTUACIÓN FINAL: ' + estadoJuego.puntuacion;
-    if (statDepth) statDepth.textContent = 'PROFUNDIDAD MÁXIMA: ' + estadoJuego.profundidad_m + ' m';
-    if (statSpecimens) statSpecimens.textContent = 'ESPECÍMENES TOTALES: ' + estadoJuego.rescatados;
-    const distanciaKm = (estadoJuego.distanciaRecorrida / 1000).toFixed(2);
-    if (statDistance) statDistance.textContent = 'DISTANCIA TOTAL: ' + distanciaKm + ' km';
-    if (finalStats) finalStats.style.display = 'block';
-    if (mainMenuContent) mainMenuContent.style.display = 'block';
-    if (levelSelectContent) levelSelectContent.style.display = 'none';
-    if (startBtn) startBtn.style.display = 'none';
-    if (restartBtn) restartBtn.style.display = 'inline-block'; // prettier-ignore
-    modoSuperposicion = 'gameover';
-    if (overlay) { overlay.style.display = 'grid'; overlay.classList.remove('initial-menu'); }
-    if (bossHealthContainer) bossHealthContainer.style.display = 'none';
-    if (gameplayHints) gameplayHints.classList.remove('visible');
+    _ganarJuego({
+        estadoJuego,
+        Levels,
+        setNivelMaximoAlcanzado: (n) => { nivelMaximoAlcanzado = n; },
+        getPuntuacionMaxima: () => puntuacionMaxima,
+        setPuntuacionMaxima: (v) => { puntuacionMaxima = v; },
+        guardarPuntuacionMaxima,
+        uiElements: {
+            mainMenu, levelTransition, welcomeMessage, promptEl, brandLogo,
+            captainImage, titleEl, statScore, statDepth, statSpecimens,
+            statDistance, finalStats, mainMenuContent, levelSelectContent,
+            startBtn, restartBtn, bossHealthContainer, gameplayHints
+        },
+        S,
+        overlay,
+        setModoSuperposicion: (m) => { modoSuperposicion = m; }
+    });
 }
 function comprobarCompletadoNivel() {
     if (!estadoJuego || estadoJuego.faseJuego !== 'playing') return;
@@ -5020,86 +2635,31 @@ export function configurarTemaFondo(tema) {
     if (t.front) { fgImg = t.front; fgListo = true; fgAncho = t.front.width; fgAlto = t.front.height; }
     if (estadoJuego) dibujarFondoParallax();
 }
+
 function mostrarVistaMenuPrincipal(desdePausa) {
-    if (!mainMenu) return;
-
-    if (desdePausa) {
-        S.pausar('music');
-    } else {
-        S.detener('music'); // Detiene cualquier música de juego que pudiera haber quedado
-    }
-    // Tanto el menú inicial como el de pausa ahora tendrán el fondo claro, sin desenfoque.
-    if (overlay) overlay.classList.add('initial-menu');
-    S.reproducir('theme_main');
-
-    if (brandLogo) brandLogo.style.display = 'block';
-    if (welcomeMessage) welcomeMessage.style.display = 'block';
-    if (promptEl) promptEl.style.display = 'block';
-    if (titleEl) titleEl.style.display = 'none';
-    if (captainImage) captainImage.style.display = 'block';
-    if (finalStats) finalStats.style.display = 'none';
-    if (startBtn) startBtn.style.display = 'inline-block';
-    if (restartBtn) restartBtn.style.display = 'none';
-    modoSuperposicion = desdePausa ? 'pause' : 'menu';
-    if (mainMenu) mainMenu.style.display = 'block';
-
-    // Reiniciar la animación del submarino "fly-by"
-    if (menuFlyBy) {
-        menuFlyBy.active = false;
-        menuFlyBy.cooldown = 4.0 + Math.random() * 4; // Primer paso en 4-8 segundos
-    }
-
-    // Generar criaturas de fondo si es el menú inicial (no en pausa)
-    // Menos criaturas para un ambiente marino más realista y natural
-    if (!desdePausa) {
-        animales.length = 0; // Limpiar cualquier animal de una partida anterior
-        const tiposMenu = [
-            'normal', 'normal', 'normal',
-            sharkListo ? 'shark' : 'normal',
-            whaleListo ? 'whale' : 'normal',
-        ];
-        for (let i = 0; i < 4; i++) { // Solo 4 criaturas para un ambiente más realista
-            const tipoAleatorio = tiposMenu[Math.floor(Math.random() * tiposMenu.length)];
-            setTimeout(() => generarAnimal(false, tipoAleatorio), i * 2500); // Más espaciadas en el tiempo
-        }
-    }
-    if (levelTransition) levelTransition.style.display = 'none';
-    if (overlay) overlay.style.display = 'grid';
-    if (mainMenuContent) mainMenuContent.style.display = 'block';
-    if (levelSelectContent) levelSelectContent.style.display = 'none';
+    _mostrarVistaMenuPrincipal(desdePausa, {
+        S,
+        overlay,
+        uiElements: {
+            mainMenu, brandLogo, welcomeMessage, promptEl, titleEl,
+            captainImage, finalStats, startBtn, restartBtn,
+            levelTransition, mainMenuContent, levelSelectContent
+        },
+        menuFlyBy,
+        animales,
+        sharkListo,
+        whaleListo,
+        generarAnimal,
+        setModoSuperposicion: (m) => { modoSuperposicion = m; }
+    });
 }
 
 function poblarSelectorDeNiveles() {
-    if (!levelSelectorContainer) return;
-    levelSelectorContainer.innerHTML = '';
-
-    Levels.CONFIG_NIVELES.forEach((config, index) => {
-        const nivelNum = index + 1;
-        const btn = document.createElement('button');
-        btn.classList.add('levelbtn');
-        btn.dataset.nivel = nivelNum;
-
-        if (nivelNum <= nivelMaximoAlcanzado) {
-            btn.textContent = nivelNum;
-            btn.onclick = () => {
-                iniciarJuego(nivelNum);
-            };
-        } else {
-            btn.disabled = true;
-        }
-        levelSelectorContainer.appendChild(btn);
-    });
+    _poblarSelectorDeNiveles(levelSelectorContainer, Levels.CONFIG_NIVELES, nivelMaximoAlcanzado, iniciarJuego);
 }
 
-/**
- * Actualiza la clase 'selected' en los botones de nivel según el índice guardado.
- */
 function actualizarSeleccionNivelVisual() {
-    if (!levelSelectorContainer || !estadoJuego) return;
-    const botonesNivel = levelSelectorContainer.querySelectorAll('.levelbtn:not(:disabled)');
-    botonesNivel.forEach((btn, index) => {
-        btn.classList.toggle('selected', index === (estadoJuego.nivelSeleccionadoIndex || 0));
-    });
+    _actualizarSeleccionNivelVisual(levelSelectorContainer, estadoJuego ? estadoJuego.nivelSeleccionadoIndex : 0);
 }
 
 function abrirMenuPrincipal() { if (estadoJuego && estadoJuego.enEjecucion) { estadoJuego.enEjecucion = false; mostrarVistaMenuPrincipal(true); if (gameplayHints) gameplayHints.classList.remove('visible'); } }
@@ -5209,130 +2769,8 @@ export function gameLoop(t) {
     // Solicita al navegador que vuelva a llamar a esta función en el próximo frame.
     requestAnimationFrame(gameLoop);
 }
-/**
- * Lee el estado del gamepad conectado y traduce sus entradas a acciones del juego.
- */
-function actualizarGamepad() {
-    if (!gamepadConectado) return;
-    const gamepads = navigator.getGamepads();
-    const gp = gamepads[0];
-    if (!gp) return;
-
-    // --- Lógica de Menú (si el overlay está visible) ---
-    if (overlay && overlay.style.display !== 'none') {
-        actualizarGamepadMenu(gp);
-    }
-    // --- Lógica Durante el Juego ---
-    else if (estadoJuego && estadoJuego.enEjecucion) {
-        actualizarGamepadJuego(gp);
-    }
-
-    // --- Lógica Global del Gamepad (se aplica en cualquier estado) ---
-    const isNewPress = (index) => gp.buttons[index].pressed && !prevGamepadButtons[index];
-    if (isNewPress(9)) { // Start -> Pausa / Reanudar
-        abrirMenuPausaDesdeMando();
-    }
-    if (isNewPress(8)) { // Select/Back -> Mostrar/Ocultar Controles
-        if (helpBtn) helpBtn.click();
-    }
-
-    // Guardar estado de botones para el próximo frame
-    prevGamepadButtons = gp.buttons.map(b => b.pressed);
-}
-
-function actualizarGamepadMenu(gp) {
-    const isNewPress = (index) => gp.buttons[index].pressed && !prevGamepadButtons[index];
-
-    // --- Menú Principal / Pausa / Game Over ---
-    if (mainMenuContent && mainMenuContent.style.display !== 'none') {
-        if (isNewPress(7)) { // RT -> Sumergirse / Reintentar
-            if (startBtn && startBtn.style.display !== 'none') startBtn.click();
-            else if (restartBtn && restartBtn.style.display !== 'none') restartBtn.click();
-        }
-        if (isNewPress(6)) { // LT -> Niveles
-            if (levelSelectBtn && levelSelectBtn.style.display !== 'none') levelSelectBtn.click();
-        }
-    }
-
-    // --- Selector de Niveles ---
-    else if (levelSelectContent && levelSelectContent.style.display !== 'none') {
-        const botonesNivel = levelSelectorContainer.querySelectorAll('.levelbtn:not(:disabled)');
-        const axisX = gp.axes[0];
-        const STICK_DEAD_ZONE = 0.6;
-
-        const movedLeft = isNewPress(14) || (axisX < -STICK_DEAD_ZONE && estadoJuego.gamepadStickX >= -STICK_DEAD_ZONE);
-        const movedRight = isNewPress(15) || (axisX > STICK_DEAD_ZONE && estadoJuego.gamepadStickX <= STICK_DEAD_ZONE);
-
-        if (movedLeft) {
-            if (botonesNivel.length > 0) {
-                estadoJuego.nivelSeleccionadoIndex = (estadoJuego.nivelSeleccionadoIndex - 1 + botonesNivel.length) % botonesNivel.length;
-                actualizarSeleccionNivelVisual();
-            }
-        }
-        if (movedRight) {
-            if (botonesNivel.length > 0) {
-                estadoJuego.nivelSeleccionadoIndex = (estadoJuego.nivelSeleccionadoIndex + 1) % botonesNivel.length;
-                actualizarSeleccionNivelVisual();
-            }
-        }
-        if (isNewPress(0)) { // A -> Seleccionar Nivel
-            if (botonesNivel[estadoJuego.nivelSeleccionadoIndex]) {
-                botonesNivel[estadoJuego.nivelSeleccionadoIndex].click();
-            }
-        }
-        if (isNewPress(1)) { // B -> Volver
-            if (backToMainBtn) backToMainBtn.click();
-        }
-        estadoJuego.gamepadStickX = axisX; // Guardar estado del stick para el próximo frame
-    }
-}
-
-function actualizarGamepadJuego(gp) {
-    const DEAD_ZONE = 0.25;
-    let axisX = gp.axes[0];
-    let axisY = gp.axes[1];
-
-    // Fallback to D-pad if left stick is not moving
-    if (Math.abs(axisX) < DEAD_ZONE && Math.abs(axisY) < DEAD_ZONE) {
-        if (gp.buttons[12] && gp.buttons[12].pressed) { // D-pad Up
-            axisY = -1;
-        } else if (gp.buttons[13] && gp.buttons[13].pressed) { // D-pad Down
-            axisY = 1;
-        }
-        if (gp.buttons[14] && gp.buttons[14].pressed) { // D-pad Left
-            axisX = -1;
-        } else if (gp.buttons[15] && gp.buttons[15].pressed) { // D-pad Right
-            axisX = 1;
-        }
-    }
-
-    teclas['ArrowUp'] = axisY < -DEAD_ZONE;
-    teclas['ArrowDown'] = axisY > DEAD_ZONE;
-    teclas['ArrowLeft'] = axisX < -DEAD_ZONE;
-    teclas['ArrowRight'] = axisX > DEAD_ZONE;
-
-    teclas[' '] = gp.buttons[0].pressed; // A -> Disparar / Láser
-    teclas['b'] = gp.buttons[1].pressed; // B -> Impulso (Boost)
-    teclas['v'] = gp.buttons[3].pressed; // Y -> Escudo (Shield)
-
-    const isNewPress = (index) => gp.buttons[index].pressed && !prevGamepadButtons[index];
-    if (isNewPress(2)) { teclas['x'] = true; } // X -> Torpedo
-    if (isNewPress(5)) { teclas['c'] = true; } // RB -> Cambiar Arma
-}
-
-function abrirMenuPausaDesdeMando() {
-    // Esta función es un wrapper para asegurar que solo se active durante el juego
-    if (estadoJuego && estadoJuego.enEjecucion) {
-        abrirMenuPrincipal();
-    } else if (estadoJuego && estadoJuego.faseJuego === 'pause') {
-        // Si ya está en pausa, reanuda el juego (simula click en "Sumergirse")
-        if (startBtn) startBtn.click();
-    } else if (modoSuperposicion === 'menu' || modoSuperposicion === 'gameover') {
-        // Si estamos en el menú principal, el botón Start también inicia el juego
-        if (startBtn && startBtn.style.display !== 'none') startBtn.click();
-        else if (restartBtn && restartBtn.style.display !== 'none') restartBtn.click();
-    }
-}
+// --- Lógica del Gamepad (delegada a input.js) ---
+export { actualizarGamepad, actualizarGamepadMenu, actualizarGamepadJuego, abrirMenuPausaDesdeMando };
 
 function actualizarAnimacionMuerte(dt, originalDt) {
     // --- Lógica de cámara lenta ---
@@ -5557,364 +2995,89 @@ function dibujarParticulas() {
 }
 
 // =================================================================================
-//  11. INICIALIZACIÓN GENERAL Y GESTIÓN DE EVENTOS
+//  11. INICIALIZACIÓN GENERAL Y GESTIÓN DE EVENTOS (Módulo input.js)
 // =================================================================================
-// La función `init` se llama una sola vez cuando la página carga.
-// Configura todos los listeners de eventos (teclado, ratón, botones de la UI).
-
-let arrastreId = -1, arrastreActivo = false, arrastreY = 0;
-function estaSobreUI(x, y) { const elementos = [muteBtn, helpBtn, infoBtn, fsBtn, shareBtn, githubBtn, overlay, infoOverlay, levelSelectBtn, backToMainBtn]; for (const el of elementos) { if (!el) continue; const style = getComputedStyle(el); if (style.display === 'none' || style.visibility === 'hidden') continue; const r = el.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true; } return false; }
 
 export function init() {
-    // --- 1. EVENTOS DE TECLADO Y RATÓN (Puntero) ---
-    // Inicializar la animación del menú
     menuFlyBy = {
         active: false,
         x: -200,
         y: H / 2,
         vx: 0,
-        cooldown: 5.0, // El primer "fly-by" ocurrirá después de 5 segundos
+        cooldown: 5.0,
         rotation: 0,
         chasingSharks: [],
         fireCooldown: 0
     };
 
-    // --- NUEVO: Eventos para conectar/desconectar el mando ---
-    window.addEventListener('gamepadconnected', (e) => {
-        console.log(`¡Mando conectado! ID: ${e.gamepad.id}`);
-        gamepadConectado = true;
-        // Inicializamos el estado de los botones
-        prevGamepadButtons = e.gamepad.buttons.map(() => false);
-
-        // >>> NUEVO: Reanudar el juego si estaba pausado por desconexión <<<
-        if (estadoJuego && estadoJuego.juegoPausadoPorDesconexion) {
-            estadoJuego.enEjecucion = true; // Reanudar el juego
-            estadoJuego.juegoPausadoPorDesconexion = false; // Quitar la bandera
-            S.bucle('music'); // Reanudar la música
-            if (controllerDisconnectOverlay) {
-                controllerDisconnectOverlay.style.display = 'none';
-            }
-        } else {
-            // Comportamiento original: Mostrar los controles si no se están mostrando ya
-            if (helpBtn && !gameplayHints.classList.contains('visible')) {
-                helpBtn.click();
-            }
+    setInputContextGetter(() => ({
+        W,
+        H,
+        estadoJuego,
+        jugador,
+        Levels,
+        iniciarJuego,
+        abrirMenuPrincipal,
+        lanzarTorpedo,
+        disparar,
+        autoSize,
+        actualizarIconos,
+        alternarPantallaCompleta,
+        mostrarVistaMenuPrincipal,
+        poblarSelectorDeNiveles,
+        actualizarSeleccionNivelVisual,
+        modoSuperposicion,
+        elementosUI: {
+            controllerDisconnectOverlay,
+            controllerConnectPrompt,
+            gameplayHints,
+            helpBtn,
+            startBtn,
+            restartBtn,
+            levelSelectBtn,
+            backToMainBtn,
+            pauseBtn,
+            muteBtn,
+            infoBtn,
+            infoOverlay,
+            cheatBtn,
+            githubBtn,
+            fsBtn,
+            shareBtn,
+            logoHUD,
+            resumeWithKeyboardButton,
+            useGamepadButton,
+            stayOnKeyboardButton,
+            closeInfo,
+            overlay,
+            mainMenuContent,
+            levelSelectContent,
+            levelSelectorContainer
+        },
+        creditosState: {
+            a_creditos_imagenes,
+            a_creditos_intervalo,
+            a_creditos_imagen_actual,
+            estabaCorriendoAntesCreditos,
+            animarSubmarino
         }
-    });
-    window.addEventListener('gamepaddisconnected', (e) => {
-        console.log(`Mando desconectado. ID: ${e.gamepad.id}`);
-        gamepadConectado = false;
+    }));
 
-        // >>> NUEVO: Pausar el juego y mostrar mensaje si se está jugando <<<
-        if (estadoJuego && estadoJuego.enEjecucion) {
-            estadoJuego.enEjecucion = false; // Pausar el juego
-            estadoJuego.juegoPausadoPorDesconexion = true; // Poner una bandera
-            S.pausar('music'); // Pausar la música del juego
-            S.detener('boost'); // Detener sonidos en bucle
-            S.detener('laser_beam');
-            S.detener('gatling_fire');
-            if (controllerDisconnectOverlay) {
-                controllerDisconnectOverlay.style.display = 'grid';
-            }
-        }
-    });
+    inicializarEventosInput();
 
-    addEventListener('keydown', function (e) { teclas[e.key] = true; if (e.code === 'Space') e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); abrirMenuPrincipal(); } });
-    addEventListener('keyup', function (e) {
-        teclas[e.key] = false;
-        // --- NUEVO: Ocultar panel de ayuda con Escape ---
-        if (e.key === '0') {
-            if (jugador && estadoJuego.enEjecucion) {
-                jugador.direccion *= -1;
-            }
-        }
-        if (e.key === 'Escape') {
-            if (gameplayHints && gameplayHints.classList.contains('visible')) {
-                gameplayHints.classList.remove('visible');
-            }
-        }
-    });
-    window.addEventListener('blur', () => { teclas = {}; }); // Limpiar teclas si se pierde el foco
-    window.addEventListener('pointerdown', (e) => {
-        // Resumir el contexto de audio en la primera interacción del usuario
-        S.init(); // Asegura que el audio context se cree
-
-        if (estaSobreUI(e.clientX, e.clientY)) return;
-        const isLevel5 = estadoJuego && estadoJuego.nivel === 5;
-        if (isLevel5) {
-            lanzarTorpedo();
-            return;
-        }
-        const tapX = e.clientX;
-        if (tapX < W * 0.4) { arrastreId = e.pointerId; arrastreActivo = true; arrastreY = e.clientY; e.preventDefault(); } // prettier-ignore
-        else if (tapX > W * 0.6) { if (!estadoJuego || !estadoJuego.enEjecucion) return; if (estadoJuego.bloqueoEntrada === 0) { teclas[' '] = true; if (estadoJuego.armaActual === 'gatling') disparar({ estadoJuego, jugador, S, Levels }); } }
-        else { lanzarTorpedo(); }
-    }, { passive: false });
-    window.addEventListener('pointermove', (e) => {
-        if (estadoJuego && estadoJuego.nivel === 5) return;
-        if (!arrastreActivo || e.pointerId !== arrastreId) return;
-        arrastreY = e.clientY; e.preventDefault();
-    }, { passive: false });
-    window.addEventListener('pointerup', (e) => {
-        if (estadoJuego && estadoJuego.nivel === 5) { return; }
-        if (e.pointerId === arrastreId) { arrastreActivo = false; arrastreId = -1; } teclas[' '] = false; // Para armas sostenidas, esto detiene el fuego
-    }, { passive: false });
-    window.addEventListener('resize', autoSize);
-
-    // --- 2. BOTONES DEL MENÚ PRINCIPAL ---
-    if (startBtn) {
-        startBtn.onclick = function (e) {
-            e.stopPropagation();
-            if (modoSuperposicion === 'pause') {
-                S.detener('theme_main'); // Detenemos el tema del menú
-                if (overlay) overlay.style.display = 'none';
-                if (estadoJuego) {
-                    estadoJuego.enEjecucion = true;
-                    estadoJuego.bloqueoEntrada = 0.15;
-                    if (gameplayHints) gameplayHints.classList.remove('visible');
-                }
-                S.bucle('music'); // Reanudamos la música del juego
-            } else { // Si no es pausa, es un nuevo juego
-                iniciarJuego(1);
-            }
-        };
-    }
-    if (restartBtn) {
-        restartBtn.onclick = () => iniciarJuego(estadoJuego.nivel || 1);
-    }
-    if (levelSelectBtn) {
-        levelSelectBtn.onclick = () => {
-            if (mainMenuContent) mainMenuContent.style.display = 'none';
-            if (levelSelectContent) levelSelectContent.style.display = 'block';
-            poblarSelectorDeNiveles();
-            // >>> NUEVO: Establecer la selección inicial para el mando <<<
-            const botonesDisponibles = levelSelectorContainer.querySelectorAll('.levelbtn:not(:disabled)');
-
-            // Si estadoJuego no existe (menú inicial), creamos un objeto temporal o usamos localstorage
-            if (!estadoJuego) {
-                // Recuperar nivel máximo para preseleccionar, o defecto 0
-                // Como no tenemos estadoJuego, no podemos guardar la selección en él.
-                // PERO, solo necesitamos esto para visualización.
-            } else {
-                estadoJuego.nivelSeleccionadoIndex = botonesDisponibles.length - 1; // Empezar en el último nivel desbloqueado
-                actualizarSeleccionNivelVisual();
-            }
-        };
-    }
-    if (backToMainBtn) {
-        backToMainBtn.onclick = () => {
-            if (mainMenuContent) mainMenuContent.style.display = 'block';
-            if (levelSelectContent) levelSelectContent.style.display = 'none';
-        };
-    }
-
-    // --- 3. BOTONES DE LA BARRA DE HUD SUPERIOR ---
-    if (helpBtn) {
-        helpBtn.onclick = function () {
-            if (gameplayHints) {
-                // Alternar la clase 'gamepad-active' según si hay un mando conectado
-                gameplayHints.classList.toggle('gamepad-active', gamepadConectado);
-                gameplayHints.classList.toggle('visible');
-            }
-        };
-    }
-    if (pauseBtn) {
-        pauseBtn.onclick = function () {
-            abrirMenuPrincipal(); // Esta función ya maneja la lógica de pausar el juego
-        };
-    }
-    if (muteBtn) { muteBtn.onclick = function () { S.alternarSilenciado(); actualizarIconos(); }; }
-    if (infoBtn) {
-        infoBtn.onclick = () => {
-            estabaCorriendoAntesCreditos = !!(estadoJuego && estadoJuego.enEjecucion);
-            if (estadoJuego) estadoJuego.enEjecucion = false;
-            S.pausar('music');
-            S.reproducir('theme_main');
-            if (infoOverlay) infoOverlay.style.display = 'grid';
-            if (gameplayHints) gameplayHints.classList.remove('visible');
-            animarSubmarino = true;
-
-            // Iniciar slideshow de créditos
-            const creatorPic = document.getElementById('creator-pic');
-            if (creatorPic) {
-                creatorPic.style.transition = 'opacity 0.5s ease-in-out';
-                // Iniciar con una imagen aleatoria
-                a_creditos_imagen_actual = Math.floor(Math.random() * a_creditos_imagenes.length);
-                creatorPic.src = a_creditos_imagenes[a_creditos_imagen_actual];
-                creatorPic.style.opacity = 1;
-
-                a_creditos_intervalo = setInterval(() => {
-                    let randomIndex;
-                    do {
-                        randomIndex = Math.floor(Math.random() * a_creditos_imagenes.length);
-                    } while (randomIndex === a_creditos_imagen_actual && a_creditos_imagenes.length > 1);
-                    a_creditos_imagen_actual = randomIndex;
-
-                    creatorPic.style.opacity = 0;
-                    setTimeout(() => {
-                        creatorPic.src = a_creditos_imagenes[a_creditos_imagen_actual];
-                        creatorPic.style.opacity = 1;
-                    }, 500); // Coincide con la transición CSS
-                }, 4000); // Cambiar imagen cada 4 segundos
-            }
-        };
-    }
-    if (cheatBtn) {
-        cheatBtn.onclick = () => {
-            const cheat = prompt("Introduce un código secreto (o escribe 'nemo' para desbloquear todos los niveles):");
-            if (cheat && (cheat.toLowerCase() === 'nemo' || cheat.toLowerCase() === 'desbloquear')) {
-                nivelMaximoAlcanzado = Levels.CONFIG_NIVELES.length;
-                try { localStorage.setItem(CLAVE_NIVEL_MAX, String(nivelMaximoAlcanzado)); } catch (e) { }
-                alert(`¡Código Mágico Aceptado!\nHas desbloqueado los ${nivelMaximoAlcanzado} niveles escondidos en la región abisal.`);
-                if (!estadoJuego || !estadoJuego.enEjecucion) {
-                    mostrarVistaMenuPrincipal(false); 
-                }
-            } else if (cheat) {
-                alert("Secuencia de comandos no reconocida.");
-            }
-        };
-    }
-    if (githubBtn) { githubBtn.onclick = () => window.open('https://github.com/HectorDanielAyarachiFuentes', '_blank'); }
-    if (fsBtn) { fsBtn.onclick = function () { alternarPantallaCompleta(); }; }
-    if (shareBtn) {
-        shareBtn.onclick = async function () {
-            let estabaCorriendo = !!(estadoJuego && estadoJuego.enEjecucion);
-            if (estabaCorriendo) { estadoJuego.enEjecucion = false; S.pausar('music'); }
-            try {
-                if (navigator.share) { await navigator.share({ title: 'La Expedición', text: '¡He conquistado las profundidades! ¿Puedes tú?', url: location.href }); }
-            } catch (_) { }
-            finally {
-                if (estabaCorriendo && (!overlay || overlay.style.display === 'none')) { if (estadoJuego) estadoJuego.enEjecucion = true; S.bucle('music'); }
-            }
-        };
-    }
-
-    // --- 4. OTROS EVENTOS DE UI ---
-    if (logoHUD) { logoHUD.addEventListener('click', abrirMenuPrincipal); }
-
-    // >>> CORRECCIÓN: Lógica para el botón de "Volver al Juego" (desconexión) <<<
-    if (resumeWithKeyboardButton) {
-        resumeWithKeyboardButton.onclick = () => {
-            if (estadoJuego && estadoJuego.juegoPausadoPorDesconexion) {
-                estadoJuego.enEjecucion = true;
-                estadoJuego.juegoPausadoPorDesconexion = false;
-                S.bucle('music');
-                if (controllerDisconnectOverlay) {
-                    controllerDisconnectOverlay.style.display = 'none';
-                }
-            }
-        };
-    }
-
-    // >>> NUEVO: Lógica para los botones del prompt de conexión de mando <<<
-    if (useGamepadButton) {
-        useGamepadButton.onclick = () => {
-            if (estadoJuego && estadoJuego.juegoPausadoPorConexionMando) {
-                gamepadConectado = true; // ACTIVAR MANDO
-                const gamepads = navigator.getGamepads();
-                if (gamepads[0]) {
-                    prevGamepadButtons = gamepads[0].buttons.map(() => false);
-                }
-
-                estadoJuego.enEjecucion = true;
-                estadoJuego.juegoPausadoPorConexionMando = false;
-                S.bucle('music');
-                if (controllerConnectPrompt) {
-                    controllerConnectPrompt.style.display = 'none';
-                }
-            }
-        };
-    }
-    if (stayOnKeyboardButton) {
-        stayOnKeyboardButton.onclick = () => {
-            if (estadoJuego && estadoJuego.juegoPausadoPorConexionMando) {
-                gamepadConectado = false; // MANTENER MANDO DESACTIVADO (para esta sesión)
-
-                estadoJuego.enEjecucion = true;
-                estadoJuego.juegoPausadoPorConexionMando = false;
-                S.bucle('music');
-                if (controllerConnectPrompt) {
-                    controllerConnectPrompt.style.display = 'none';
-                }
-            }
-        };
-    }
-
-    if (closeInfo) {
-        closeInfo.onclick = function () {
-            S.detener('theme_main');
-            if (infoOverlay) infoOverlay.style.display = 'none';
-            if (estabaCorriendoAntesCreditos && (!overlay || overlay.style.display === 'none')) {
-                if (estadoJuego) { estadoJuego.enEjecucion = true; }
-                S.bucle('music');
-                if (gameplayHints) gameplayHints.classList.remove('visible');
-            }
-            animarSubmarino = false;
-
-            // Detener slideshow y resetear estilos
-            if (a_creditos_intervalo) {
-                clearInterval(a_creditos_intervalo);
-                a_creditos_intervalo = null;
-            }
-        };
-    }
-    if (overlay) {
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay && overlay.style.display !== 'none' && (!restartBtn || restartBtn.style.display === 'none') && estadoJuego && estadoJuego.faseJuego !== 'transition' && levelSelectContent.style.display === 'none') {
-                if (modoSuperposicion === 'pause') {
-                    S.detener('theme_main');
-                    overlay.style.display = 'none';
-                    if (estadoJuego) {
-                        estadoJuego.enEjecucion = true;
-                        estadoJuego.bloqueoEntrada = 0.15;
-                        if (gameplayHints) gameplayHints.classList.remove('visible');
-                    }
-                    S.bucle('music');
-                } else {
-                    iniciarJuego(1);
-                }
-            }
-        });
-    }
-
-    // --- 5. LÓGICA DE PESTAÑAS EN LA VENTANA DE INFORMACIÓN ---
-    const infoTabs = document.querySelectorAll('.info-tab-btn');
-    const infoPanels = document.querySelectorAll('.info-tab-panel');
-
-    infoTabs.forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            // Evita que el click en el botón se propague al overlay y lo cierre.
-            e.stopPropagation();
-
-            // 1. Ocultar todos los paneles y desactivar todas las pestañas.
-            infoTabs.forEach(t => t.classList.remove('active'));
-            infoPanels.forEach(p => p.classList.remove('active'));
-
-            // 2. Activar la pestaña y el panel seleccionados.
-            tab.classList.add('active');
-            const tabId = tab.dataset.tab;
-            const targetPanel = document.getElementById(`tab-${tabId}`);
-            if (targetPanel) {
-                targetPanel.classList.add('active');
-            }
-        });
-    });
-
-    // --- 7. INICIALIZACIÓN FINAL DEL JUEGO ---
+    // --- Inicialización Final del Juego ---
     autoSize();
     S.init();
-    inicializarCanvasOffscreen(); // >>> NUEVO: Inicializar el canvas para tintes
+    inicializarCanvasOffscreen();
     actualizarIconos();
     reiniciar();
     mostrarVistaMenuPrincipal(false);
 
-    // --- Carga de Recursos SVG (desde archivos) ---
     cargarImagen('js/svg/propeller.svg', function (img) {
         if (!img) return;
         propellerImg = img;
         propellerReady = true;
     });
 
-    // Cargar assets de armas
     Weapons.loadWeaponAssets(cargarImagen, ctx);
 }
