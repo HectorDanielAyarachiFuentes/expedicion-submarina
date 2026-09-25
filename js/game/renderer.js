@@ -23,13 +23,41 @@ import {
     orcaImg,
     criaturasImg,
     dibujarHector,
-    dibujarSpriteConTinte,
     BABYWHALE_SPRITE_DATA,
     ORCA_SPRITE_DATA,
     SHARK_SPRITE_DATA,
     WHALE_SPRITE_DATA,
     MIERDEI_SPRITE_DATA
 } from './assets.js';
+
+let offscreenCanvas = null;
+let offscreenCtx = null;
+
+export function inicializarCanvasOffscreen() {
+    if (!offscreenCanvas && typeof document !== 'undefined') {
+        offscreenCanvas = document.createElement('canvas');
+        offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+    }
+}
+
+export function dibujarSpriteConTinte(ctx, img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, tintColor) {
+    if (!offscreenCanvas) inicializarCanvasOffscreen();
+    if (!offscreenCtx || !offscreenCanvas) {
+        if (ctx) ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+        return;
+    }
+    if (offscreenCanvas.width < sWidth || offscreenCanvas.height < sHeight) {
+        offscreenCanvas.width = sWidth;
+        offscreenCanvas.height = sHeight;
+    }
+    offscreenCtx.clearRect(0, 0, sWidth, sHeight);
+    offscreenCtx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+    offscreenCtx.globalCompositeOperation = 'source-atop';
+    offscreenCtx.fillStyle = tintColor;
+    offscreenCtx.fillRect(0, 0, sWidth, sHeight);
+    offscreenCtx.globalCompositeOperation = 'source-over';
+    if (ctx) ctx.drawImage(offscreenCanvas, 0, 0, sWidth, sHeight, dx, dy, dWidth, dHeight);
+}
 
 export function dibujarPiloto(ctx, p) {
     ctx.save();
@@ -536,7 +564,7 @@ export function dibujarAnimales(ctx, ctxData) {
                 const dx = Math.round(a.x - a.w / 2);
                 const dy = Math.round(a.y + offsetFlotante - a.h / 2);
                 if (tint) {
-                    dibujarSpriteConTinte(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, dx, dy, a.w, a.h, tint);
+                    dibujarSpriteConTinte(ctx, criaturasImg, sx, sy, cFrameAncho, cFrameAlto, dx, dy, a.w, a.h, tint);
                 } else {
                     ctx.drawImage(criaturasImg, sx, sy, cFrameAncho, cFrameAlto, dx, dy, a.w, a.h);
                 }
